@@ -2,6 +2,8 @@
 
 This is a client-side web application built with React, TypeScript, and Vite, designed to streamline the process of loading, merging, analyzing, and exporting data from multiple Excel files. It provides a user-friendly interface to manage complex datasets efficiently.
 
+**Live Demo:** [https://cj-1981.github.io/excel-processor/](https://cj-1981.github.io/excel-processor/)
+
 ## Features
 
 *   **Multi-File Upload:** Load multiple Excel files simultaneously.
