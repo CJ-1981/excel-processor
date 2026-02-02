@@ -120,7 +120,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
   }, [allAvailableHeaders, columnVisibility]);
 
 
-  const handleRequestSort = (event: React.MouseEvent<unknown>, property: string) => {
+  const handleRequestSort = (_event: React.MouseEvent<unknown>, property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
@@ -185,7 +185,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     }
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 

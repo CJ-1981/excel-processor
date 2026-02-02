@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, Box, Typography } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 
 interface ColumnSelectorProps {
   data: any[];
@@ -7,7 +8,7 @@ interface ColumnSelectorProps {
 }
 
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect }) => {
-  const [columns, setColumns] = useState<string[]>([]);
+  const [columns, setColumns] = useState<Array<{ original: string; display: string }>>([]);
   const [selectedColumn, setSelectedColumn] = useState<string>('');
 
   useEffect(() => {
@@ -39,8 +40,8 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     }
   }, [data]);
 
-  const handleChange = (event: any) => {
-    const originalColumnName = event.target.value;
+  const handleChange = (event: SelectChangeEvent<string>) => {
+    const originalColumnName = event.target.value as string;
     setSelectedColumn(originalColumnName);
     onColumnSelect(originalColumnName);
   };

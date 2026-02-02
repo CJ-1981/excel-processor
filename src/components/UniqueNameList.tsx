@@ -104,20 +104,11 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
   }, [uniqueNames]);
 
 
-  const handleRequestSort = (event: React.MouseEvent<unknown>, property: string) => {
+  const handleRequestSort = (_event: React.MouseEvent<unknown>, property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
-
-  const sortedNames = useMemo(() => {
-    const stabilizedThis = uniqueNames.map((el, index) => [el, index] as [any, number]);
-    stabilizedThis.sort((a, b) => {
-      const orderValue = order === 'desc' ? -1 : 1;
-      return orderValue * String(a[0]).localeCompare(String(b[0]));
-    });
-    return stabilizedThis.map((el) => el[0]);
-  }, [uniqueNames, order, orderBy]);
 
   const displayedNames = useMemo(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -131,9 +122,19 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
       .filter(name => !selectedNames.includes(name)) // Exclude already selected names
       .filter(name => String(name).toLowerCase().includes(lowerCaseSearchTerm)); // Apply search term
 
-    // 3. Combine them: selected first, then filtered unselected
-    return [...currentlySelectedNames, ...unselectedAndFilteredNames];
-  }, [uniqueNames, selectedNames, searchTerm]);
+    // Keep selected names at top while maintaining sort order within each group
+    const selectedSorted = currentlySelectedNames.sort((a, b) => {
+      const orderValue = order === 'desc' ? -1 : 1;
+      return orderValue * String(a).localeCompare(String(b));
+    });
+
+    const unselectedSorted = unselectedAndFilteredNames.sort((a, b) => {
+      const orderValue = order === 'desc' ? -1 : 1;
+      return orderValue * String(a).localeCompare(String(b));
+    });
+
+    return [...selectedSorted, ...unselectedSorted];
+  }, [uniqueNames, selectedNames, searchTerm, order]);
 
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,7 +145,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
     onNamesSelect([]);
   };
 
-  const handleClick = (event: React.MouseEvent<unknown>, name: string) => {
+  const handleClick = (_event: React.MouseEvent<unknown>, name: string) => {
     const selectedIndex = selectedNames.indexOf(name);
     let newSelected: string[] = [];
 
@@ -163,7 +164,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
     onNamesSelect(newSelected);
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 

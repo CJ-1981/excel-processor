@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Box, Typography, Checkbox, FormControlLabel, Button, Paper, List, ListItem, ListSubheader,
   Divider,
@@ -15,15 +15,6 @@ const ITEM_WIDTH = 250; // Fixed width for each file's column
 
 const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel }) => {
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
-
-  // Memoize all sheet names to facilitate cross-file selection
-  const allSheetNames = useMemo(() => {
-    const names = new Set<string>();
-    files.forEach(file => {
-      file.sheets.forEach(sheet => names.add(sheet.sheetName));
-    });
-    return Array.from(names).sort();
-  }, [files]);
 
   const handleToggle = (sheetIdentifier: string) => {
     const currentIndex = selectedSheets.indexOf(sheetIdentifier);
@@ -124,9 +115,14 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
                     <ListItem
                       key={sheetIdentifier}
                       disablePadding
-                      button // Make the whole item clickable
                       onClick={() => handleToggle(sheetIdentifier)} // Individual toggle on item click
-                      selected={isSheetSelected} // Add selected styling
+                      sx={{
+                        cursor: 'pointer',
+                        backgroundColor: isSheetSelected ? 'action.selected' : 'transparent',
+                        '&:hover': {
+                          backgroundColor: isSheetSelected ? 'action.selected' : 'action.hover',
+                        },
+                      }}
                     >
                       <Checkbox
                         edge="start" // Position checkbox at the start

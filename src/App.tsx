@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ExcelUploader from './components/ExcelUploader';
 import ColumnSelector from './components/ColumnSelector';
 import UniqueNameList from './components/UniqueNameList';
@@ -8,7 +8,7 @@ import SheetSelector from './components/SheetSelector'; // Import SheetSelector
 import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { ParsedFile, ParsedSheet } from './types.ts'; // Import from new types file
+import type { ParsedFile } from './types.ts'; // Import from new types file
 import * as XLSX from 'xlsx'; // Import xlsx library
 
 type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
@@ -89,8 +89,8 @@ function App() {
 
     const combinedData = sheetsToMerge.flat().map(row => {
       const newRow: { [key: string]: any } = {};
-      allHeaders.forEach(header => {
-        newRow[header] = row[header] !== undefined ? row[header] : null;
+      allHeaders.forEach((header) => {
+        newRow[header] = (row as Record<string, any>)[header] !== undefined ? (row as Record<string, any>)[header] : null;
       });
       return newRow;
     });
