@@ -63,10 +63,10 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
           onChange={handleChange}
           MenuProps={{
             PaperProps: {
-              style: {
-                maxHeight: 400, // Show approximately 10-12 items
-              },
-            },
+              sx: {
+                maxHeight: 600, // Show at least 12-15 items (each item ~40-48px)
+              }
+            }
           }}
         >
           {columns.map((column) => (
