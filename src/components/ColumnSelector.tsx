@@ -11,6 +11,7 @@ interface ColumnOption {
   original: string;
   display: string;
   rowIndex: number;
+  value: string; // The actual value in this cell
 }
 
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect }) => {
@@ -19,48 +20,51 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
 
   useEffect(() => {
     if (data.length > 0) {
-      // Scan first 3 rows to handle padding/empty rows
+      // Get column headers from the data structure
+      const rawHeaders = Object.keys(data[0]);
       const rowsToScan = Math.min(3, data.length);
       const allColumns: ColumnOption[] = [];
 
-      for (let rowIdx = 0; rowIdx < rowsToScan; rowIdx++) {
-        const row = data[rowIdx];
-        const rawHeaders = Object.keys(row);
+      // For each column, show the value from each of the first 3 rows
+      rawHeaders.forEach((header) => {
+        for (let rowIdx = 0; rowIdx < rowsToScan; rowIdx++) {
+          const row = data[rowIdx];
+          const value = row[header];
+          const valueStr = value !== undefined && value !== null && value !== '' ? String(value) : '(empty)';
 
-        rawHeaders.forEach((header) => {
-          // Check if we haven't already added this column from a previous row
-          const alreadyExists = allColumns.some(col => col.original === header);
-          if (!alreadyExists) {
-            let display = header;
-
-            // Convert __EMPTY_X headers to Excel column letters
-            if (header.startsWith('__EMPTY_')) {
-              let colIdx = parseInt(header.replace('__EMPTY_', ''), 10);
-              if (isNaN(colIdx)) {
-                colIdx = rawHeaders.indexOf(header);
-              }
-              let colLetter = '';
-              let temp = colIdx + 1;
-              while (temp > 0) {
-                colLetter = String.fromCharCode(65 + (temp - 1) % 26) + colLetter;
-                temp = Math.floor((temp - 1) / 26);
-              }
-              display = colLetter || header;
+          let display = header;
+          // Convert __EMPTY_X headers to Excel column letters
+          if (header.startsWith('__EMPTY_')) {
+            let colIdx = parseInt(header.replace('__EMPTY_', ''), 10);
+            if (isNaN(colIdx)) {
+              colIdx = rawHeaders.indexOf(header);
             }
-
-            allColumns.push({
-              original: header,
-              display: display,
-              rowIndex: rowIdx + 1 // 1-based row number
-            });
+            let colLetter = '';
+            let temp = colIdx + 1;
+            while (temp > 0) {
+              colLetter = String.fromCharCode(65 + (temp - 1) % 26) + colLetter;
+              temp = Math.floor((temp - 1) / 26);
+            }
+            display = colLetter || header;
           }
-        });
-      }
+
+          allColumns.push({
+            original: header,
+            display: `${display}: "${valueStr}"`,
+            rowIndex: rowIdx + 1,
+            value: valueStr
+          });
+        }
+      });
 
       setColumns(allColumns);
 
-      // Auto-select first column from first non-empty row
-      if (allColumns.length > 0) {
+      // Auto-select first column with non-empty value from first row
+      const firstNonEmpty = allColumns.find(col => col.rowIndex === 1 && col.value !== '(empty)');
+      if (firstNonEmpty) {
+        setSelectedColumn(firstNonEmpty.original);
+        onColumnSelect(firstNonEmpty.original);
+      } else if (allColumns.length > 0) {
         setSelectedColumn(allColumns[0].original);
         onColumnSelect(allColumns[0].original);
       }
@@ -90,7 +94,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     <Box sx={{ mt: 3, width: '100%' }}>
       <Typography variant="h6" gutterBottom>Select Column for Names</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        Scanning first 3 rows for column names
+        Showing values from first 3 rows to identify header row
       </Typography>
       <FormControl fullWidth>
         <InputLabel id="column-select-label">Select Name Column</InputLabel>
@@ -114,8 +118,12 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
                 Row {rowNum}
               </ListSubheader>
               {cols.map((column) => (
-                <MenuItem key={column.original} value={column.original}>
-                  {column.display}
+                <MenuItem key={`${column.rowIndex}-${column.original}`} value={column.original}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="body2" sx={{ fontWeight: column.value !== '(empty)' ? 'bold' : 'normal' }}>
+                      {column.display}
+                    </Typography>
+                  </Box>
                 </MenuItem>
               ))}
             </div>
