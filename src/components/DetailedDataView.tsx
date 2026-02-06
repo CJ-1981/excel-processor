@@ -103,16 +103,16 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     return dynamicHeaders;
   }, [filteredData]);
 
-  // Initialize column visibility when headers change
+  // Initialize column visibility when headers change (only if not already set)
   useEffect(() => {
-    if (allAvailableHeaders.length > 0) {
+    if (allAvailableHeaders.length > 0 && Object.keys(columnVisibility).length === 0) {
       const initialVisibility: Record<string, boolean> = {};
       allAvailableHeaders.forEach(header => {
         initialVisibility[header.id] = true; // All columns visible by default
       });
       setColumnVisibility(initialVisibility);
     }
-  }, [allAvailableHeaders]);
+  }, [allAvailableHeaders, columnVisibility]);
 
 
   // Headers that are currently visible
