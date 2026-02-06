@@ -94,7 +94,16 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
 
   const uniqueNames = useMemo(() => {
     if (!nameColumn || data.length === 0) return [];
+
+    // Debug: log what we're extracting
     const names = data.map(row => row[nameColumn]).filter(Boolean);
+
+    // Log for debugging
+    console.log('UniqueNameList Debug:');
+    console.log('- Selected column:', nameColumn);
+    console.log('- Total rows:', data.length);
+    console.log('- Names found:', names.slice(0, 10)); // Show first 10
+
     return Array.from(new Set(names));
   }, [data, nameColumn]);
 
@@ -190,7 +199,12 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
 
   return (
     <Box sx={{ mt: 4, width: '100%' }}>
-      <Typography variant="h6" gutterBottom>Unique Names</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h6">Unique Names</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Found {uniqueNames.length} unique values in "{nameColumn}"
+        </Typography>
+      </Box>
       <TextField
         fullWidth
         variant="outlined"
