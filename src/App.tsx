@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ExcelUploader from './components/ExcelUploader';
 import ColumnSelector from './components/ColumnSelector';
 import UniqueNameList from './components/UniqueNameList';
@@ -29,6 +29,7 @@ function App() {
 
   // State for the final data processing
   const [selectedNameColumn, setSelectedNameColumn] = useState<string | null>(null);
+  const [headerRowIndex, setHeaderRowIndex] = useState<number>(1); // Track which row has the actual headers (1-indexed)
   const [selectedUniqueNames, setSelectedUniqueNames] = useState<string[]>([]);
   const [isDetailedViewFullScreen, setIsDetailedViewFullScreen] = useState(false); // New state for full screen
 
@@ -148,6 +149,9 @@ function App() {
     });
 
     setMergedData(combinedData);
+    console.log('Merged data created. Total rows:', combinedData.length);
+    console.log('Sample row:', combinedData[0]);
+    console.log('All columns:', Object.keys(combinedData[0]));
     setStatus('data_merged');
   };
 
@@ -156,27 +160,29 @@ function App() {
     setStatus('ready');
   };
 
-  const handleColumnSelect = (columnName: string) => {
+  const handleColumnSelect = useCallback((columnName: string, rowIndex: number) => {
     setSelectedNameColumn(columnName);
+    setHeaderRowIndex(rowIndex);
     setSelectedUniqueNames([]);
-    console.log('Selected Name Column:', columnName);
-  };
+    console.log('Selected Name Column:', columnName, 'from row', rowIndex);
+  }, []);
 
 
-  const handleUniqueNamesSelect = (names: string[]) => {
+  const handleUniqueNamesSelect = useCallback((names: string[]) => {
     setSelectedUniqueNames(names);
     console.log('Selected Unique Names:', names);
-  };
+  }, []);
 
-  const handleToggleDetailedViewFullScreen = () => {
+  const handleToggleDetailedViewFullScreen = useCallback(() => {
     setIsDetailedViewFullScreen(prev => !prev);
-  };
+  }, []);
 
 
   const detailedViewContent = (
     <DetailedDataView
       data={mergedData}
       nameColumn={selectedNameColumn}
+      headerRowIndex={headerRowIndex}
       selectedUniqueNames={selectedUniqueNames}
       onToggleFullScreen={handleToggleDetailedViewFullScreen}
       isFullScreen={isDetailedViewFullScreen}
@@ -201,7 +207,7 @@ function App() {
           Excel Data Processor
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          v1.0.0 • Last updated: February 2025
+          v1.0.0 • Last updated: {__BUILD_TIME__}
         </Typography>
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
@@ -234,6 +240,7 @@ function App() {
                 <UniqueNameList
                   data={mergedData}
                   nameColumn={selectedNameColumn}
+                  headerRowIndex={headerRowIndex}
                   selectedNames={selectedUniqueNames}
                   onNamesSelect={handleUniqueNamesSelect}
                 />

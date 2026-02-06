@@ -4,7 +4,7 @@ import type { SelectChangeEvent } from '@mui/material';
 
 interface ColumnSelectorProps {
   data: any[];
-  onColumnSelect: (columnName: string) => void;
+  onColumnSelect: (columnName: string, headerRowIndex: number) => void;
 }
 
 interface ColumnOption {
@@ -17,16 +17,27 @@ interface ColumnOption {
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect }) => {
   const [columns, setColumns] = useState<ColumnOption[]>([]);
   const [selectedColumn, setSelectedColumn] = useState<string>('');
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number>(1);
 
   useEffect(() => {
     if (data.length > 0) {
+      console.log('ColumnSelector - data[0] sample:', data[0]);
+      console.log('ColumnSelector - all keys:', Object.keys(data[0]));
+
       // Get column headers from the data structure
       const rawHeaders = Object.keys(data[0]);
       const rowsToScan = Math.min(3, data.length);
       const allColumns: ColumnOption[] = [];
 
+      console.log('ColumnSelector - rawHeaders:', rawHeaders);
+
       // For each column, show the value from each of the first 3 rows
+      // Skip source metadata columns
       rawHeaders.forEach((header) => {
+        // Skip metadata columns
+        if (header === '_sourceFileName' || header === '_sourceSheetName') {
+          return;
+        }
         for (let rowIdx = 0; rowIdx < rowsToScan; rowIdx++) {
           const row = data[rowIdx];
           const value = row[header];
@@ -58,23 +69,40 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
       });
 
       setColumns(allColumns);
+      console.log('ColumnSelector - allColumns built:', allColumns.length, 'options');
 
       // Auto-select first column with non-empty value from first row
       const firstNonEmpty = allColumns.find(col => col.rowIndex === 1 && col.value !== '(empty)');
       if (firstNonEmpty) {
+        console.log('ColumnSelector - auto-selecting:', firstNonEmpty);
         setSelectedColumn(firstNonEmpty.original);
-        onColumnSelect(firstNonEmpty.original);
+        setSelectedRowIndex(firstNonEmpty.rowIndex);
+        onColumnSelect(firstNonEmpty.original, firstNonEmpty.rowIndex);
       } else if (allColumns.length > 0) {
+        console.log('ColumnSelector - selecting first available:', allColumns[0]);
         setSelectedColumn(allColumns[0].original);
-        onColumnSelect(allColumns[0].original);
+        setSelectedRowIndex(allColumns[0].rowIndex);
+        onColumnSelect(allColumns[0].original, allColumns[0].rowIndex);
+      } else {
+        console.log('ColumnSelector - no columns to select!');
       }
     }
   }, [data, onColumnSelect]);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
-    const originalColumnName = event.target.value as string;
-    setSelectedColumn(originalColumnName);
-    onColumnSelect(originalColumnName);
+    const value = event.target.value as string;
+    // Parse the value which is in format "rowIndex-originalColumnName"
+    const [rowIndexStr, originalColumnName] = value.split('-');
+    const rowIndex = parseInt(rowIndexStr, 10);
+
+    // Find the column with this original name and row index
+    const selectedCol = columns.find(col => col.original === originalColumnName && col.rowIndex === rowIndex);
+    if (selectedCol) {
+      console.log('ColumnSelector - user selected:', selectedCol);
+      setSelectedColumn(originalColumnName);
+      setSelectedRowIndex(rowIndex);
+      onColumnSelect(originalColumnName, rowIndex);
+    }
   };
 
   // Group columns by row
@@ -86,7 +114,15 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     return acc;
   }, {} as Record<number, ColumnOption[]>);
 
+  console.log('ColumnSelector - groupedColumns:', Object.keys(groupedColumns));
+  console.log('ColumnSelector - selectedColumn value:', selectedColumn);
+
   if (data.length === 0) {
+    return null;
+  }
+
+  if (columns.length === 0) {
+    console.log('ColumnSelector - no columns available!');
     return null;
   }
 
@@ -101,7 +137,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
         <Select
           labelId="column-select-label"
           id="column-select"
-          value={selectedColumn}
+          value={selectedRowIndex ? `${selectedRowIndex}-${selectedColumn}` : ''}
           label="Select Name Column"
           onChange={handleChange}
           MenuProps={{
@@ -112,22 +148,20 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
             }
           }}
         >
-          {Object.entries(groupedColumns).map(([rowNum, cols]) => (
-            <div key={rowNum}>
-              <ListSubheader sx={{ bgcolor: 'grey.100', fontWeight: 'bold' }}>
-                Row {rowNum}
-              </ListSubheader>
-              {cols.map((column) => (
-                <MenuItem key={`${column.rowIndex}-${column.original}`} value={column.original}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2" sx={{ fontWeight: column.value !== '(empty)' ? 'bold' : 'normal' }}>
-                      {column.display}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-            </div>
-          ))}
+          {Object.entries(groupedColumns).flatMap(([rowNum, cols]) => [
+            <ListSubheader key={`header-${rowNum}`} sx={{ bgcolor: 'grey.100', fontWeight: 'bold' }}>
+              Row {rowNum}
+            </ListSubheader>,
+            ...cols.map((column) => (
+              <MenuItem key={`${column.rowIndex}-${column.original}`} value={`${column.rowIndex}-${column.original}`}>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="body2" sx={{ fontWeight: column.value !== '(empty)' ? 'bold' : 'normal' }}>
+                    {column.display}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))
+          ])}
         </Select>
       </FormControl>
     </Box>

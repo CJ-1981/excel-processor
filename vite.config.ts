@@ -5,4 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/excel-processor/',
+  define: {
+    __BUILD_TIME__: JSON.stringify(new Date().toLocaleString()),
+  },
 })

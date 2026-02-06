@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 interface DetailedDataViewProps {
   data: any[];
   nameColumn: string | null;
+  headerRowIndex: number; // Which row contains the actual headers (1-indexed)
   selectedUniqueNames: string[];
   onToggleFullScreen: () => void;
   isFullScreen: boolean;
@@ -73,7 +74,7 @@ function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) 
 }
 
 
-const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, selectedUniqueNames, onToggleFullScreen, isFullScreen, columnVisibility, setColumnVisibility }) => {
+const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, headerRowIndex, selectedUniqueNames, onToggleFullScreen, isFullScreen, columnVisibility, setColumnVisibility }) => {
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -91,12 +92,64 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     }
   });
 
+  // Helper to get the actual column name from the header row
+  const getActualColumnName = useMemo(() => {
+    if (!nameColumn || data.length === 0) return nameColumn;
+    const headerRowIdx = headerRowIndex - 1;
+    if (headerRowIdx >= 0 && headerRowIdx < data.length) {
+      const headerRow = data[headerRowIdx];
+      const headerValue = headerRow[nameColumn];
+      if (headerValue !== undefined && headerValue !== null && headerValue !== '') {
+        return String(headerValue);
+      }
+    }
+    return nameColumn;
+  }, [data, nameColumn, headerRowIndex]);
+
+  // Helper to get value from a row, trying both actual name and original key
+  const getRowValue = (row: any, originalKey: string | null, actualName: string | null) => {
+    if (actualName && actualName in row) return row[actualName];
+    if (originalKey) return row[originalKey];
+    return undefined;
+  };
+
+  // Create a mapping of original keys to actual display names from header row
+  const columnMapping = useMemo(() => {
+    if (data.length === 0) return {};
+    const headerRowIdx = headerRowIndex - 1;
+    console.log('DetailedDataView - headerRowIndex:', headerRowIndex, 'headerRowIdx:', headerRowIdx);
+    if (headerRowIdx < 0 || headerRowIdx >= data.length) return {};
+
+    const headerRow = data[headerRowIdx];
+    console.log('DetailedDataView - headerRow sample:', headerRow);
+    const mapping: Record<string, string> = {};
+
+    Object.keys(headerRow).forEach(key => {
+      const value = headerRow[key];
+      if (value !== undefined && value !== null && value !== '') {
+        mapping[key] = String(value);
+      } else {
+        mapping[key] = key;
+      }
+    });
+
+    console.log('DetailedDataView - columnMapping:', mapping);
+    return mapping;
+  }, [data, headerRowIndex]);
+
   const filteredData = useMemo(() => {
     if (!nameColumn || selectedUniqueNames.length === 0 || data.length === 0) {
       return [];
     }
-    return data.filter(row => selectedUniqueNames.includes(row[nameColumn]));
-  }, [data, nameColumn, selectedUniqueNames]);
+    const headerRowIdx = headerRowIndex - 1;
+
+    return data
+      .filter((_, idx) => idx !== headerRowIdx) // Exclude header row
+      .filter(row => {
+        const value = getRowValue(row, nameColumn, getActualColumnName);
+        return selectedUniqueNames.includes(value);
+      });
+  }, [data, nameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName]);
 
 
   const allAvailableHeaders = useMemo(() => {
@@ -104,13 +157,22 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     const keys = Object.keys(filteredData[0]);
     const dynamicHeaders: HeadCell[] = [];
 
+    // Always add source file columns first if they exist
     if (keys.includes('_sourceFileName')) {
       dynamicHeaders.push({ id: '_sourceFileName', label: 'Source File', numeric: false });
       dynamicHeaders.push({ id: '_sourceSheetName', label: 'Source Sheet', numeric: false });
     }
 
+    // For other columns, use the actual display names from the header row
     keys.filter(key => key !== '_sourceFileName' && key !== '_sourceSheetName')
-        .forEach(key => dynamicHeaders.push({ id: key, label: key, numeric: typeof filteredData[0][key] === 'number' }));
+      .forEach(key => {
+        const displayName = columnMapping[key] || key;
+        dynamicHeaders.push({
+          id: key,
+          label: displayName,
+          numeric: typeof filteredData[0][key] === 'number'
+        });
+      });
 
     // If custom order exists, sort by it
     if (columnOrder.length > 0) {
@@ -129,7 +191,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     }
 
     return dynamicHeaders;
-  }, [filteredData, columnOrder]);
+  }, [filteredData, columnOrder, columnMapping]);
 
   // Initialize column visibility when headers change (only if not already set)
   useEffect(() => {
@@ -140,7 +202,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
       });
       setColumnVisibility(initialVisibility);
     }
-  }, [allAvailableHeaders, columnVisibility]);
+  }, [allAvailableHeaders, setColumnVisibility]);
 
 
   // Headers that are currently visible
@@ -154,7 +216,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
       setOrderBy(visibleHeaders[0].id);
       setOrder('asc');
     }
-  }, [visibleHeaders, orderBy]);
+  }, [visibleHeaders]);
 
 
   const handleRequestSort = (_event: React.MouseEvent<unknown>, property: string) => {
@@ -170,30 +232,54 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     if (searchTerm) {
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
       currentData = currentData.filter(row =>
-        Object.values(row).some(value =>
-          String(value).toLowerCase().includes(lowerCaseSearchTerm)
-        )
+        Object.keys(row).some(key => {
+          // For data columns, try to get the actual display value
+          if (key === '_sourceFileName' || key === '_sourceSheetName') {
+            return String(row[key]).toLowerCase().includes(lowerCaseSearchTerm);
+          }
+          const actualName = columnMapping[key] || key;
+          const value = getRowValue(row, key, actualName);
+          return String(value).toLowerCase().includes(lowerCaseSearchTerm);
+        })
       );
     }
 
     // Apply sorting
     if (orderBy) {
-      currentData = stableSort(currentData, getComparator(order, orderBy));
+      currentData = stableSort(currentData, (a, b) => {
+        // Get values using the actual column name for sorting
+        let aValue, bValue;
+        if (orderBy === '_sourceFileName' || orderBy === '_sourceSheetName') {
+          aValue = a[orderBy];
+          bValue = b[orderBy];
+        } else {
+          const actualName = columnMapping[orderBy] || orderBy;
+          aValue = getRowValue(a, orderBy, actualName);
+          bValue = getRowValue(b, orderBy, actualName);
+        }
+        return getComparator(order, orderBy)({ [orderBy]: aValue }, { [orderBy]: bValue });
+      });
     }
 
     return currentData;
-  }, [filteredData, searchTerm, order, orderBy]);
+  }, [filteredData, searchTerm, order, orderBy, columnMapping]);
 
   // Calculate column totals
   const columnTotals = useMemo(() => {
     const totals: { [key: string]: number | string } = {};
-    visibleHeaders.forEach(header => { // Use visibleHeaders for totals
+    visibleHeaders.forEach(header => {
       let sum = 0;
       let isNumericColumn = true;
       filteredAndSortedData.forEach(row => {
-        const value = row[header.id];
-        const numValue = parseFloat(String(value)); // Ensure value is string before parseFloat
-        if (isNaN(numValue) || typeof value === 'boolean') { // Treat boolean as non-numeric for sum
+        let value;
+        if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
+          value = row[header.id];
+        } else {
+          const actualName = columnMapping[header.id] || header.id;
+          value = getRowValue(row, header.id, actualName);
+        }
+        const numValue = parseFloat(String(value));
+        if (isNaN(numValue) || typeof value === 'boolean') {
           isNumericColumn = false;
         } else {
           sum += numValue;
@@ -202,7 +288,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
       totals[header.id] = isNumericColumn ? sum : '';
     });
     return totals;
-  }, [filteredAndSortedData, visibleHeaders]);
+  }, [filteredAndSortedData, visibleHeaders, columnMapping]);
 
 
   const handleExportCsv = () => {
@@ -210,7 +296,15 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
       const dataToExport = filteredAndSortedData.map(row => {
         const newRow: { [key: string]: any } = {};
         visibleHeaders.forEach(header => {
-            newRow[header.label] = row[header.id]; // Export visible columns with their labels
+          // Export using the actual column value
+          let value;
+          if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
+            value = row[header.id];
+          } else {
+            const actualName = columnMapping[header.id] || header.id;
+            value = getRowValue(row, header.id, actualName);
+          }
+          newRow[header.label] = value;
         });
         return newRow;
       });
@@ -440,7 +534,16 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
             {paginatedData.map((row, index) => (
               <TableRow hover key={index}>
                 {visibleHeaders.map((headCell, cellIndex) => {
-                  const cellValue = row[headCell.id];
+                  // For source columns, use direct access
+                  // For data columns, use the getRowValue helper
+                  let cellValue: any;
+                  if (headCell.id === '_sourceFileName' || headCell.id === '_sourceSheetName') {
+                    cellValue = row[headCell.id];
+                  } else {
+                    // Try to get value using the actual column name from header row
+                    const actualName = columnMapping[headCell.id] || headCell.id;
+                    cellValue = getRowValue(row, headCell.id, actualName);
+                  }
                   return (
                     <TableCell key={`${index}-${headCell.id}`} sx={{ borderRight: cellIndex < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
                       {cellValue !== undefined && cellValue !== null ? String(cellValue) : ''}

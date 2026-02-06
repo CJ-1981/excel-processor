@@ -23,6 +23,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 interface UniqueNameListProps {
   data: any[];
   nameColumn: string | null;
+  headerRowIndex: number; // Which row contains the actual headers (1-indexed)
   selectedNames: string[]; // Changed from onNameSelect
   onNamesSelect: (names: string[]) => void; // Changed from onNameSelect
 }
@@ -85,7 +86,7 @@ function EnhancedTableHead(props: {
   );
 }
 
-const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selectedNames, onNamesSelect }) => {
+const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, headerRowIndex, selectedNames, onNamesSelect }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('name');
@@ -95,17 +96,46 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
   const uniqueNames = useMemo(() => {
     if (!nameColumn || data.length === 0) return [];
 
-    // Debug: log what we're extracting
-    const names = data.map(row => row[nameColumn]).filter(Boolean);
+    // Convert headerRowIndex (1-indexed) to array index
+    const headerRowIdx = headerRowIndex - 1;
 
-    // Log for debugging (only log when nameColumn changes)
+    // The nameColumn is the original key (e.g., "__EMPTY_0")
+    // But we need to find what value is at that position in the header row
+    // and use that as the actual column name for lookups
+    let actualColumnName = nameColumn;
+
+    if (headerRowIdx >= 0 && headerRowIdx < data.length) {
+      const headerRow = data[headerRowIdx];
+      // Get the value from the header row at this column position
+      const headerValue = headerRow[nameColumn];
+      if (headerValue !== undefined && headerValue !== null && headerValue !== '') {
+        actualColumnName = String(headerValue);
+      }
+    }
+
+    // Now extract names using the actual column name from the header row
+    // Skip the header row itself when extracting names
+    const names = data
+      .filter((_, idx) => idx !== headerRowIdx)
+      .map(row => {
+        // First try the actual column name from header row
+        if (actualColumnName in row) {
+          return row[actualColumnName];
+        }
+        // Fall back to the original column key
+        return row[nameColumn];
+      })
+      .filter(Boolean);
+
     console.log('UniqueNameList Debug:');
-    console.log('- Selected column:', nameColumn);
+    console.log('- Original column key:', nameColumn);
+    console.log('- Header row index:', headerRowIndex);
+    console.log('- Actual column name from header:', actualColumnName);
     console.log('- Total rows:', data.length);
-    console.log('- Names found:', names.slice(0, 10)); // Show first 10
+    console.log('- Names found:', names.slice(0, 10));
 
     return Array.from(new Set(names));
-  }, [data, nameColumn]);
+  }, [data, nameColumn, headerRowIndex]);
 
 
   const handleRequestSort = (_event: React.MouseEvent<unknown>, property: string) => {
@@ -127,12 +157,13 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
       .filter(name => String(name).toLowerCase().includes(lowerCaseSearchTerm)); // Apply search term
 
     // Keep selected names at top while maintaining sort order within each group
-    const selectedSorted = currentlySelectedNames.sort((a, b) => {
+    // Clone arrays before sorting to avoid mutation
+    const selectedSorted = [...currentlySelectedNames].sort((a, b) => {
       const orderValue = order === 'desc' ? -1 : 1;
       return orderValue * String(a).localeCompare(String(b));
     });
 
-    const unselectedSorted = unselectedAndFilteredNames.sort((a, b) => {
+    const unselectedSorted = [...unselectedAndFilteredNames].sort((a, b) => {
       const orderValue = order === 'desc' ? -1 : 1;
       return orderValue * String(a).localeCompare(String(b));
     });
