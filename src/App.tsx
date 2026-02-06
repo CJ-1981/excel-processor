@@ -151,6 +151,9 @@ function App() {
         <Typography component="h1" variant="h4" gutterBottom>
           Excel Data Processor
         </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          v1.0.0 • Last updated: February 2025
+        </Typography>
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
 
