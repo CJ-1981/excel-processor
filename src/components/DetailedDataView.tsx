@@ -5,16 +5,18 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
-import FullscreenIcon from '@mui/icons-material/Fullscreen'; // Import FullscreenIcon
-import ViewColumnIcon from '@mui/icons-material/ViewColumn'; // Import ViewColumnIcon
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as XLSX from 'xlsx';
 
 interface DetailedDataViewProps {
   data: any[];
   nameColumn: string | null;
   selectedUniqueNames: string[];
-  onToggleFullScreen: () => void; // New prop
-  isFullScreen: boolean; // New prop
+  onToggleFullScreen: () => void;
+  isFullScreen: boolean;
   columnVisibility: Record<string, boolean>;
   setColumnVisibility: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }
@@ -77,7 +79,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null); // For column selection menu
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [columnOrder, setColumnOrder] = useState<string[]>([]); // Store custom column order
 
   const filteredData = useMemo(() => {
     if (!nameColumn || selectedUniqueNames.length === 0 || data.length === 0) {
@@ -99,9 +102,25 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
 
     keys.filter(key => key !== '_sourceFileName' && key !== '_sourceSheetName')
         .forEach(key => dynamicHeaders.push({ id: key, label: key, numeric: typeof filteredData[0][key] === 'number' }));
-    
+
+    // If custom order exists, sort by it
+    if (columnOrder.length > 0) {
+      const orderedHeaders: HeadCell[] = [];
+      columnOrder.forEach(id => {
+        const header = dynamicHeaders.find(h => h.id === id);
+        if (header) orderedHeaders.push(header);
+      });
+      // Add any new columns that weren't in the custom order
+      dynamicHeaders.forEach(header => {
+        if (!columnOrder.includes(header.id)) {
+          orderedHeaders.push(header);
+        }
+      });
+      return orderedHeaders;
+    }
+
     return dynamicHeaders;
-  }, [filteredData]);
+  }, [filteredData, columnOrder]);
 
   // Initialize column visibility when headers change (only if not already set)
   useEffect(() => {
@@ -226,6 +245,18 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     setColumnVisibility(newVisibility);
   };
 
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(allAvailableHeaders);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update column order with the new sequence
+    const newOrder = items.map(item => item.id);
+    setColumnOrder(newOrder);
+  };
+
   const allColumnsSelected = allAvailableHeaders.length > 0 &&
     allAvailableHeaders.every(header => columnVisibility[header.id]);
 
@@ -259,7 +290,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
             onClose={handleColumnMenuClose}
             PaperProps={{
               sx: {
-                maxHeight: 600, // Show at least 12-15 column options
+                maxHeight: 600,
+                width: 320,
               }
             }}
           >
@@ -270,20 +302,55 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
               <Typography variant="body2">Unselect All</Typography>
             </MenuItem>
             <Divider />
-            {allAvailableHeaders.map((header) => (
-              <MenuItem key={header.id} dense>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={columnVisibility[header.id]}
-                      onChange={() => handleToggleColumnVisibility(header.id)}
-                      size="small"
-                    />
-                  }
-                  label={header.label}
-                />
-              </MenuItem>
-            ))}
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="column-list">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {allAvailableHeaders.map((header, index) => (
+                      <Draggable
+                        key={header.id}
+                        draggableId={header.id}
+                        index={index}
+                        disableInteractiveElementBlocking
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              backgroundColor: snapshot.isDragging ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
+                            }}
+                          >
+                            <MenuItem dense disableRipple>
+                              <Box
+                                {...provided.dragHandleProps}
+                                sx={{ display: 'flex', alignItems: 'center', mr: 1, cursor: 'grab' }}
+                              >
+                                <DragHandleIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                              </Box>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={columnVisibility[header.id]}
+                                    onChange={() => handleToggleColumnVisibility(header.id)}
+                                    size="small"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                }
+                                label={header.label}
+                                sx={{ ml: 0, flex: 1 }}
+                              />
+                            </MenuItem>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </Menu>
         </Box>
       </Box>
