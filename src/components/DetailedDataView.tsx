@@ -148,6 +148,14 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     return allAvailableHeaders.filter(header => columnVisibility[header.id]);
   }, [allAvailableHeaders, columnVisibility]);
 
+  // Set default sort to first column when data loads
+  useEffect(() => {
+    if (visibleHeaders.length > 0 && !orderBy) {
+      setOrderBy(visibleHeaders[0].id);
+      setOrder('asc');
+    }
+  }, [visibleHeaders, orderBy]);
+
 
   const handleRequestSort = (_event: React.MouseEvent<unknown>, property: string) => {
     const isAsc = orderBy === property && order === 'asc';
