@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Button,
-  TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox
+  TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -210,6 +210,25 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     }));
   };
 
+  const handleSelectAllColumns = () => {
+    const newVisibility: Record<string, boolean> = {};
+    allAvailableHeaders.forEach(header => {
+      newVisibility[header.id] = true;
+    });
+    setColumnVisibility(newVisibility);
+  };
+
+  const handleUnselectAllColumns = () => {
+    const newVisibility: Record<string, boolean> = {};
+    allAvailableHeaders.forEach(header => {
+      newVisibility[header.id] = false;
+    });
+    setColumnVisibility(newVisibility);
+  };
+
+  const allColumnsSelected = allAvailableHeaders.length > 0 &&
+    allAvailableHeaders.every(header => columnVisibility[header.id]);
+
 
   if (selectedUniqueNames.length === 0 || data.length === 0) {
     return null;
@@ -240,6 +259,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
             onClose={handleColumnMenuClose}
             PaperProps={{ style: { maxHeight: 300 } }}
           >
+            <MenuItem dense onClick={handleSelectAllColumns} disabled={allColumnsSelected}>
+              <Typography variant="body2">Select All</Typography>
+            </MenuItem>
+            <MenuItem dense onClick={handleUnselectAllColumns} disabled={!allColumnsSelected}>
+              <Typography variant="body2">Unselect All</Typography>
+            </MenuItem>
+            <Divider />
             {allAvailableHeaders.map((header) => (
               <MenuItem key={header.id} dense>
                 <FormControlLabel
