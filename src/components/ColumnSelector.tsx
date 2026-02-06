@@ -61,6 +61,13 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
           value={selectedColumn}
           label="Select Name Column"
           onChange={handleChange}
+          MenuProps={{
+            PaperProps: {
+              style: {
+                maxHeight: 400, // Show approximately 10-12 items
+              },
+            },
+          }}
         >
           {columns.map((column) => (
             <MenuItem key={column.original} value={column.original}>

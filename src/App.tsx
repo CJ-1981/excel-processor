@@ -3,13 +3,15 @@ import ExcelUploader from './components/ExcelUploader';
 import ColumnSelector from './components/ColumnSelector';
 import UniqueNameList from './components/UniqueNameList';
 import DetailedDataView from './components/DetailedDataView';
-import SheetSelector from './components/SheetSelector'; // Import SheetSelector
+import SheetSelector from './components/SheetSelector';
+import FileProgressIndicator from './components/FileProgressIndicator';
 
 import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { ParsedFile } from './types.ts'; // Import from new types file
-import * as XLSX from 'xlsx'; // Import xlsx library
+import type { ParsedFile, ParseProgress } from './types';
+import * as XLSX from 'xlsx';
+import { processInBatches } from './utils/batchProcessor';
 
 type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
@@ -18,6 +20,12 @@ function App() {
   const [status, setStatus] = useState<AppStatus>('ready');
   const [parsedFiles, setParsedFiles] = useState<ParsedFile[]>([]);
   const [mergedData, setMergedData] = useState<any[]>([]);
+  const [parseProgress, setParseProgress] = useState<ParseProgress>({
+    total: 0,
+    completed: 0,
+    stage: 'reading',
+    errors: []
+  });
 
   // State for the final data processing
   const [selectedNameColumn, setSelectedNameColumn] = useState<string | null>(null);
@@ -27,37 +35,57 @@ function App() {
   // State for DetailedDataView that needs to persist across full-screen toggle
   const [detailedViewColumnVisibility, setDetailedViewColumnVisibility] = useState<Record<string, boolean>>({});
 
-  // New handler to parse multiple files
+  /**
+   * Parse multiple Excel files using batch processing with progress tracking.
+   * Processes files in batches of 3 to prevent memory overload and maintain UI responsiveness.
+   */
   const handleFilesUpload = async (files: FileList) => {
     setStatus('parsing');
-    const filePromises = Array.from(files).map(file => {
-      return new Promise<ParsedFile>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheets = workbook.SheetNames.map(sheetName => ({
-              sheetName,
-              data: XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]),
-            }));
-            resolve({ fileName: file.name, sheets });
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-      });
+    const fileArray = Array.from(files);
+
+    // Initialize progress state
+    setParseProgress({
+      total: fileArray.length,
+      completed: 0,
+      stage: 'reading',
+      errors: []
     });
 
     try {
-      const allParsedFiles = await Promise.all(filePromises);
-      setParsedFiles(allParsedFiles);
+      // Process files in batches of 3 for optimal performance
+      const results = await processInBatches(
+        fileArray,
+        async (file): Promise<ParsedFile> => {
+          // Read file as ArrayBuffer
+          const arrayBuffer = await file.arrayBuffer();
+
+          // Parse Excel file
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          const sheets = workbook.SheetNames.map(sheetName => ({
+            sheetName,
+            data: XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]),
+          }));
+
+          return { fileName: file.name, sheets };
+        },
+        {
+          concurrency: 3,
+          onProgress: (completed) => {
+            setParseProgress(prev => ({
+              ...prev,
+              completed,
+              stage: 'parsing'
+            }));
+          }
+        }
+      );
+
+      setParsedFiles(results);
       setStatus('files_uploaded');
+
     } catch (error) {
-      console.error("Error parsing one or more files:", error);
-      setStatus('ready'); // Reset status on error
+      console.error("Error parsing files:", error);
+      setStatus('ready');
     }
   };
 
@@ -157,7 +185,12 @@ function App() {
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
 
-        {status === 'parsing' && <CircularProgress sx={{ mt: 4 }} />}
+        {status === 'parsing' && (
+          <>
+            <FileProgressIndicator progress={parseProgress} />
+            <CircularProgress sx={{ mt: 2 }} />
+          </>
+        )}
 
         {status === 'files_uploaded' && (
           <SheetSelector
