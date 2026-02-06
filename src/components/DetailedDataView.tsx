@@ -81,6 +81,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [includedRowIndices, setIncludedRowIndices] = useState<Set<number>>(new Set()); // Track rows to include in export
 
   // Load column order from localStorage on mount
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -264,13 +265,23 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
     return currentData;
   }, [filteredData, searchTerm, order, orderBy, columnMapping]);
 
-  // Calculate column totals
+  // Initialize all rows as included when data changes
+  useEffect(() => {
+    if (filteredAndSortedData.length > 0) {
+      setIncludedRowIndices(new Set(filteredAndSortedData.map((_, index) => index)));
+    }
+  }, [filteredAndSortedData.length]);
+
+  // Calculate column totals (only for included rows)
   const columnTotals = useMemo(() => {
     const totals: { [key: string]: number | string } = {};
     visibleHeaders.forEach(header => {
       let sum = 0;
       let isNumericColumn = true;
-      filteredAndSortedData.forEach(row => {
+      filteredAndSortedData.forEach((row, index) => {
+        // Skip non-included rows
+        if (!includedRowIndices.has(index)) return;
+
         let value;
         if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
           value = row[header.id];
@@ -288,32 +299,55 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
       totals[header.id] = isNumericColumn ? sum : '';
     });
     return totals;
-  }, [filteredAndSortedData, visibleHeaders, columnMapping]);
+  }, [filteredAndSortedData, visibleHeaders, columnMapping, includedRowIndices]);
 
 
   const handleExportCsv = () => {
     if (filteredAndSortedData.length > 0) {
-      const dataToExport = filteredAndSortedData.map(row => {
-        const newRow: { [key: string]: any } = {};
-        visibleHeaders.forEach(header => {
-          // Export using the actual column value
-          let value;
-          if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
-            value = row[header.id];
-          } else {
-            const actualName = columnMapping[header.id] || header.id;
-            value = getRowValue(row, header.id, actualName);
-          }
-          newRow[header.label] = value;
+      // Only export included rows
+      const dataToExport = filteredAndSortedData
+        .filter((_, index) => includedRowIndices.has(index))
+        .map(row => {
+          const newRow: { [key: string]: any } = {};
+          visibleHeaders.forEach(header => {
+            // Export using the actual column value
+            let value;
+            if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
+              value = row[header.id];
+            } else {
+              const actualName = columnMapping[header.id] || header.id;
+              value = getRowValue(row, header.id, actualName);
+            }
+            newRow[header.label] = value;
+          });
+          return newRow;
         });
-        return newRow;
-      });
       const ws = XLSX.utils.json_to_sheet(dataToExport);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "SelectedData");
       const fileName = selectedUniqueNames.length > 1 ? 'selected_data.csv' : `${selectedUniqueNames[0]}_data.csv`;
       XLSX.writeFile(wb, fileName);
     }
+  };
+
+  const handleToggleRowInclude = (index: number) => {
+    setIncludedRowIndices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllRows = () => {
+    setIncludedRowIndices(new Set(filteredAndSortedData.map((_, index) => index)));
+  };
+
+  const handleDeselectAllRows = () => {
+    setIncludedRowIndices(new Set());
   };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -496,21 +530,50 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
               </InputAdornment>
             ),
           }}
-          sx={{ width: '40%' }}
+          sx={{ width: '30%' }}
         />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleExportCsv}
-          disabled={filteredAndSortedData.length === 0}
-        >
-          Export as CSV
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            {includedRowIndices.size} of {filteredAndSortedData.length} rows selected
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleSelectAllRows}
+            disabled={filteredAndSortedData.length === 0}
+          >
+            Select All
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleDeselectAllRows}
+            disabled={includedRowIndices.size === 0}
+          >
+            Deselect All
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleExportCsv}
+            disabled={includedRowIndices.size === 0}
+          >
+            Export as CSV ({includedRowIndices.size})
+          </Button>
+        </Box>
       </Box>
       <TableContainer component={Paper} sx={{ flexGrow: 1, overflow: 'auto' }}>
         <Table stickyHeader aria-label="detailed data table">
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={includedRowIndices.size > 0 && includedRowIndices.size < filteredAndSortedData.length}
+                  checked={includedRowIndices.size === filteredAndSortedData.length && filteredAndSortedData.length > 0}
+                  onChange={() => includedRowIndices.size === filteredAndSortedData.length ? handleDeselectAllRows() : handleSelectAllRows()}
+                  inputProps={{ 'aria-label': 'select all rows' }}
+                />
+              </TableCell>
               {visibleHeaders.map((headCell, index) => (
                 <TableCell
                   key={headCell.id}
@@ -531,34 +594,36 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedData.map((row, index) => (
-              <TableRow hover key={index}>
-                {visibleHeaders.map((headCell, cellIndex) => {
-                  // For source columns, use direct access
-                  // For data columns, use the getRowValue helper
-                  let cellValue: any;
-                  if (headCell.id === '_sourceFileName' || headCell.id === '_sourceSheetName') {
-                    cellValue = row[headCell.id];
-                  } else {
-                    // Try to get value using the actual column name from header row
-                    const actualName = columnMapping[headCell.id] || headCell.id;
-                    cellValue = getRowValue(row, headCell.id, actualName);
-                  }
-                  return (
-                    <TableCell key={`${index}-${headCell.id}`} sx={{ borderRight: cellIndex < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
-                      {cellValue !== undefined && cellValue !== null ? String(cellValue) : ''}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-            {emptyRows > 0 && (
-              <TableRow style={{ height: (33) * emptyRows }}> {/* Adjusted height for dense table */}
-                <TableCell colSpan={visibleHeaders.length} sx={{ borderRight: 0 }} />
-              </TableRow>
-            )}
-            {/* Summary Row */}
+            {paginatedData.map((row, index) => {
+              const actualIndex = page * rowsPerPage + index;
+              const isIncluded = includedRowIndices.has(actualIndex);
+              return (<TableRow hover key={index} sx={{ opacity: isIncluded ? 1 : 0.5 }}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={isIncluded}
+                      onChange={() => handleToggleRowInclude(actualIndex)}
+                      inputProps={{ 'aria-label': `select row ${index + 1}` }}
+                    />
+                  </TableCell>
+                  {visibleHeaders.map((headCell, cellIndex) => {
+                    let cellValue: any;
+                    if (headCell.id === '_sourceFileName' || headCell.id === '_sourceSheetName') {
+                      cellValue = row[headCell.id];
+                    } else {
+                      const actualName = columnMapping[headCell.id] || headCell.id;
+                      cellValue = getRowValue(row, headCell.id, actualName);
+                    }
+                    return (<TableCell key={`${index}-${headCell.id}`} sx={{ borderRight: cellIndex < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+                        {cellValue !== undefined && cellValue !== null ? String(cellValue) : ''}
+                      </TableCell>);
+                    })}
+                </TableRow>);
+            })}
+            {emptyRows > 0 && (<TableRow style={{ height: (33) * emptyRows }}>
+                <TableCell colSpan={visibleHeaders.length + 1} sx={{ borderRight: 0 }} />
+              </TableRow>)}
             <TableRow sx={{ '& > td': { fontWeight: 'bold' } }}>
+              <TableCell />
               {visibleHeaders.map((headCell, index) => (
                 <TableCell key={`total-${headCell.id}`} align={index === 0 ? 'left' : headCell.numeric ? 'right' : 'left'} sx={{ borderRight: index < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
                   {index === 0 ? 'Total' : (typeof columnTotals[headCell.id] === 'number' ? (columnTotals[headCell.id] as number).toFixed(2) : columnTotals[headCell.id])}
