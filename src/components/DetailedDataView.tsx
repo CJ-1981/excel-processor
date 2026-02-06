@@ -15,6 +15,8 @@ interface DetailedDataViewProps {
   selectedUniqueNames: string[];
   onToggleFullScreen: () => void; // New prop
   isFullScreen: boolean; // New prop
+  columnVisibility: Record<string, boolean>;
+  setColumnVisibility: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }
 
 type Order = 'asc' | 'desc';
@@ -69,13 +71,12 @@ function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) 
 }
 
 
-const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, selectedUniqueNames, onToggleFullScreen, isFullScreen }) => {
+const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, selectedUniqueNames, onToggleFullScreen, isFullScreen, columnVisibility, setColumnVisibility }) => {
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({}); // New state for column visibility
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null); // For column selection menu
 
   const filteredData = useMemo(() => {

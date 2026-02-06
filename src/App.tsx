@@ -24,6 +24,9 @@ function App() {
   const [selectedUniqueNames, setSelectedUniqueNames] = useState<string[]>([]);
   const [isDetailedViewFullScreen, setIsDetailedViewFullScreen] = useState(false); // New state for full screen
 
+  // State for DetailedDataView that needs to persist across full-screen toggle
+  const [detailedViewColumnVisibility, setDetailedViewColumnVisibility] = useState<Record<string, boolean>>({});
+
   // New handler to parse multiple files
   const handleFilesUpload = async (files: FileList) => {
     setStatus('parsing');
@@ -128,6 +131,8 @@ function App() {
       selectedUniqueNames={selectedUniqueNames}
       onToggleFullScreen={handleToggleDetailedViewFullScreen} // Pass the toggle function
       isFullScreen={isDetailedViewFullScreen} // Pass current full screen state
+      columnVisibility={detailedViewColumnVisibility}
+      setColumnVisibility={setDetailedViewColumnVisibility}
     />
   );
 
