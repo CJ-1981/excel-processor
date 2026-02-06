@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -98,7 +98,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
     // Debug: log what we're extracting
     const names = data.map(row => row[nameColumn]).filter(Boolean);
 
-    // Log for debugging
+    // Log for debugging (only log when nameColumn changes)
     console.log('UniqueNameList Debug:');
     console.log('- Selected column:', nameColumn);
     console.log('- Total rows:', data.length);
@@ -106,11 +106,6 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
 
     return Array.from(new Set(names));
   }, [data, nameColumn]);
-
-  useEffect(() => {
-    // Clear selection if the underlying data changes
-    onNamesSelect([]);
-  }, [uniqueNames]);
 
 
   const handleRequestSort = (_event: React.MouseEvent<unknown>, property: string) => {
