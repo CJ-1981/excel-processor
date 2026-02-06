@@ -137,12 +137,14 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, selec
   }, [uniqueNames, selectedNames, searchTerm, order]);
 
 
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      onNamesSelect(displayedNames); // Select all currently displayed
-      return;
+  const handleSelectAllClick = (_event: React.ChangeEvent<HTMLInputElement>) => {
+    // If any names are selected (partial or full), clicking clears the selection
+    // If no names are selected, clicking selects all
+    if (selectedNames.length > 0) {
+      onNamesSelect([]);
+    } else {
+      onNamesSelect(displayedNames);
     }
-    onNamesSelect([]);
   };
 
   const handleClick = (_event: React.MouseEvent<unknown>, name: string) => {
