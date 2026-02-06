@@ -80,7 +80,16 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [columnOrder, setColumnOrder] = useState<string[]>([]); // Store custom column order
+
+  // Load column order from localStorage on mount
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('excel-processor-column-order');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const filteredData = useMemo(() => {
     if (!nameColumn || selectedUniqueNames.length === 0 || data.length === 0) {
@@ -255,6 +264,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
     // Update column order with the new sequence
     const newOrder = items.map(item => item.id);
     setColumnOrder(newOrder);
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('excel-processor-column-order', JSON.stringify(newOrder));
+    } catch (error) {
+      console.warn('Could not save column order to localStorage:', error);
+    }
   };
 
   const allColumnsSelected = allAvailableHeaders.length > 0 &&

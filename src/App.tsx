@@ -33,7 +33,28 @@ function App() {
   const [isDetailedViewFullScreen, setIsDetailedViewFullScreen] = useState(false); // New state for full screen
 
   // State for DetailedDataView that needs to persist across full-screen toggle
-  const [detailedViewColumnVisibility, setDetailedViewColumnVisibility] = useState<Record<string, boolean>>({});
+  // Load from localStorage on mount
+  const [detailedViewColumnVisibility, setDetailedViewColumnVisibility] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('excel-processor-column-visibility');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Wrapper to save column visibility to localStorage whenever it changes
+  const handleSetColumnVisibility = (newVisibility: React.SetStateAction<Record<string, boolean>>) => {
+    setDetailedViewColumnVisibility((prev) => {
+      const updated = typeof newVisibility === 'function' ? newVisibility(prev) : newVisibility;
+      try {
+        localStorage.setItem('excel-processor-column-visibility', JSON.stringify(updated));
+      } catch (error) {
+        console.warn('Could not save column visibility to localStorage:', error);
+      }
+      return updated;
+    });
+  };
 
   /**
    * Parse multiple Excel files using batch processing with progress tracking.
@@ -157,10 +178,10 @@ function App() {
       data={mergedData}
       nameColumn={selectedNameColumn}
       selectedUniqueNames={selectedUniqueNames}
-      onToggleFullScreen={handleToggleDetailedViewFullScreen} // Pass the toggle function
-      isFullScreen={isDetailedViewFullScreen} // Pass current full screen state
+      onToggleFullScreen={handleToggleDetailedViewFullScreen}
+      isFullScreen={isDetailedViewFullScreen}
       columnVisibility={detailedViewColumnVisibility}
-      setColumnVisibility={setDetailedViewColumnVisibility}
+      setColumnVisibility={handleSetColumnVisibility}
     />
   );
 
