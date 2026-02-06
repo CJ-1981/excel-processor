@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FormControl, InputLabel, Select, MenuItem, Box, Typography } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, Box, Typography, ListSubheader } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 
 interface ColumnSelectorProps {
@@ -7,38 +7,65 @@ interface ColumnSelectorProps {
   onColumnSelect: (columnName: string) => void;
 }
 
+interface ColumnOption {
+  original: string;
+  display: string;
+  rowIndex: number;
+}
+
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect }) => {
-  const [columns, setColumns] = useState<Array<{ original: string; display: string }>>([]);
+  const [columns, setColumns] = useState<ColumnOption[]>([]);
   const [selectedColumn, setSelectedColumn] = useState<string>('');
 
   useEffect(() => {
     if (data.length > 0) {
-      const rawHeaders = Object.keys(data[0]);
-      const processedHeaders = rawHeaders.map((header, index) => {
-        if (header.startsWith('__EMPTY_')) {
-          // Convert index to Excel column letter (0 -> A, 1 -> B, etc.)
-          let colIdx = parseInt(header.replace('__EMPTY_', ''), 10);
-          if (isNaN(colIdx)) { // Handle __EMPTY case where index is 0
-            colIdx = index;
-          }
-          let colLetter = '';
-          let temp = colIdx + 1; // 1-based index
-          while (temp > 0) {
-            colLetter = String.fromCharCode(65 + (temp - 1) % 26) + colLetter;
-            temp = Math.floor((temp - 1) / 26);
-          }
-          return { original: header, display: colLetter || header };
-        }
-        return { original: header, display: header };
-      });
-      setColumns(processedHeaders);
+      // Scan first 3 rows to handle padding/empty rows
+      const rowsToScan = Math.min(3, data.length);
+      const allColumns: ColumnOption[] = [];
 
-      if (processedHeaders.length > 0) {
-        setSelectedColumn(processedHeaders[0].original); // Select the first original column name
-        onColumnSelect(processedHeaders[0].original);
+      for (let rowIdx = 0; rowIdx < rowsToScan; rowIdx++) {
+        const row = data[rowIdx];
+        const rawHeaders = Object.keys(row);
+
+        rawHeaders.forEach((header) => {
+          // Check if we haven't already added this column from a previous row
+          const alreadyExists = allColumns.some(col => col.original === header);
+          if (!alreadyExists) {
+            let display = header;
+
+            // Convert __EMPTY_X headers to Excel column letters
+            if (header.startsWith('__EMPTY_')) {
+              let colIdx = parseInt(header.replace('__EMPTY_', ''), 10);
+              if (isNaN(colIdx)) {
+                colIdx = rawHeaders.indexOf(header);
+              }
+              let colLetter = '';
+              let temp = colIdx + 1;
+              while (temp > 0) {
+                colLetter = String.fromCharCode(65 + (temp - 1) % 26) + colLetter;
+                temp = Math.floor((temp - 1) / 26);
+              }
+              display = colLetter || header;
+            }
+
+            allColumns.push({
+              original: header,
+              display: display,
+              rowIndex: rowIdx + 1 // 1-based row number
+            });
+          }
+        });
+      }
+
+      setColumns(allColumns);
+
+      // Auto-select first column from first non-empty row
+      if (allColumns.length > 0) {
+        setSelectedColumn(allColumns[0].original);
+        onColumnSelect(allColumns[0].original);
       }
     }
-  }, [data]);
+  }, [data, onColumnSelect]);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const originalColumnName = event.target.value as string;
@@ -46,13 +73,25 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     onColumnSelect(originalColumnName);
   };
 
+  // Group columns by row
+  const groupedColumns = columns.reduce((acc, column) => {
+    if (!acc[column.rowIndex]) {
+      acc[column.rowIndex] = [];
+    }
+    acc[column.rowIndex].push(column);
+    return acc;
+  }, {} as Record<number, ColumnOption[]>);
+
   if (data.length === 0) {
-    return null; // Or some loading indicator
+    return null;
   }
 
   return (
     <Box sx={{ mt: 3, width: '100%' }}>
       <Typography variant="h6" gutterBottom>Select Column for Names</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        Scanning first 3 rows for column names
+      </Typography>
       <FormControl fullWidth>
         <InputLabel id="column-select-label">Select Name Column</InputLabel>
         <Select
@@ -64,15 +103,22 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
           MenuProps={{
             PaperProps: {
               sx: {
-                maxHeight: 600, // Show at least 12-15 items (each item ~40-48px)
+                maxHeight: 600,
               }
             }
           }}
         >
-          {columns.map((column) => (
-            <MenuItem key={column.original} value={column.original}>
-              {column.display}
-            </MenuItem>
+          {Object.entries(groupedColumns).map(([rowNum, cols]) => (
+            <div key={rowNum}>
+              <ListSubheader sx={{ bgcolor: 'grey.100', fontWeight: 'bold' }}>
+                Row {rowNum}
+              </ListSubheader>
+              {cols.map((column) => (
+                <MenuItem key={column.original} value={column.original}>
+                  {column.display}
+                </MenuItem>
+              ))}
+            </div>
           ))}
         </Select>
       </FormControl>
