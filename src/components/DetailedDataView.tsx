@@ -257,7 +257,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, s
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleColumnMenuClose}
-            PaperProps={{ style: { maxHeight: 300 } }}
+            PaperProps={{
+              sx: {
+                maxHeight: 600, // Show at least 12-15 column options
+              }
+            }}
           >
             <MenuItem dense onClick={handleSelectAllColumns} disabled={allColumnsSelected}>
               <Typography variant="body2">Select All</Typography>
