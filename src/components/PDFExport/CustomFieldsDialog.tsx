@@ -102,6 +102,16 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     if (amountColumn && context.data.length > 0) {
       // Filter data to only include selected rows
       const selectedData = context.data.filter((_, idx) => context.includedIndices.has(idx));
+
+      console.log('CustomFieldsDialog - Aggregating data:', {
+        totalDataRows: context.data.length,
+        includedIndices: context.includedIndices.size,
+        selectedDataRows: selectedData.length,
+        amountColumn,
+        sampleRow: selectedData[0],
+        sampleFileName: selectedData[0]?._sourceFileName,
+      });
+
       const aggregation = aggregateByMonth(selectedData, amountColumn);
 
       setMonthlyAmounts({
