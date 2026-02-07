@@ -8,8 +8,11 @@ import ClearIcon from '@mui/icons-material/Clear';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as XLSX from 'xlsx';
+import { PDFExportDialog } from './PDFExport';
+import type { PDFGenerationContext } from '../types';
 
 interface DetailedDataViewProps {
   data: any[];
@@ -82,7 +85,18 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [includedRowIndices, setIncludedRowIndices] = useState<Set<number>>(new Set()); // Track rows to include in export
-  const [autoDeselectZeros, setAutoDeselectZeros] = useState<boolean>(true); // Auto-deselect rows with zero values
+
+  // Load auto-deselect preference from localStorage
+  const [autoDeselectZeros, setAutoDeselectZeros] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('excel-processor-auto-deselect-zeros');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [showPDFDialog, setShowPDFDialog] = useState<boolean>(false); // PDF export dialog state
 
   // Load column order from localStorage on mount
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -205,6 +219,15 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
       setColumnVisibility(initialVisibility);
     }
   }, [allAvailableHeaders, setColumnVisibility]);
+
+  // Persist auto-deselect zeros preference to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('excel-processor-auto-deselect-zeros', JSON.stringify(autoDeselectZeros));
+    } catch (error) {
+      console.warn('Could not save auto-deselect preference to localStorage:', error);
+    }
+  }, [autoDeselectZeros]);
 
 
   // Headers that are currently visible
@@ -368,6 +391,18 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
       XLSX.writeFile(wb, fileName);
     }
   };
+
+  const preparePDFContext = (): PDFGenerationContext => ({
+    data: filteredAndSortedData,
+    visibleHeaders: visibleHeaders,
+    includedIndices: includedRowIndices,
+    columnTotals: Object.fromEntries(
+      Object.entries(columnTotals).filter(([_, value]) => typeof value === 'number')
+    ) as Record<string, number>,
+    selectedNames: selectedUniqueNames,
+    sourceFiles: Array.from(new Set(filteredAndSortedData.map(row => row._sourceFileName).filter(Boolean))),
+    sourceSheets: Array.from(new Set(filteredAndSortedData.map(row => row._sourceSheetName).filter(Boolean))),
+  });
 
   const handleToggleRowInclude = (index: number) => {
     setIncludedRowIndices(prev => {
@@ -612,6 +647,15 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
           >
             Export as CSV ({includedRowIndices.size})
           </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => setShowPDFDialog(true)}
+            disabled={includedRowIndices.size === 0}
+            startIcon={<PictureAsPdfIcon />}
+          >
+            PDF ({includedRowIndices.size})
+          </Button>
         </Box>
       </Box>
       <TableContainer component={Paper} sx={{ flexGrow: 1, overflow: 'auto' }}>
@@ -693,6 +737,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+      />
+      <PDFExportDialog
+        open={showPDFDialog}
+        onClose={() => setShowPDFDialog(false)}
+        context={preparePDFContext()}
       />
     </Box>
   );
