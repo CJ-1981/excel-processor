@@ -218,16 +218,16 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       <DialogContent sx={{ pb: 2 }}>
         {/* Section 1: Donor Information */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Spender Informationen
+          Donor Information
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           {context.selectedNames.length > 1 ? (
             <FormControl fullWidth sx={{ mb: 2 }} size="small">
-              <InputLabel id="donor-name-label">Spender Name</InputLabel>
+              <InputLabel id="donor-name-label">Donor Name</InputLabel>
               <Select
                 labelId="donor-name-label"
                 value={donorName}
-                label="Spender Name"
+                label="Donor Name"
                 onChange={handleDonorNameChange}
               >
                 {context.selectedNames.map((name) => (
@@ -240,14 +240,14 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           ) : (
             <FormField
               type="text"
-              label="Spender Name"
+              label="Donor Name"
               value={donorName}
               onChange={setDonorName}
             />
           )}
           <FormField
             type="text"
-            label="Adresse"
+            label="Address"
             value={donorAddress}
             onChange={setDonorAddress}
             sx={{ mb: 0 }}
@@ -256,15 +256,15 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 2: Amount Column Selection */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Spaltenauswahl
+          Column Selection
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormControl fullWidth size="small">
-            <InputLabel id="amount-column-label">Betrag Spalte</InputLabel>
+            <InputLabel id="amount-column-label">Amount Column</InputLabel>
             <Select
               labelId="amount-column-label"
               value={amountColumn}
-              label="Betrag Spalte"
+              label="Amount Column"
               onChange={handleAmountColumnChange}
             >
               {numericColumns.map((col) => (
@@ -275,13 +275,13 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             </Select>
           </FormControl>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Wählen Sie die Spalte, die die Spendenbeträge enthält
+            Select the column containing donation amounts
           </Typography>
         </Paper>
 
         {/* Section 3: Monthly Amounts */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Monatliche Beträge (EUR)
+          Monthly Amounts (EUR)
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -301,26 +301,26 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 4: Totals */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Zusammenfassung
+          Summary
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormField
             type="number"
-            label="Gesamtbetrag (EUR)"
+            label="Total Amount (EUR)"
             value={totalAmount}
             onChange={setTotalAmount}
             fullWidth
           />
           <FormField
             type="text"
-            label="Betrag in Worten"
+            label="Amount in Words"
             value={amountInWords}
             onChange={setAmountInWords}
             fullWidth
           />
           <FormField
             type="text"
-            label="Zeitraum"
+            label="Period"
             value={donationPeriod}
             onChange={setDonationPeriod}
             sx={{ mb: 0 }}
@@ -329,31 +329,31 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 5: Tax Options */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Steueroptionen
+          Tax Options
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormField
             type="checkbox"
-            label="Verzicht auf Erstattung (Ja)"
+            label="Waiver of Reimbursement (Yes)"
             value={verzichtJa}
             onChange={setVerzichtJa}
           />
           <FormField
             type="checkbox"
-            label="Verzicht auf Erstattung (Nein)"
+            label="Waiver of Reimbursement (No)"
             value={verzichtNein}
             onChange={setVerzichtNein}
           />
           <Divider sx={{ my: 1 }} />
           <FormField
             type="checkbox"
-            label="Steuerbefreiung nach Freistellungsbescheid"
+            label="Tax Exemption According to Exemption Notice"
             value={taxOption1}
             onChange={setTaxOption1}
           />
           <FormField
             type="checkbox"
-            label="Vorläufige Bescheinigung (Standard)"
+            label="Preliminary Certificate (Standard)"
             value={taxOption2}
             onChange={setTaxOption2}
           />
@@ -361,13 +361,13 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             <>
               <FormField
                 type="text"
-                label="Steuernummer 1"
+                label="Tax Number 1"
                 value={taxNumber1}
                 onChange={setTaxNumber1}
               />
               <FormField
                 type="text"
-                label="Datum 1"
+                label="Date 1"
                 value={taxDate1}
                 onChange={setTaxDate1}
                 sx={{ mb: 0 }}
@@ -376,7 +376,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           )}
           <FormField
             type="checkbox"
-            label="Kein Mitgliedsbeitrag"
+            label="Not a Membership Fee"
             value={notMembership}
             onChange={setNotMembership}
           />
@@ -384,18 +384,18 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 6: Signature */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Unterschrift
+          Signature
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormField
             type="text"
-            label="Ort"
+            label="Location"
             value={signatureLocation}
             onChange={setSignatureLocation}
           />
           <FormField
             type="text"
-            label="Datum"
+            label="Date"
             value={issueDate}
             onChange={setIssueDate}
             sx={{ mb: 0 }}
@@ -404,9 +404,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Abbrechen</Button>
+        <Button onClick={onClose}>Cancel</Button>
         <Button variant="contained" onClick={handleConfirm}>
-          PDF Exportieren
+          Export PDF
         </Button>
       </DialogActions>
     </Dialog>

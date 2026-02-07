@@ -29,7 +29,7 @@ export function aggregateByMonth(
 ): MonthlyAggregation {
   // Initialize monthly totals
   const monthlyTotals = new Array(12).fill(0);
-  let year = new Date().getFullYear();
+  let year: number | null = null;
   let minDate: Date | null = null;
   let maxDate: Date | null = null;
 
@@ -50,8 +50,10 @@ export function aggregateByMonth(
       if (minDate === null || date < minDate) minDate = date;
       if (maxDate === null || date > maxDate) maxDate = date;
 
-      // Use the most recent year
-      if (yearNum > year) year = yearNum;
+      // Use the year from filenames (should be consistent across files)
+      if (year === null) {
+        year = yearNum;
+      }
 
       // Add amount to corresponding month
       const amount = parseFloat(row[amountColumn]) || 0;
@@ -66,11 +68,13 @@ export function aggregateByMonth(
 
   // Generate date range string
   let dateRange = '';
-  if (minDate && maxDate) {
+  if (minDate && maxDate && year !== null) {
     const startMonth = getGermanMonthName(minDate.getMonth());
     const endMonth = getGermanMonthName(maxDate.getMonth());
     dateRange = `${startMonth} - ${endMonth} ${year}`;
   } else {
+    // Fallback to current year if no dates found
+    year = year !== null ? year : new Date().getFullYear();
     dateRange = `Jan. - Dez. ${year}`;
   }
 
