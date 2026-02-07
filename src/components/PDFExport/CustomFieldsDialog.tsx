@@ -67,6 +67,13 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   // Initialize data when dialog opens
   useEffect(() => {
     if (open) {
+      console.log('CustomFieldsDialog - Initializing:', {
+        visibleHeadersCount: context.visibleHeaders.length,
+        visibleHeaders: context.visibleHeaders,
+        dataRowCount: context.data.length,
+        sampleDataRow: context.data[0],
+      });
+
       // Get numeric columns from visible headers
       // Filter to only include columns that have numeric values in the data
       const numericCols: Array<{id: string, label: string}> = [];
@@ -75,11 +82,15 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         // Skip metadata columns
         if (header.id.startsWith('_')) continue;
 
+        console.log('Checking column:', header.id, header.label);
+
         // Check if this column has numeric values in any row
         for (const row of context.data) {
           const value = row[header.id];
+          console.log('  Row value:', { id: header.id, value, type: typeof value });
           if (value !== null && value !== undefined && value !== '') {
             if (typeof value === 'number') {
+              console.log('  -> Found numeric column:', header.label);
               numericCols.push({ id: header.id, label: header.label });
               break;
             }
@@ -88,6 +99,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         }
       }
 
+      console.log('Final numeric columns:', numericCols);
       setNumericColumns(numericCols);
 
       // Auto-select first numeric column (only if not already set)
