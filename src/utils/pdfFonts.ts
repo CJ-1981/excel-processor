@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 let koreanFontLoaded = false;
 
 /**
- * Load Korean font into jsPDF from CDN
+ * Load Korean font into jsPDF from local public folder
  * Uses Noto Sans KR which supports Korean characters
  */
 export async function loadKoreanFont(doc: jsPDF): Promise<void> {
@@ -17,50 +17,33 @@ export async function loadKoreanFont(doc: jsPDF): Promise<void> {
   }
 
   try {
-    // Try multiple CDN sources for Noto Sans KR font
-    const fontUrls = [
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/Korean/NotoSansKR-Regular.otf',
-      'https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/OTF/Korean/NotoSansKR-Regular.otf',
-    ];
+    // Load font from public folder (bundled with app)
+    const fontUrl = '/fonts/NotoSansKR-Regular.ttf';
 
-    let fontLoaded = false;
-    for (const fontUrl of fontUrls) {
-      try {
-        console.log('Loading Korean font from:', fontUrl);
+    console.log('Loading Korean font from:', fontUrl);
 
-        const response = await fetch(fontUrl);
-        if (!response.ok) {
-          console.log('  -> Failed, trying next URL...');
-          continue;
-        }
-
-        const fontArrayBuffer = await response.arrayBuffer();
-
-        // Convert to base64
-        const fontBase64 = arrayBufferToBase64(fontArrayBuffer);
-
-        // Add font to jsPDF virtual file system
-        doc.addFileToVFS('NotoSansKR-Regular.otf', fontBase64);
-        doc.addFont('NotoSansKR-Regular.otf', 'NotoSansKR', 'normal');
-
-        koreanFontLoaded = true;
-        fontLoaded = true;
-        console.log('Korean font loaded successfully');
-        break;
-      } catch (err) {
-        console.log('  -> Error, trying next URL...', err);
-        continue;
-      }
+    const response = await fetch(fontUrl);
+    if (!response.ok) {
+      throw new Error(`Font fetch failed: ${response.status} ${response.statusText}`);
     }
 
-    if (!fontLoaded) {
-      throw new Error('All font URLs failed');
-    }
+    const fontArrayBuffer = await response.arrayBuffer();
+
+    // Convert to base64
+    const fontBase64 = arrayBufferToBase64(fontArrayBuffer);
+
+    // Add font to jsPDF virtual file system
+    doc.addFileToVFS('NotoSansKR-Regular.ttf', fontBase64);
+    doc.addFont('NotoSansKR-Regular.ttf', 'NotoSansKR', 'normal');
+
+    koreanFontLoaded = true;
+    console.log('Korean font loaded successfully');
 
     // Set default font to Korean font
     doc.setFont('NotoSansKR');
   } catch (error) {
     console.warn('Failed to load Korean font:', error);
+    console.info('Make sure public/fonts/NotoSansKR-Regular.ttf exists');
     console.info('Korean characters will not render correctly in PDF');
   }
 }
