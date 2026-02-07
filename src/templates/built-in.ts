@@ -3,7 +3,7 @@ import type { PDFTemplate } from '../types';
 export const BUILT_IN_TEMPLATES: PDFTemplate[] = [
   {
     id: 'german-donation-receipt',
-    name: '2025년도 헌금 영수증',
+    name: '우리교회 헌금 영수증',
     description: 'created on 20260207',
     page: {
       orientation: 'portrait',
