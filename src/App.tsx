@@ -207,7 +207,7 @@ function App() {
           Excel Data Processor
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          v1.0.1 • Last updated: {__BUILD_TIME__}
+          v1.1.0 • Last updated: {__BUILD_TIME__}
         </Typography>
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
