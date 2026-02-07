@@ -71,16 +71,18 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       const numCols = getNumericColumns(context.data);
       setNumericColumns(numCols);
 
-      // Auto-select first numeric column
+      // Auto-select first numeric column (only if not already set)
       if (numCols.length > 0 && !amountColumn) {
         setAmountColumn(numCols[0]);
       }
 
-      // Set donor name from selected names
-      if (context.selectedNames.length === 1) {
-        setDonorName(context.selectedNames[0]);
-      } else if (context.selectedNames.length > 1) {
-        setDonorName(context.selectedNames[0]); // Default to first name
+      // Set donor name from selected names (only if not already set)
+      if (!donorName) {
+        if (context.selectedNames.length === 1) {
+          setDonorName(context.selectedNames[0]);
+        } else if (context.selectedNames.length > 1) {
+          setDonorName(context.selectedNames[0]); // Default to first name
+        }
       }
 
       // Set today's date
@@ -93,12 +95,14 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setTaxOption1(false);
       setNotMembership(true);
     }
-  }, [open, context.data, context.selectedNames, amountColumn]);
+  }, [open, context.data, context.selectedNames]);
 
   // Run monthly aggregation when amount column changes
   useEffect(() => {
     if (amountColumn && context.data.length > 0) {
-      const aggregation = aggregateByMonth(context.data, amountColumn);
+      // Filter data to only include selected rows
+      const selectedData = context.data.filter((_, idx) => context.includedIndices.has(idx));
+      const aggregation = aggregateByMonth(selectedData, amountColumn);
 
       setMonthlyAmounts({
         jan: aggregation.jan,
@@ -118,7 +122,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setTotalAmount(aggregation.total);
       setDonationPeriod(aggregation.dateRange);
     }
-  }, [amountColumn, context.data]);
+  }, [amountColumn, context.data, context.includedIndices]);
 
   // Update amount in words when total changes
   useEffect(() => {
