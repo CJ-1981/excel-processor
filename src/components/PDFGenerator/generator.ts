@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as numberToWords from 'number-to-words';
+import { loadKoreanFont, containsKorean, setFontForText, isKoreanFontLoaded } from '../../utils/pdfFonts';
 import type {
   PDFTemplate,
   PDFGenerationContext,
@@ -24,6 +25,9 @@ export async function generatePDF(
     orientation: template.page.orientation,
     format: template.page.format,
   });
+
+  // Load Korean font for proper character rendering
+  await loadKoreanFont(doc);
 
   let yPosition = template.page.margins.top;
 
@@ -142,7 +146,7 @@ function renderHeader(
 
   const title = substituteVariables(section.title, context);
   doc.setFontSize(section.fontSize);
-  doc.setFont('helvetica', 'bold');
+  setFontForText(doc, title, true);
 
   let xPosition: number;
   switch (section.alignment) {
@@ -164,7 +168,7 @@ function renderHeader(
   if (section.subtitle) {
     const subtitle = substituteVariables(section.subtitle, context);
     doc.setFontSize(section.fontSize * 0.7);
-    doc.setFont('helvetica', 'normal');
+    setFontForText(doc, subtitle, false);
 
     switch (section.alignment) {
       case 'center':
@@ -193,7 +197,7 @@ function renderText(
   const content = substituteVariables(section.content, context);
 
   doc.setFontSize(section.fontSize);
-  doc.setFont('helvetica', 'normal');
+  setFontForText(doc, content, false);
 
   let xPosition: number;
   switch (section.alignment) {
@@ -284,6 +288,11 @@ async function renderTable(
       });
     });
 
+  // Check if data contains Korean text
+  const hasKorean = body.some(row =>
+    row.some(cell => containsKorean(String(cell)))
+  ) || headers.some(h => containsKorean(h));
+
   // Generate table
   autoTable(doc, {
     head: [headers],
@@ -294,6 +303,7 @@ async function renderTable(
       cellPadding: section.options.cellPadding,
       lineColor: hexToRgb(section.options.borderColor),
       lineWidth: section.options.borderWidth,
+      font: hasKorean && isKoreanFontLoaded() ? 'NotoSansKR' : 'helvetica',
     },
     headStyles: {
       fillColor: hexToRgb(section.options.headerBackgroundColor),
@@ -323,6 +333,11 @@ async function renderCustomDataTable(
     )
   );
 
+  // Check if data contains Korean text
+  const hasKorean = body.some(row =>
+    row.some(cell => containsKorean(String(cell)))
+  ) || (section.headers && section.headers.some(h => containsKorean(h)));
+
   // Generate table
   autoTable(doc, {
     head: section.options.showHeaders ? [section.headers] : undefined,
@@ -333,6 +348,7 @@ async function renderCustomDataTable(
       cellPadding: section.options.cellPadding,
       lineColor: hexToRgb(section.options.borderColor),
       lineWidth: section.options.borderWidth,
+      font: hasKorean && isKoreanFontLoaded() ? 'NotoSansKR' : 'helvetica',
     },
     headStyles: section.options.showHeaders ? {
       fillColor: hexToRgb(section.options.headerBackgroundColor),
@@ -357,14 +373,14 @@ function renderLabeledField(
   const separator = section.separator ?? ': ';
 
   doc.setFontSize(section.labelFontSize ?? section.fontSize ?? 10);
-  doc.setFont('helvetica', section.boldLabel !== false ? 'bold' : 'normal');
+  setFontForText(doc, label, section.boldLabel !== false);
   doc.text(label, section.x, section.y);
 
   const labelWidth = section.labelWidth ?? doc.getTextWidth(label + separator);
   const valueX = section.x + labelWidth;
 
   doc.setFontSize(section.fontSize ?? 10);
-  doc.setFont('helvetica', section.boldValue === true ? 'bold' : 'normal');
+  setFontForText(doc, value, section.boldValue === true);
   doc.text(separator + value, valueX, section.y);
 }
 
@@ -375,7 +391,7 @@ function renderTextBlock(
 ): void {
   const content = substituteVariables(section.content, context);
   doc.setFontSize(section.fontSize ?? 10);
-  doc.setFont('helvetica', section.bold === true ? 'bold' : 'normal');
+  setFontForText(doc, content, section.bold === true);
 
   const textOptions: any = { maxWidth: section.width };
   if (section.align === 'center') textOptions.align = 'center';
@@ -414,7 +430,7 @@ function renderCheckbox(
 
   // Draw label with text wrapping
   doc.setFontSize(section.fontSize ?? 10);
-  doc.setFont('helvetica', 'normal');
+  setFontForText(doc, label, false);
 
   // Split text into lines that fit within maxTextWidth
   const lines = doc.splitTextToSize(label, maxTextWidth);
@@ -472,6 +488,7 @@ function renderFooter(
 
     if (section.left) {
       const leftText = substituteVariables(section.left, context);
+      setFontForText(doc, leftText, false);
       doc.text(leftText, 10, footerY, { align: 'left' });
     }
 
@@ -480,11 +497,13 @@ function renderFooter(
       centerText = centerText
         .replace(/\{\{pageNum\}\}/g, String(i))
         .replace(/\{\{totalPages\}\}/g, String(pageCount));
+      setFontForText(doc, centerText, false);
       doc.text(centerText, doc.internal.pageSize.getWidth() / 2, footerY, { align: 'center' });
     }
 
     if (section.right) {
       const rightText = substituteVariables(section.right, context);
+      setFontForText(doc, rightText, false);
       doc.text(rightText, doc.internal.pageSize.getWidth() - 10, footerY, { align: 'right' });
     }
   }
