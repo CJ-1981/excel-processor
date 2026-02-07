@@ -27,25 +27,18 @@ export function aggregateByMonth(
   amountColumn: string,
   datePattern: RegExp = /(\d{8})/
 ): MonthlyAggregation {
-  console.log('aggregateByMonth called with:', { dataLength: data.length, amountColumn });
-
   // Initialize monthly totals
   const monthlyTotals = new Array(12).fill(0);
   let year = new Date().getFullYear();
   let minDate: Date | null = null;
   let maxDate: Date | null = null;
-  let rowsWithDates = 0;
-  let rowsWithoutDates = 0;
 
   // Process each data row
   for (const row of data) {
     const fileName = row._sourceFileName || '';
     const match = fileName.match(datePattern);
 
-    console.log('Processing row:', { fileName, hasDate: !!match, amount: row[amountColumn] });
-
     if (match) {
-      rowsWithDates++;
       const dateStr = match[1];
       const yearNum = parseInt(dateStr.substring(0, 4), 10);
       const monthNum = parseInt(dateStr.substring(4, 6), 10) - 1; // 0-indexed
@@ -65,14 +58,8 @@ export function aggregateByMonth(
       if (monthNum >= 0 && monthNum < 12) {
         monthlyTotals[monthNum] += amount;
       }
-    } else {
-      rowsWithoutDates++;
-      // Row without date in filename - skip it
-      console.warn('Skipping row without date in filename:', fileName);
     }
   }
-
-  console.log('Aggregation result:', { rowsWithDates, rowsWithoutDates, monthlyTotals });
 
   // Calculate total
   const total = monthlyTotals.reduce((sum, val) => sum + val, 0);

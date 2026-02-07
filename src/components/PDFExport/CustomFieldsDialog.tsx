@@ -67,13 +67,6 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   // Initialize data when dialog opens
   useEffect(() => {
     if (open) {
-      console.log('CustomFieldsDialog - Initializing:', {
-        visibleHeadersCount: context.visibleHeaders.length,
-        visibleHeaders: context.visibleHeaders,
-        dataRowCount: context.data.length,
-        sampleDataRow: context.data[0],
-      });
-
       // Get numeric columns from visible headers
       // Filter to only include columns that have numeric values in the data
       const numericCols: Array<{id: string, label: string}> = [];
@@ -83,15 +76,11 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         // __EMPTY columns are valid data columns from Excel
         if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') continue;
 
-        console.log('Checking column:', header.id, header.label);
-
         // Check if this column has numeric values in any row
         for (const row of context.data) {
           const value = row[header.id];
-          console.log('  Row value:', { id: header.id, value, type: typeof value });
           if (value !== null && value !== undefined && value !== '') {
             if (typeof value === 'number') {
-              console.log('  -> Found numeric column:', header.label);
               numericCols.push({ id: header.id, label: header.label });
               break;
             }
@@ -100,7 +89,6 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         }
       }
 
-      console.log('Final numeric columns:', numericCols);
       setNumericColumns(numericCols);
 
       // Auto-select first numeric column (only if not already set)
@@ -141,16 +129,6 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     if (amountColumn && context.data.length > 0) {
       // Filter data to only include selected rows
       const selectedData = context.data.filter((_, idx) => context.includedIndices.has(idx));
-
-      console.log('CustomFieldsDialog - Aggregating data:', {
-        totalDataRows: context.data.length,
-        includedIndices: context.includedIndices.size,
-        selectedDataRows: selectedData.length,
-        amountColumn,
-        sampleRow: selectedData[0],
-        sampleFileName: selectedData[0]?._sourceFileName,
-      });
-
       const aggregation = aggregateByMonth(selectedData, amountColumn);
 
       setMonthlyAmounts({

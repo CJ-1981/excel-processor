@@ -1,51 +1,20 @@
 /**
  * Korean font utilities for jsPDF
- * Loads and registers Korean fonts for proper character rendering
+ * NOTE: Korean font support is disabled due to font loading limitations
+ * Korean characters will appear as garbled text in PDFs
  */
 
 import jsPDF from 'jspdf';
 
-let koreanFontLoaded = false;
+const koreanFontLoaded = false;
 
 /**
- * Load Korean font into jsPDF from local public folder
- * Uses Noto Sans KR which supports Korean characters
+ * Load Korean font - NOOP (disabled)
+ * Korean font loading is not supported due to CORS and bundling limitations
  */
-export async function loadKoreanFont(doc: jsPDF): Promise<void> {
-  if (koreanFontLoaded) {
-    return;
-  }
-
-  try {
-    // Load font from public folder (bundled with app)
-    const fontUrl = '/fonts/NotoSansKR-Regular.ttf';
-
-    console.log('Loading Korean font from:', fontUrl);
-
-    const response = await fetch(fontUrl);
-    if (!response.ok) {
-      throw new Error(`Font fetch failed: ${response.status} ${response.statusText}`);
-    }
-
-    const fontArrayBuffer = await response.arrayBuffer();
-
-    // Convert to base64
-    const fontBase64 = arrayBufferToBase64(fontArrayBuffer);
-
-    // Add font to jsPDF virtual file system
-    doc.addFileToVFS('NotoSansKR-Regular.ttf', fontBase64);
-    doc.addFont('NotoSansKR-Regular.ttf', 'NotoSansKR', 'normal');
-
-    koreanFontLoaded = true;
-    console.log('Korean font loaded successfully');
-
-    // Set default font to Korean font
-    doc.setFont('NotoSansKR');
-  } catch (error) {
-    console.warn('Failed to load Korean font:', error);
-    console.info('Make sure public/fonts/NotoSansKR-Regular.ttf exists');
-    console.info('Korean characters will not render correctly in PDF');
-  }
+export async function loadKoreanFont(_doc: jsPDF): Promise<void> {
+  // Korean font loading disabled - function does nothing
+  return;
 }
 
 /**
@@ -58,25 +27,11 @@ export function containsKorean(text: string): boolean {
 
 /**
  * Set appropriate font for text (Korean or default)
+ * NOTE: Korean font is never loaded, so always uses default font
  */
-export function setFontForText(doc: jsPDF, text: string, bold = false): void {
-  if (containsKorean(text) && koreanFontLoaded) {
-    doc.setFont('NotoSansKR', 'normal');
-  } else {
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
-  }
-}
-
-/**
- * Convert ArrayBuffer to Base64
- */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
+export function setFontForText(doc: jsPDF, _text: string, bold = false): void {
+  // Always use default font since Korean font is disabled
+  doc.setFont('helvetica', bold ? 'bold' : 'normal');
 }
 
 /**
