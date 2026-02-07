@@ -79,8 +79,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       const numericCols: Array<{id: string, label: string}> = [];
 
       for (const header of context.visibleHeaders) {
-        // Skip metadata columns
-        if (header.id.startsWith('_')) continue;
+        // Skip only specific metadata columns, not all columns starting with _
+        // __EMPTY columns are valid data columns from Excel
+        if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') continue;
 
         console.log('Checking column:', header.id, header.label);
 
