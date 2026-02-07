@@ -5,7 +5,8 @@ import packageJson from './package.json'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/excel-processor/',
+  // Use different base path for development vs production
+  base: process.env.NODE_ENV === 'production' ? '/excel-processor/' : '/',
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toLocaleString()),
     __APP_VERSION__: JSON.stringify(packageJson.version),
