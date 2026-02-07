@@ -16,7 +16,7 @@ import {
   type SelectChangeEvent,
 } from '@mui/material';
 import { FormField } from './FormField';
-import { aggregateByMonth, getNumericColumns } from '../../utils/monthlyAggregator';
+import { aggregateByMonth } from '../../utils/monthlyAggregator';
 import {
   formatTodayDateGerman,
   formatAmountInGermanWords,
@@ -61,19 +61,45 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [taxValidFrom] = useState('27.12.2016');
   const [notMembership, setNotMembership] = useState(true);
 
-  // Available numeric columns
-  const [numericColumns, setNumericColumns] = useState<string[]>([]);
+  // Available numeric columns (internal key -> label mapping)
+  const [numericColumns, setNumericColumns] = useState<Array<{id: string, label: string}>>([]);
 
   // Initialize data when dialog opens
   useEffect(() => {
     if (open) {
-      // Get numeric columns
-      const numCols = getNumericColumns(context.data);
-      setNumericColumns(numCols);
+      // Get numeric columns from visible headers
+      // Filter to only include columns that have numeric values in the data
+      const numericCols: Array<{id: string, label: string}> = [];
+
+      for (const header of context.visibleHeaders) {
+        // Skip metadata columns
+        if (header.id.startsWith('_')) continue;
+
+        // Check if this column has numeric values in any row
+        for (const row of context.data) {
+          const value = row[header.id];
+          if (value !== null && value !== undefined && value !== '') {
+            if (typeof value === 'number') {
+              numericCols.push({ id: header.id, label: header.label });
+              break;
+            }
+            break; // Found a non-null value that's not a number, stop checking this column
+          }
+        }
+      }
+
+      setNumericColumns(numericCols);
 
       // Auto-select first numeric column (only if not already set)
-      if (numCols.length > 0 && !amountColumn) {
-        setAmountColumn(numCols[0]);
+      if (numericCols.length > 0 && !amountColumn) {
+        setAmountColumn(numericCols[0].id);
+      } else if (numericCols.length > 0 && amountColumn) {
+        // Verify that the current amountColumn is still in the numeric columns
+        const isValid = numericCols.some(col => col.id === amountColumn);
+        if (!isValid) {
+          // Current selection is no longer valid, reset to first numeric column
+          setAmountColumn(numericCols[0].id);
+        }
       }
 
       // Set donor name from selected names (only if not already set)
@@ -95,7 +121,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setTaxOption1(false);
       setNotMembership(true);
     }
-  }, [open, context.data, context.selectedNames]);
+  }, [open, context.data, context.visibleHeaders, context.selectedNames]);
 
   // Run monthly aggregation when amount column changes
   useEffect(() => {
@@ -251,8 +277,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               onChange={handleAmountColumnChange}
             >
               {numericColumns.map((col) => (
-                <MenuItem key={col} value={col}>
-                  {col}
+                <MenuItem key={col.id} value={col.id}>
+                  {col.label}
                 </MenuItem>
               ))}
             </Select>
