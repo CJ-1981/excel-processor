@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Button,
-  TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider
+  TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider, Switch, FormGroup
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -82,6 +82,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [includedRowIndices, setIncludedRowIndices] = useState<Set<number>>(new Set()); // Track rows to include in export
+  const [autoDeselectZeros, setAutoDeselectZeros] = useState<boolean>(true); // Auto-deselect rows with zero values
 
   // Load column order from localStorage on mount
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -267,10 +268,48 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
 
   // Initialize all rows as included when data changes
   useEffect(() => {
-    if (filteredAndSortedData.length > 0) {
-      setIncludedRowIndices(new Set(filteredAndSortedData.map((_, index) => index)));
+    if (filteredAndSortedData.length === 0) {
+      setIncludedRowIndices(new Set());
+      return;
     }
-  }, [filteredAndSortedData.length]);
+
+    // Helper function to check if a row has all zero numeric values
+    const hasOnlyZeros = (row: any): boolean => {
+      let hasNumericValues = false;
+
+      for (const [key, value] of Object.entries(row)) {
+        // Skip source metadata columns
+        if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
+
+        // Try to parse as number
+        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+
+        // Check if this is a valid numeric value
+        if (!isNaN(numValue) && typeof value !== 'boolean') {
+          hasNumericValues = true;
+          // If any non-zero value found, this row is NOT all zeros
+          if (numValue !== 0) {
+            return false;
+          }
+        }
+      }
+
+      // Return true only if row has numeric values and all are zero
+      return hasNumericValues;
+    };
+
+    // Select all rows, excluding zero-value rows if toggle is ON
+    const newSet = new Set<number>();
+    filteredAndSortedData.forEach((row, index) => {
+      if (autoDeselectZeros && hasOnlyZeros(row)) {
+        // Don't include zero-value rows
+        return;
+      }
+      newSet.add(index);
+    });
+
+    setIncludedRowIndices(newSet);
+  }, [filteredAndSortedData, autoDeselectZeros]);
 
   // Calculate column totals (only for included rows)
   const columnTotals = useMemo(() => {
@@ -536,6 +575,19 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
           <Typography variant="body2" color="text.secondary">
             {includedRowIndices.size} of {filteredAndSortedData.length} rows selected
           </Typography>
+          <FormGroup sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={autoDeselectZeros}
+                  onChange={(e) => setAutoDeselectZeros(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Auto-deselect zero-value rows"
+              sx={{ mr: 1 }}
+            />
+          </FormGroup>
           <Button
             variant="outlined"
             size="small"

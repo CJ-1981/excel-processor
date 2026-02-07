@@ -207,7 +207,7 @@ function App() {
           Excel Data Processor
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          v1.0.0 • Last updated: {__BUILD_TIME__}
+          v1.0.1 • Last updated: {__BUILD_TIME__}
         </Typography>
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
@@ -261,7 +261,7 @@ function App() {
           onClose={handleToggleDetailedViewFullScreen}
         >
           <DialogTitle sx={{ m: 0, p: 2 }}>
-            <Typography variant="h6">Detailed Data View (Full Screen)</Typography>
+            Detailed Data View (Full Screen)
             <IconButton
               aria-label="close"
               onClick={handleToggleDetailedViewFullScreen}
