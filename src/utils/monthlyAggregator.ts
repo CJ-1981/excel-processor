@@ -101,11 +101,19 @@ export function getNumericColumns(data: any[]): string[] {
 
   const numericColumns: string[] = [];
 
-  for (const key of Object.keys(data[0])) {
+  // Collect ALL unique keys from ALL rows (not just the first row)
+  const allKeys = new Set<string>();
+  for (const row of data) {
+    for (const key of Object.keys(row)) {
+      allKeys.add(key);
+    }
+  }
+
+  for (const key of allKeys) {
     // Skip metadata columns
     if (key.startsWith('_')) continue;
 
-    // Check if first non-null value is a number
+    // Check if any non-null value in this column is a number
     for (const row of data) {
       const value = row[key];
       if (value !== null && value !== undefined && value !== '') {
@@ -113,7 +121,7 @@ export function getNumericColumns(data: any[]): string[] {
           numericColumns.push(key);
           break;
         }
-        break; // Found a non-null value, stop checking this column
+        break; // Found a non-null value that's not a number, stop checking this column
       }
     }
   }
