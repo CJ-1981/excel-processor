@@ -12,6 +12,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import type { ParsedFile, ParseProgress } from './types';
 import * as XLSX from 'xlsx';
 import { processInBatches } from './utils/batchProcessor';
+import { APP_VERSION } from './version';
 
 type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
@@ -207,7 +208,7 @@ function App() {
           Excel Data Processor
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          v1.1.0 • Last updated: {__BUILD_TIME__}
+          v{APP_VERSION} • Last updated: {__BUILD_TIME__}
         </Typography>
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
