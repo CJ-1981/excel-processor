@@ -42,9 +42,9 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
     }
   };
 
-  const handleCustomFieldsConfirm = async (customFields: Record<string, string | number>) => {
-    // Add customFields to context
-    const contextWithFields = { ...context, customFields };
+  const handleCustomFieldsConfirm = async (customFields: Record<string, string | number>, textColor: string) => {
+    // Add customFields and textColor to context
+    const contextWithFields = { ...context, customFields, textColor };
     await generatePDFInternal(selectedTemplate, contextWithFields);
     setShowCustomFields(false);
   };

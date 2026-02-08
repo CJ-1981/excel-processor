@@ -85,6 +85,16 @@ export async function generatePDF(
   doc.save(fileName);
 }
 
+// Set text color from context
+function setTextColor(doc: jsPDF, context: PDFGenerationContext): void {
+  if (context.textColor) {
+    const rgb = hexToRgb(context.textColor);
+    doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+  } else {
+    doc.setTextColor(0, 0, 0); // Default black
+  }
+}
+
 // Variable substitution
 function substituteVariables(text: string, context: PDFGenerationContext): string {
   let result = text
@@ -146,6 +156,7 @@ function renderHeader(
 
   const title = substituteVariables(section.title, context);
   doc.setFontSize(section.fontSize);
+  setTextColor(doc, context);
   setFontForText(doc, title, true);
 
   let xPosition: number;
@@ -197,6 +208,7 @@ function renderText(
   const content = substituteVariables(section.content, context);
 
   doc.setFontSize(section.fontSize);
+  setTextColor(doc, context);
   setFontForText(doc, content, false);
 
   let xPosition: number;
@@ -373,6 +385,7 @@ function renderLabeledField(
   const separator = section.separator ?? ': ';
 
   doc.setFontSize(section.labelFontSize ?? section.fontSize ?? 10);
+  setTextColor(doc, context);
   setFontForText(doc, label, section.boldLabel !== false);
   doc.text(label, section.x, section.y);
 
@@ -391,6 +404,7 @@ function renderTextBlock(
 ): void {
   const content = substituteVariables(section.content, context);
   doc.setFontSize(section.fontSize ?? 10);
+  setTextColor(doc, context);
   setFontForText(doc, content, section.bold === true);
 
   const textOptions: any = { maxWidth: section.width };
@@ -430,6 +444,7 @@ function renderCheckbox(
 
   // Draw label with text wrapping
   doc.setFontSize(section.fontSize ?? 10);
+  setTextColor(doc, context);
   setFontForText(doc, label, false);
 
   // Split text into lines that fit within maxTextWidth
@@ -482,7 +497,7 @@ function renderFooter(
     doc.setPage(i);
     doc.setFontSize(section.fontSize);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100);
+    setTextColor(doc, context);
 
     const footerY = pageHeight - 10;
 

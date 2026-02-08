@@ -216,4 +216,6 @@ export interface PDFGenerationContext {
   sourceSheets: string[];
   // Custom form fields
   customFields?: Record<string, string | number>;
+  // Text color for PDF (hex format, e.g., "#FF0000")
+  textColor?: string;
 }
