@@ -230,7 +230,71 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
-      <DialogTitle>PDF Export - Custom Fields</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ position: 'relative', pr: 20 }}>
+          PDF Export - Custom Fields
+          {/* Compact color picker in top right */}
+          <Box
+            sx={{
+              position: 'absolute',
+              right: 0,
+              top: -8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+            }}
+          >
+            {presetColors.slice(0, 6).map((color) => (
+              <Box
+                key={color.value}
+                onClick={() => setTextColor(color.value)}
+                sx={{
+                  width: 24,
+                  height: 24,
+                  backgroundColor: color.value,
+                  border: textColor === color.value ? '2px solid #1976d2' : '1px solid #ddd',
+                  borderRadius: 0.5,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    transform: 'scale(1.15)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  },
+                }}
+                title={color.name}
+              />
+            ))}
+            {/* Custom color option */}
+            <Box
+              sx={{
+                position: 'relative',
+                width: 24,
+                height: 24,
+                border: '1px dashed #999',
+                borderRadius: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="color"
+                value={textColor}
+                onChange={(e) => setTextColor(e.target.value)}
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer',
+                }}
+              />
+              <ColorizeIcon sx={{ fontSize: 14, color: '#666' }} />
+            </Box>
+          </Box>
+        </Box>
+      </DialogTitle>
 
       <DialogContent sx={{ pb: 2 }}>
         {/* Section 1: Donor Information */}
@@ -260,6 +324,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               label="Donor Name"
               value={donorName}
               onChange={setDonorName}
+              textColor={textColor}
             />
           )}
           <FormField
@@ -268,6 +333,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             value={donorAddress}
             onChange={setDonorAddress}
             sx={{ mb: 0 }}
+            textColor={textColor}
           />
         </Paper>
 
@@ -310,6 +376,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                   value={monthlyAmounts[key]}
                   onChange={(value) => handleMonthlyAmountChange(key, value)}
                   sx={{ mb: 0 }}
+                  textColor={textColor}
                 />
               </Box>
             ))}
@@ -327,6 +394,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             value={totalAmount}
             onChange={setTotalAmount}
             fullWidth
+            textColor={textColor}
           />
           <FormField
             type="text"
@@ -334,6 +402,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             value={amountInWords}
             onChange={setAmountInWords}
             fullWidth
+            textColor={textColor}
           />
           <FormField
             type="text"
@@ -341,86 +410,11 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             value={donationPeriod}
             onChange={setDonationPeriod}
             sx={{ mb: 0 }}
+            textColor={textColor}
           />
         </Paper>
 
-        {/* Section 5: Text Color */}
-        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Text Color
-        </Typography>
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            {presetColors.map((color) => (
-              <Box
-                key={color.value}
-                onClick={() => setTextColor(color.value)}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  backgroundColor: color.value,
-                  border: textColor === color.value ? '3px solid #1976d2' : '2px solid #ddd',
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                  },
-                }}
-                title={color.name}
-              >
-                {textColor === color.value && (
-                  <Box
-                    sx={{
-                      color: '#fff',
-                      fontSize: 20,
-                      fontWeight: 'bold',
-                      textShadow: '0 0 2px rgba(0,0,0,0.5)',
-                    }}
-                  >
-                    ✓
-                  </Box>
-                )}
-              </Box>
-            ))}
-            {/* Custom color option */}
-            <Box
-              sx={{
-                position: 'relative',
-                width: 48,
-                height: 48,
-                border: '2px dashed #ccc',
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="color"
-                value={textColor}
-                onChange={(e) => setTextColor(e.target.value)}
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  opacity: 0,
-                  cursor: 'pointer',
-                }}
-              />
-              <ColorizeIcon sx={{ color: '#666' }} />
-            </Box>
-          </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-            Selected Color: {textColor} (Preview shown above)
-          </Typography>
-        </Paper>
-
-        {/* Section 6: Tax Options */}
+        {/* Section 5: Tax Options */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
           Tax Options
         </Typography>
@@ -475,7 +469,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           />
         </Paper>
 
-        {/* Section 7: Signature */}
+        {/* Section 6: Signature */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
           Signature
         </Typography>
@@ -485,6 +479,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             label="Location"
             value={signatureLocation}
             onChange={setSignatureLocation}
+            textColor={textColor}
           />
           <FormField
             type="text"
@@ -492,6 +487,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             value={issueDate}
             onChange={setIssueDate}
             sx={{ mb: 0 }}
+            textColor={textColor}
           />
         </Paper>
       </DialogContent>

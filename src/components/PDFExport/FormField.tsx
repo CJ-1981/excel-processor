@@ -21,6 +21,7 @@ interface FormFieldProps {
   disabled?: boolean;
   fullWidth?: boolean;
   sx?: any;
+  textColor?: string; // For showing preview color in text input
 }
 
 export const FormField: React.FC<FormFieldProps> = ({
@@ -32,6 +33,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   disabled = false,
   fullWidth = true,
   sx,
+  textColor,
 }) => {
   const baseSx = { mb: 2, ...sx };
 
@@ -46,6 +48,9 @@ export const FormField: React.FC<FormFieldProps> = ({
           fullWidth={fullWidth}
           sx={baseSx}
           size="small"
+          InputProps={{
+            style: textColor ? { color: textColor } : undefined,
+          }}
         />
       );
 
@@ -62,6 +67,7 @@ export const FormField: React.FC<FormFieldProps> = ({
           size="small"
           InputProps={{
             inputProps: { step: '0.01', min: '0' },
+            style: textColor ? { color: textColor } : undefined,
           }}
         />
       );

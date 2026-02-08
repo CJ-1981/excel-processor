@@ -85,14 +85,17 @@ export async function generatePDF(
   doc.save(fileName);
 }
 
-// Set text color from context
+// Set text color from context (for custom fields only)
 function setTextColor(doc: jsPDF, context: PDFGenerationContext): void {
   if (context.textColor) {
     const rgb = hexToRgb(context.textColor);
     doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-  } else {
-    doc.setTextColor(0, 0, 0); // Default black
   }
+}
+
+// Reset to default color (black)
+function resetTextColor(doc: jsPDF): void {
+  doc.setTextColor(0, 0, 0);
 }
 
 // Variable substitution
@@ -156,7 +159,7 @@ function renderHeader(
 
   const title = substituteVariables(section.title, context);
   doc.setFontSize(section.fontSize);
-  setTextColor(doc, context);
+  resetTextColor(doc); // Always use default color for template text
   setFontForText(doc, title, true);
 
   let xPosition: number;
@@ -208,7 +211,7 @@ function renderText(
   const content = substituteVariables(section.content, context);
 
   doc.setFontSize(section.fontSize);
-  setTextColor(doc, context);
+  resetTextColor(doc); // Always use default color for template text
   setFontForText(doc, content, false);
 
   let xPosition: number;
@@ -350,6 +353,9 @@ async function renderCustomDataTable(
     row.some(cell => containsKorean(String(cell)))
   ) || (section.headers && section.headers.some(h => containsKorean(h)));
 
+  // Store original cell data for checking custom fields in willDrawCell
+  const originalRows = section.rows;
+
   // Generate table
   autoTable(doc, {
     head: section.options.showHeaders ? [section.headers] : undefined,
@@ -370,6 +376,23 @@ async function renderCustomDataTable(
     alternateRowStyles: section.options.alternateRowColors ? {
       fillColor: hexToRgb(section.options.alternateRowColor2),
     } : undefined,
+    // Apply custom color to cells containing custom field values
+    willDrawCell: (data: any) => {
+      if (data.section === 'body' && context.textColor) {
+        const rowIndex = data.row.index;
+        const columnIndex = data.column.index;
+        if (originalRows[rowIndex] && originalRows[rowIndex][columnIndex]) {
+          const originalCell = String(originalRows[rowIndex][columnIndex]);
+          // Check if this cell originally contained a custom field reference
+          if (/\{\{customFields\./.test(originalCell)) {
+            const rgb = hexToRgb(context.textColor);
+            doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+          } else {
+            doc.setTextColor(0, 0, 0);
+          }
+        }
+      }
+    },
   });
 
   return (doc as any).lastAutoTable.finalY + 10;
@@ -385,7 +408,7 @@ function renderLabeledField(
   const separator = section.separator ?? ': ';
 
   doc.setFontSize(section.labelFontSize ?? section.fontSize ?? 10);
-  setTextColor(doc, context);
+  resetTextColor(doc);
   setFontForText(doc, label, section.boldLabel !== false);
   doc.text(label, section.x, section.y);
 
@@ -393,8 +416,20 @@ function renderLabeledField(
   const valueX = section.x + labelWidth;
 
   doc.setFontSize(section.fontSize ?? 10);
+
+  // Apply custom color only if value contains custom fields
+  const hasCustomFields = /\{\{customFields\./.test(section.value);
+  if (hasCustomFields && context.textColor) {
+    setTextColor(doc, context);
+  } else {
+    resetTextColor(doc);
+  }
+
   setFontForText(doc, value, section.boldValue === true);
   doc.text(separator + value, valueX, section.y);
+
+  // Reset back to black after
+  resetTextColor(doc);
 }
 
 function renderTextBlock(
@@ -404,7 +439,15 @@ function renderTextBlock(
 ): void {
   const content = substituteVariables(section.content, context);
   doc.setFontSize(section.fontSize ?? 10);
-  setTextColor(doc, context);
+
+  // Check if this text block contains custom fields (apply custom color only to those)
+  const hasCustomFields = /\{\{customFields\./.test(section.content);
+  if (hasCustomFields && context.textColor) {
+    setTextColor(doc, context);
+  } else {
+    resetTextColor(doc);
+  }
+
   setFontForText(doc, content, section.bold === true);
 
   const textOptions: any = { maxWidth: section.width };
@@ -414,6 +457,9 @@ function renderTextBlock(
   else textOptions.align = 'left';
 
   doc.text(content, section.x, section.y, textOptions);
+
+  // Reset back to black after rendering
+  resetTextColor(doc);
 }
 
 function renderCheckbox(
@@ -442,9 +488,9 @@ function renderCheckbox(
     doc.line(section.x + boxSize, section.y - boxSize/2, section.x, section.y + boxSize/2);
   }
 
-  // Draw label with text wrapping
+  // Draw label with text wrapping - always use default color (checkbox labels are template text)
   doc.setFontSize(section.fontSize ?? 10);
-  setTextColor(doc, context);
+  resetTextColor(doc);
   setFontForText(doc, label, false);
 
   // Split text into lines that fit within maxTextWidth
@@ -497,7 +543,7 @@ function renderFooter(
     doc.setPage(i);
     doc.setFontSize(section.fontSize);
     doc.setFont('helvetica', 'normal');
-    setTextColor(doc, context);
+    resetTextColor(doc); // Always use default color for template text
 
     const footerY = pageHeight - 10;
 
