@@ -97,6 +97,7 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
         onClose={() => setShowCustomFields(false)}
         onConfirm={handleCustomFieldsConfirm}
         context={context}
+        template={selectedTemplate}
       />
     </>
   );

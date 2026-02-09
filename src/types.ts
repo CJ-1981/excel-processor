@@ -45,6 +45,8 @@ export interface PDFTemplate {
     margins: { top: number; right: number; bottom: number; left: number };
   };
   sections: TemplateSection[];
+  // Optional default values for custom fields (template-specific)
+  customFieldDefaults?: Record<string, string | number | boolean>;
 }
 
 export type TemplateSection =

@@ -24,7 +24,7 @@ export function extractCustomFieldsFromTemplate(
     while ((match = regex.exec(content)) !== null) {
       const key = match[1];
       if (!fields.has(key)) {
-        fields.set(key, createFieldDefinition(key));
+        fields.set(key, createFieldDefinition(key, template.customFieldDefaults?.[key]));
       }
     }
   };
@@ -85,7 +85,7 @@ export function templateRequiresCustomFields(
  * Create a field definition based on the field key
  * Infers type and label from field name
  */
-function createFieldDefinition(key: string): CustomFieldDefinition {
+function createFieldDefinition(key: string, templateDefaultValue?: any): CustomFieldDefinition {
   const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
   // Determine type based on key
@@ -105,8 +105,11 @@ function createFieldDefinition(key: string): CustomFieldDefinition {
     .trim();
 
   // Set default values for known fields
+  // Use template-specific default if provided, otherwise use hardcoded defaults
   let defaultValue: any;
-  if (key === 'signatureLocation') {
+  if (templateDefaultValue !== undefined) {
+    defaultValue = templateDefaultValue;
+  } else if (key === 'signatureLocation') {
     defaultValue = 'Kelsterbach';
   } else if (key === 'verzichtNein') {
     defaultValue = true;

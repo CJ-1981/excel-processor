@@ -23,12 +23,14 @@ import {
   formatAmountInGermanWords,
 } from '../../utils/germanFormatter';
 import type { PDFGenerationContext } from '../../types';
+import type { PDFTemplate } from '../../types';
 
 interface CustomFieldsDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (customFields: Record<string, string | number>, textColor: string) => void;
   context: PDFGenerationContext;
+  template: PDFTemplate;
 }
 
 export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
@@ -36,6 +38,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   onClose,
   onConfirm,
   context,
+  template,
 }) => {
   // State for form fields
   const [donorName, setDonorName] = useState('');
@@ -131,14 +134,19 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       // Set today's date
       setIssueDate(formatTodayDateGerman());
 
-      // Set default values
+      // Set default values from template, falling back to hardcoded defaults
       setVerzichtNein(true);
       setVerzichtJa(false);
       setTaxOption2(true);
       setTaxOption1(false);
       setNotMembership(true);
+
+      // Use template-specific default for signatureLocation if available
+      if (template.customFieldDefaults?.signatureLocation) {
+        setSignatureLocation(String(template.customFieldDefaults.signatureLocation));
+      }
     }
-  }, [open, context.data, context.visibleHeaders, context.selectedNames]);
+  }, [open, context.data, context.visibleHeaders, context.selectedNames, template]);
 
   // Run monthly aggregation when amount column changes
   useEffect(() => {
