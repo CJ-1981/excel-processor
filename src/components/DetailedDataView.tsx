@@ -296,43 +296,68 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
       return;
     }
 
-    // Helper function to check if a row has all zero numeric values
-    const hasOnlyZeros = (row: any): boolean => {
-      let hasNumericValues = false;
+    // Helper function to check if a string is purely numeric (no extra characters)
+    const isPureNumericString = (str: string): boolean => {
+      // Allow optional sign, digits, decimal point, and optional exponent
+      // But no other characters (like Korean text)
+      return /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(str.trim());
+    };
+
+    // Helper function to check if a row has no valid numeric values in visible columns
+    const hasNoValidNumericValues = (row: any): boolean => {
+      const visibleColumnIds = new Set(visibleHeaders.map(h => h.id));
 
       for (const [key, value] of Object.entries(row)) {
-        // Skip source metadata columns
+        // Skip non-visible columns and source metadata columns
+        if (!visibleColumnIds.has(key)) continue;
         if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
 
-        // Try to parse as number
-        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+        // Skip null, undefined, empty string, or boolean values
+        if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
+          continue;
+        }
 
-        // Check if this is a valid numeric value
-        if (!isNaN(numValue) && typeof value !== 'boolean') {
-          hasNumericValues = true;
-          // If any non-zero value found, this row is NOT all zeros
-          if (numValue !== 0) {
+        // Check if it's a number type
+        if (typeof value === 'number') {
+          // Check if this is a valid, non-zero numeric value
+          if (value !== 0) {
             return false;
           }
+          // If it's zero, continue checking other columns
+          continue;
+        }
+
+        // If it's a string, check if it's purely numeric
+        if (typeof value === 'string') {
+          const trimmedValue = value.trim();
+          if (isPureNumericString(trimmedValue)) {
+            const numValue = parseFloat(trimmedValue);
+            // Check if this is a valid, non-zero numeric value
+            if (!isNaN(numValue) && numValue !== 0) {
+              return false;
+            }
+          }
+          // Not a pure numeric string (contains text), skip it
+          continue;
         }
       }
 
-      // Return true only if row has numeric values and all are zero
-      return hasNumericValues;
+      // No valid non-zero numeric values found in visible columns
+      return true;
     };
 
-    // Select all rows, excluding zero-value rows if toggle is ON
+    // Select all rows, excluding rows without valid numeric values if toggle is ON
     const newSet = new Set<number>();
     filteredAndSortedData.forEach((row, index) => {
-      if (autoDeselectZeros && hasOnlyZeros(row)) {
-        // Don't include zero-value rows
+      if (autoDeselectZeros && hasNoValidNumericValues(row)) {
+        // Don't include rows without valid numeric values
         return;
       }
       newSet.add(index);
     });
 
     setIncludedRowIndices(newSet);
-  }, [filteredAndSortedData, autoDeselectZeros]);
+  }, [filteredAndSortedData, autoDeselectZeros, visibleHeaders, nameColumn]);
 
   // Calculate column totals (only for included rows)
   const columnTotals = useMemo(() => {
@@ -417,7 +442,56 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
   };
 
   const handleSelectAllRows = () => {
-    setIncludedRowIndices(new Set(filteredAndSortedData.map((_, index) => index)));
+    // Helper function to check if a string is purely numeric (no extra characters)
+    const isPureNumericString = (str: string): boolean => {
+      return /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(str.trim());
+    };
+
+    // Helper function to check if a row has no valid numeric values in visible columns
+    const hasNoValidNumericValues = (row: any): boolean => {
+      const visibleColumnIds = new Set(visibleHeaders.map(h => h.id));
+
+      for (const [key, value] of Object.entries(row)) {
+        if (!visibleColumnIds.has(key)) continue;
+        if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
+        if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
+          continue;
+        }
+
+        // Check if it's a number type
+        if (typeof value === 'number') {
+          if (value !== 0) {
+            return false; // Found non-zero number
+          }
+          continue; // It's zero, continue checking
+        }
+
+        // If it's a string, check if it's purely numeric
+        if (typeof value === 'string') {
+          const trimmedValue = value.trim();
+          if (isPureNumericString(trimmedValue)) {
+            const numValue = parseFloat(trimmedValue);
+            if (!isNaN(numValue) && numValue !== 0) {
+              return false; // Found non-zero number in string
+            }
+          }
+          // Not a pure numeric string, skip
+          continue;
+        }
+      }
+      return true; // No valid non-zero numeric values found
+    };
+
+    // Select all rows, excluding rows without valid numeric values if toggle is ON
+    const newSet = new Set<number>();
+    filteredAndSortedData.forEach((row, index) => {
+      if (autoDeselectZeros && hasNoValidNumericValues(row)) {
+        return;
+      }
+      newSet.add(index);
+    });
+
+    setIncludedRowIndices(newSet);
   };
 
   const handleDeselectAllRows = () => {
@@ -619,7 +693,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
                   size="small"
                 />
               }
-              label="Auto-deselect zero-value rows"
+              label="Auto-deselect empty/zero-value rows"
               sx={{ mr: 1 }}
             />
           </FormGroup>
