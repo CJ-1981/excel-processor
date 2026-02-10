@@ -103,6 +103,9 @@ export function aggregateByMonth(
 export function getNumericColumns(data: any[]): string[] {
   if (data.length === 0) return [];
 
+  // Metadata columns to skip
+  const skipColumns = new Set(['_sourceFileName', '_sourceSheetName']);
+
   const numericColumns: string[] = [];
 
   // Collect ALL unique keys from ALL rows (not just the first row)
@@ -115,7 +118,7 @@ export function getNumericColumns(data: any[]): string[] {
 
   for (const key of allKeys) {
     // Skip metadata columns
-    if (key.startsWith('_')) continue;
+    if (skipColumns.has(key)) continue;
 
     // Check if any non-null value in this column is a number
     for (const row of data) {

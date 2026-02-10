@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Button,
-  TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider, Switch, FormGroup
+  TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider, Switch, FormGroup,
+  Dialog, DialogTitle, DialogContent
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -9,13 +10,16 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as XLSX from 'xlsx';
 import { PDFExportDialog } from './PDFExport';
+import DashboardView from './DashboardView';
 import type { PDFGenerationContext } from '../types';
 
 interface DetailedDataViewProps {
   data: any[];
+  filteredData?: any[]; // Optional pre-computed filtered data
   nameColumn: string | null;
   headerRowIndex: number; // Which row contains the actual headers (1-indexed)
   selectedUniqueNames: string[];
@@ -23,6 +27,7 @@ interface DetailedDataViewProps {
   isFullScreen: boolean;
   columnVisibility: Record<string, boolean>;
   setColumnVisibility: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  columnMapping?: Record<string, string>; // Optional column mapping for consistency
 }
 
 type Order = 'asc' | 'desc';
@@ -77,7 +82,18 @@ function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) 
 }
 
 
-const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, headerRowIndex, selectedUniqueNames, onToggleFullScreen, isFullScreen, columnVisibility, setColumnVisibility }) => {
+const DetailedDataView: React.FC<DetailedDataViewProps> = ({
+  data,
+  filteredData: propsFilteredData,
+  nameColumn,
+  headerRowIndex,
+  selectedUniqueNames,
+  onToggleFullScreen,
+  isFullScreen,
+  columnVisibility,
+  setColumnVisibility,
+  columnMapping: propsColumnMapping
+}) => {
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -97,6 +113,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
   });
 
   const [showPDFDialog, setShowPDFDialog] = useState<boolean>(false); // PDF export dialog state
+  const [showDashboardDialog, setShowDashboardDialog] = useState<boolean>(false); // Dashboard dialog state
+  const [hideDeselectedRows, setHideDeselectedRows] = useState<boolean>(false); // Toggle to hide deselected rows
 
   // Load column order from localStorage on mount
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -131,6 +149,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
 
   // Create a mapping of original keys to actual display names from header row
   const columnMapping = useMemo(() => {
+    // If provided via props, use it
+    if (propsColumnMapping) return propsColumnMapping;
+
     if (data.length === 0) return {};
     const headerRowIdx = headerRowIndex - 1;
     console.log('DetailedDataView - headerRowIndex:', headerRowIndex, 'headerRowIdx:', headerRowIdx);
@@ -151,9 +172,16 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
 
     console.log('DetailedDataView - columnMapping:', mapping);
     return mapping;
-  }, [data, headerRowIndex]);
+  }, [data, headerRowIndex, propsColumnMapping]);
 
+  // Use provided filteredData or compute locally
   const filteredData = useMemo(() => {
+    // If pre-computed filteredData is provided, use it
+    if (propsFilteredData !== undefined) {
+      return propsFilteredData;
+    }
+
+    // Otherwise compute locally (backward compatibility)
     if (!nameColumn || selectedUniqueNames.length === 0 || data.length === 0) {
       return [];
     }
@@ -165,7 +193,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
         const value = getRowValue(row, nameColumn, getActualColumnName);
         return selectedUniqueNames.includes(value);
       });
-  }, [data, nameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName]);
+  }, [propsFilteredData, data, nameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName]);
 
 
   const allAvailableHeaders = useMemo(() => {
@@ -250,14 +278,23 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
     setOrderBy(property);
   };
 
+  // Add stable index to filtered data for consistent row tracking
+  const filteredDataWithIndex = useMemo(() => {
+    return filteredData.map((row, index) => ({
+      ...row,
+      _stableIndex: index,
+    }));
+  }, [filteredData]);
+
   const filteredAndSortedData = useMemo(() => {
-    let currentData = filteredData;
+    let currentData = filteredDataWithIndex;
 
     // Apply search filter
     if (searchTerm) {
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
       currentData = currentData.filter(row =>
         Object.keys(row).some(key => {
+          if (key === '_stableIndex') return false;
           // For data columns, try to get the actual display value
           if (key === '_sourceFileName' || key === '_sourceSheetName') {
             return String(row[key]).toLowerCase().includes(lowerCaseSearchTerm);
@@ -289,85 +326,80 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
     return currentData;
   }, [filteredData, searchTerm, order, orderBy, columnMapping]);
 
-  // Initialize all rows as included when data changes
+  // Initialize all rows as included when the base filtered data changes (not when search changes)
   useEffect(() => {
-    if (filteredAndSortedData.length === 0) {
+    if (filteredData.length === 0) {
       setIncludedRowIndices(new Set());
       return;
     }
 
     // Helper function to check if a string is purely numeric (no extra characters)
     const isPureNumericString = (str: string): boolean => {
-      // Allow optional sign, digits, decimal point, and optional exponent
-      // But no other characters (like Korean text)
       return /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(str.trim());
     };
 
-    // Helper function to check if a row has no valid numeric values in visible columns
-    const hasNoValidNumericValues = (row: any): boolean => {
-      const visibleColumnIds = new Set(visibleHeaders.map(h => h.id));
-
+    // Helper function to check if a row has no valid numeric values
+    // Uses allAvailableHeaders instead of visibleHeaders to avoid dependency issues
+    const hasNoValidNumericValues = (row: any, allColumnIds: Set<string>): boolean => {
       for (const [key, value] of Object.entries(row)) {
-        // Skip non-visible columns and source metadata columns
-        if (!visibleColumnIds.has(key)) continue;
+        if (!allColumnIds.has(key)) continue;
         if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
-
-        // Skip null, undefined, empty string, or boolean values
         if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
           continue;
         }
 
-        // Check if it's a number type
         if (typeof value === 'number') {
-          // Check if this is a valid, non-zero numeric value
           if (value !== 0) {
             return false;
           }
-          // If it's zero, continue checking other columns
           continue;
         }
 
-        // If it's a string, check if it's purely numeric
         if (typeof value === 'string') {
           const trimmedValue = value.trim();
           if (isPureNumericString(trimmedValue)) {
             const numValue = parseFloat(trimmedValue);
-            // Check if this is a valid, non-zero numeric value
             if (!isNaN(numValue) && numValue !== 0) {
               return false;
             }
           }
-          // Not a pure numeric string (contains text), skip it
           continue;
         }
       }
-
-      // No valid non-zero numeric values found in visible columns
       return true;
     };
 
-    // Select all rows, excluding rows without valid numeric values if toggle is ON
+    // Get all column IDs from ALL rows (not just first row, and not depending on visibleHeaders)
+    const allColumnIds = new Set<string>();
+    filteredData.forEach(row => {
+      Object.keys(row).forEach(key => {
+        if (key !== '_sourceFileName' && key !== '_sourceSheetName') {
+          allColumnIds.add(key);
+        }
+      });
+    });
+
+    // Select all rows using stable indices
     const newSet = new Set<number>();
-    filteredAndSortedData.forEach((row, index) => {
-      if (autoDeselectZeros && hasNoValidNumericValues(row)) {
-        // Don't include rows without valid numeric values
+    filteredData.forEach((row, index) => {
+      if (autoDeselectZeros && hasNoValidNumericValues(row, allColumnIds)) {
         return;
       }
       newSet.add(index);
     });
 
     setIncludedRowIndices(newSet);
-  }, [filteredAndSortedData, autoDeselectZeros, visibleHeaders, nameColumn]);
+  }, [filteredData, autoDeselectZeros]); // Only depend on filteredData and autoDeselectZeros
 
   // Calculate column totals (only for included rows)
   const columnTotals = useMemo(() => {
     const totals: { [key: string]: number | string } = {};
     visibleHeaders.forEach(header => {
       let sum = 0;
-      let isNumericColumn = true;
-      filteredAndSortedData.forEach((row, index) => {
+      let hasNumericValue = false;
+      filteredAndSortedData.forEach((row) => {
         // Skip non-included rows
-        if (!includedRowIndices.has(index)) return;
+        if (!includedRowIndices.has(row._stableIndex)) return;
 
         let value;
         if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
@@ -376,24 +408,62 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
           const actualName = columnMapping[header.id] || header.id;
           value = getRowValue(row, header.id, actualName);
         }
+
+        // Skip non-numeric values (but don't mark column as non-numeric)
+        if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
+          return;
+        }
+
         const numValue = parseFloat(String(value));
-        if (isNaN(numValue) || typeof value === 'boolean') {
-          isNumericColumn = false;
-        } else {
+        if (!isNaN(numValue)) {
           sum += numValue;
+          hasNumericValue = true;
         }
       });
-      totals[header.id] = isNumericColumn ? sum : '';
+      totals[header.id] = hasNumericValue ? sum : '';
     });
     return totals;
   }, [filteredAndSortedData, visibleHeaders, columnMapping, includedRowIndices]);
+
+  // Prepare dashboard data (only included rows with only visible columns)
+  const dashboardData = useMemo(() => {
+    if (filteredAndSortedData.length === 0 || visibleHeaders.length === 0) {
+      return [];
+    }
+
+    // Get the list of visible column IDs
+    const visibleColumnIds = visibleHeaders.map(h => h.id);
+
+    // Filter to included rows and only visible columns
+    return filteredAndSortedData
+      .filter((row) => includedRowIndices.has(row._stableIndex))
+      .map(row => {
+        const filteredRow: Record<string, any> = {};
+        visibleColumnIds.forEach(colId => {
+          // Skip internal properties
+          if (colId === '_stableIndex') return;
+          // Access the value directly using the column ID (the original key in the row)
+          filteredRow[colId] = row[colId];
+        });
+        return filteredRow;
+      });
+  }, [filteredAndSortedData, visibleHeaders, includedRowIndices]);
+
+  // Create column mapping for dashboard (only visible columns)
+  const dashboardColumnMapping = useMemo(() => {
+    const mapping: Record<string, string> = {};
+    visibleHeaders.forEach(header => {
+      mapping[header.id] = header.label;
+    });
+    return mapping;
+  }, [visibleHeaders]);
 
 
   const handleExportCsv = () => {
     if (filteredAndSortedData.length > 0) {
       // Only export included rows
       const dataToExport = filteredAndSortedData
-        .filter((_, index) => includedRowIndices.has(index))
+        .filter((row) => includedRowIndices.has(row._stableIndex))
         .map(row => {
           const newRow: { [key: string]: any } = {};
           visibleHeaders.forEach(header => {
@@ -429,13 +499,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
     sourceSheets: Array.from(new Set(filteredAndSortedData.map(row => row._sourceSheetName).filter(Boolean))),
   });
 
-  const handleToggleRowInclude = (index: number) => {
+  const handleToggleRowInclude = (stableIndex: number) => {
     setIncludedRowIndices(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
+      if (newSet.has(stableIndex)) {
+        newSet.delete(stableIndex);
       } else {
-        newSet.add(index);
+        newSet.add(stableIndex);
       }
       return newSet;
     });
@@ -453,7 +523,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
 
       for (const [key, value] of Object.entries(row)) {
         if (!visibleColumnIds.has(key)) continue;
-        if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
+        if (key === '_sourceFileName' || key === '_sourceSheetName' || key === '_stableIndex') continue;
         if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
           continue;
         }
@@ -482,20 +552,28 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
       return true; // No valid non-zero numeric values found
     };
 
-    // Select all rows, excluding rows without valid numeric values if toggle is ON
-    const newSet = new Set<number>();
-    filteredAndSortedData.forEach((row, index) => {
-      if (autoDeselectZeros && hasNoValidNumericValues(row)) {
-        return;
-      }
-      newSet.add(index);
+    // Add visible rows to selection, excluding rows without valid numeric values if toggle is ON
+    setIncludedRowIndices(prev => {
+      const newSet = new Set(prev);
+      filteredAndSortedData.forEach((row) => {
+        if (autoDeselectZeros && hasNoValidNumericValues(row)) {
+          return;
+        }
+        newSet.add(row._stableIndex);
+      });
+      return newSet;
     });
-
-    setIncludedRowIndices(newSet);
   };
 
   const handleDeselectAllRows = () => {
-    setIncludedRowIndices(new Set());
+    // Remove only visible rows from selection (not all rows)
+    setIncludedRowIndices(prev => {
+      const newSet = new Set(prev);
+      filteredAndSortedData.forEach((row) => {
+        newSet.delete(row._stableIndex);
+      });
+      return newSet;
+    });
   };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -565,17 +643,28 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
     return null;
   }
 
-  const paginatedData = rowsPerPage > 0
-    ? filteredAndSortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+  // Data to display (optionally hide deselected rows)
+  const displayData = hideDeselectedRows
+    ? filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex))
     : filteredAndSortedData;
 
-  const emptyRows = rowsPerPage - Math.min(rowsPerPage, filteredAndSortedData.length - page * rowsPerPage);
+  const paginatedData = rowsPerPage > 0
+    ? displayData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+    : displayData;
+
+  const emptyRows = rowsPerPage - Math.min(rowsPerPage, displayData.length - page * rowsPerPage);
 
   return (
     <Box sx={{ mt: isFullScreen ? 0 : 4, width: '100%', height: isFullScreen ? '100%' : 'auto', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" gutterBottom={!isFullScreen}>
-          Details for: <strong>{selectedUniqueNames.join(', ')}</strong>
+          Details for:{' '}
+          <strong>
+            {selectedUniqueNames.length <= 3
+              ? selectedUniqueNames.join(', ')
+              : `${selectedUniqueNames.slice(0, 2).join(', ')} and ${selectedUniqueNames.length - 2} more`}
+          </strong>
+          {' '}({filteredAndSortedData.length} rows)
         </Typography>
         <Box>
           <IconButton onClick={onToggleFullScreen} size="small" sx={{ ml: 1 }}>
@@ -696,6 +785,20 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
               label="Auto-deselect empty/zero-value rows"
               sx={{ mr: 1 }}
             />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={hideDeselectedRows}
+                  onChange={(e) => {
+                    setHideDeselectedRows(e.target.checked);
+                    setPage(0); // Reset to first page when toggling
+                  }}
+                  size="small"
+                />
+              }
+              label="Hide deselected"
+              sx={{ mr: 1 }}
+            />
           </FormGroup>
           <Button
             variant="outlined"
@@ -738,10 +841,23 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
             <TableRow>
               <TableCell padding="checkbox">
                 <Checkbox
-                  indeterminate={includedRowIndices.size > 0 && includedRowIndices.size < filteredAndSortedData.length}
-                  checked={includedRowIndices.size === filteredAndSortedData.length && filteredAndSortedData.length > 0}
-                  onChange={() => includedRowIndices.size === filteredAndSortedData.length ? handleDeselectAllRows() : handleSelectAllRows()}
-                  inputProps={{ 'aria-label': 'select all rows' }}
+                  indeterminate={(() => {
+                    const visibleSelectedCount = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
+                    return visibleSelectedCount > 0 && visibleSelectedCount < filteredAndSortedData.length;
+                  })()}
+                  checked={(() => {
+                    if (filteredAndSortedData.length === 0) return false;
+                    return filteredAndSortedData.every(row => includedRowIndices.has(row._stableIndex));
+                  })()}
+                  onChange={() => {
+                    const allVisibleSelected = filteredAndSortedData.every(row => includedRowIndices.has(row._stableIndex));
+                    if (allVisibleSelected) {
+                      handleDeselectAllRows();
+                    } else {
+                      handleSelectAllRows();
+                    }
+                  }}
+                  inputProps={{ 'aria-label': 'select all visible rows' }}
                 />
               </TableCell>
               {visibleHeaders.map((headCell, index) => (
@@ -765,13 +881,12 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
           </TableHead>
           <TableBody>
             {paginatedData.map((row, index) => {
-              const actualIndex = page * rowsPerPage + index;
-              const isIncluded = includedRowIndices.has(actualIndex);
-              return (<TableRow hover key={index} sx={{ opacity: isIncluded ? 1 : 0.5 }}>
+              const isIncluded = includedRowIndices.has(row._stableIndex);
+              return (<TableRow hover key={row._stableIndex} sx={{ opacity: isIncluded ? 1 : 0.5 }}>
                   <TableCell padding="checkbox">
                     <Checkbox
                       checked={isIncluded}
-                      onChange={() => handleToggleRowInclude(actualIndex)}
+                      onChange={() => handleToggleRowInclude(row._stableIndex)}
                       inputProps={{ 'aria-label': `select row ${index + 1}` }}
                     />
                   </TableCell>
@@ -803,20 +918,60 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({ data, nameColumn, h
           </TableBody>
         </Table>
       </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
-        component="div"
-        count={filteredAndSortedData.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button
+          variant="contained"
+          color="info"
+          onClick={() => setShowDashboardDialog(true)}
+          disabled={includedRowIndices.size === 0}
+          startIcon={<DashboardIcon />}
+          size="small"
+        >
+          Dashboard ({includedRowIndices.size})
+        </Button>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+          component="div"
+          count={displayData.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Box>
       <PDFExportDialog
         open={showPDFDialog}
         onClose={() => setShowPDFDialog(false)}
         context={preparePDFContext()}
       />
+
+      {/* Dashboard Dialog */}
+      <Dialog
+        fullScreen
+        open={showDashboardDialog}
+        onClose={() => setShowDashboardDialog(false)}
+      >
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DashboardIcon />
+            <Typography variant="h6">Dashboard</Typography>
+          </Box>
+          <IconButton
+            aria-label="close"
+            onClick={() => setShowDashboardDialog(false)}
+            sx={{ color: (theme) => theme.palette.grey[500] }}
+          >
+            <ClearIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <DashboardView
+            data={dashboardData}
+            columnMapping={dashboardColumnMapping}
+            nameColumn={getActualColumnName}
+          />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

@@ -221,3 +221,50 @@ export interface PDFGenerationContext {
   // Text color for PDF (hex format, e.g., "#FF0000")
   textColor?: string;
 }
+
+// Dashboard Types
+export interface ColumnStatistics {
+  columnName: string;
+  columnLabel: string;
+  sum: number;
+  avg: number;
+  min: number;
+  max: number;
+  median: number;
+  stdDev: number;
+  count: number;
+  nonNullCount: number;
+}
+
+export interface TimeSeriesDataPoint {
+  period: string;
+  value: number;
+  count: number;
+  date?: Date;
+}
+
+export interface CategoryDistribution {
+  category: string;
+  value: number;
+  count: number;
+  percentage: number;
+}
+
+export interface DashboardAnalysis {
+  numericColumns: ColumnStatistics[];
+  timeSeries: {
+    monthly?: TimeSeriesDataPoint[];
+    quarterly?: TimeSeriesDataPoint[];
+    yearly?: TimeSeriesDataPoint[];
+  };
+  distributions: {
+    byName?: CategoryDistribution[];
+    bySource?: CategoryDistribution[];
+  };
+  topDonors: CategoryDistribution[];
+  metadata: {
+    totalRows: number;
+    filteredRows: number;
+    dateRange?: { start: Date; end: Date };
+  };
+}

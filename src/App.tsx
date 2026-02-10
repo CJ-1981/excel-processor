@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import ExcelUploader from './components/ExcelUploader';
 import ColumnSelector from './components/ColumnSelector';
 import UniqueNameList from './components/UniqueNameList';
@@ -178,10 +178,68 @@ function App() {
     setIsDetailedViewFullScreen(prev => !prev);
   }, []);
 
+  // Helper to get the actual column name from the header row
+  const getActualColumnName = useMemo(() => {
+    if (!selectedNameColumn || mergedData.length === 0) return selectedNameColumn;
+    const headerRowIdx = headerRowIndex - 1;
+    if (headerRowIdx >= 0 && headerRowIdx < mergedData.length) {
+      const headerRow = mergedData[headerRowIdx];
+      const headerValue = headerRow[selectedNameColumn];
+      if (headerValue !== undefined && headerValue !== null && headerValue !== '') {
+        return String(headerValue);
+      }
+    }
+    return selectedNameColumn;
+  }, [mergedData, selectedNameColumn, headerRowIndex]);
+
+  // Helper to get value from a row, trying both actual name and original key
+  const getRowValue = (row: any, originalKey: string | null, actualName: string | null) => {
+    if (actualName && actualName in row) return row[actualName];
+    if (originalKey) return row[originalKey];
+    return undefined;
+  };
+
+  // Create column mapping
+  const columnMapping = useMemo(() => {
+    if (mergedData.length === 0) return {};
+    const headerRowIdx = headerRowIndex - 1;
+    if (headerRowIdx < 0 || headerRowIdx >= mergedData.length) return {};
+
+    const headerRow = mergedData[headerRowIdx];
+    const mapping: Record<string, string> = {};
+
+    Object.keys(headerRow).forEach(key => {
+      const value = headerRow[key];
+      if (value !== undefined && value !== null && value !== '') {
+        mapping[key] = String(value);
+      } else {
+        mapping[key] = key;
+      }
+    });
+
+    return mapping;
+  }, [mergedData, headerRowIndex]);
+
+  // Compute filtered data for details view
+  const filteredData = useMemo(() => {
+    if (!selectedNameColumn || selectedUniqueNames.length === 0 || mergedData.length === 0) {
+      return [];
+    }
+    const headerRowIdx = headerRowIndex - 1;
+
+    return mergedData
+      .filter((_, idx) => idx !== headerRowIdx) // Exclude header row
+      .filter(row => {
+        const value = getRowValue(row, selectedNameColumn, getActualColumnName);
+        return selectedUniqueNames.includes(value);
+      });
+  }, [mergedData, selectedNameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName]);
+
 
   const detailedViewContent = (
     <DetailedDataView
       data={mergedData}
+      filteredData={filteredData}
       nameColumn={selectedNameColumn}
       headerRowIndex={headerRowIndex}
       selectedUniqueNames={selectedUniqueNames}
@@ -189,6 +247,7 @@ function App() {
       isFullScreen={isDetailedViewFullScreen}
       columnVisibility={detailedViewColumnVisibility}
       setColumnVisibility={handleSetColumnVisibility}
+      columnMapping={columnMapping}
     />
   );
 
