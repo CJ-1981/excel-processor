@@ -81,7 +81,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
-  const LAYOUT_VERSION = 5; // Increment to invalidate saved layouts
+  const LAYOUT_VERSION = 6; // Increment to invalidate saved layouts
   const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
   const COLS_BREAKPOINTS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
 
