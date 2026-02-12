@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Button,
   TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider, Switch, FormGroup,
-  Dialog, DialogTitle, DialogContent
+  Dialog, DialogTitle, DialogContent, Popover, List, ListItemButton, ListItemText, ListItemIcon, Chip, Tooltip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -11,6 +11,8 @@ import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as XLSX from 'xlsx';
 import { PDFExportDialog } from './PDFExport';
@@ -114,7 +116,21 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
 
   const [showPDFDialog, setShowPDFDialog] = useState<boolean>(false); // PDF export dialog state
   const [showDashboardDialog, setShowDashboardDialog] = useState<boolean>(false); // Dashboard dialog state
-  const [hideDeselectedRows, setHideDeselectedRows] = useState<boolean>(false); // Toggle to hide deselected rows
+  const [hideDeselectedRows, setHideDeselectedRows] = useState<boolean>(() => {
+    // Persist "hide deselected" setting to localStorage
+    try {
+      const saved = localStorage.getItem('excel-processor-hide-deselected');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Column filter state
+  const [columnFilters, setColumnFilters] = useState<Record<string, Set<string>>>({}); // columnId -> Set of included values
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
+  const [filterSearchTerm, setFilterSearchTerm] = useState<string>('');
 
   // Load column order from localStorage on mount
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -263,6 +279,63 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     return allAvailableHeaders.filter(header => columnVisibility[header.id]);
   }, [allAvailableHeaders, columnVisibility]);
 
+  // Column Filter Functions (must be defined before filteredAndSortedData)
+
+  // Get unique values for a column
+  const getUniqueColumnValues = useCallback((columnId: string): string[] => {
+    const values = new Set<string>();
+    filteredData.forEach(row => {
+      let value: any;
+      if (columnId === '_sourceFileName' || columnId === '_sourceSheetName') {
+        value = row[columnId];
+      } else {
+        const actualName = columnMapping[columnId] || columnId;
+        value = getRowValue(row, columnId, actualName);
+      }
+      if (value !== null && value !== undefined) {
+        values.add(String(value));
+      } else {
+        values.add('(empty)');
+      }
+    });
+    return Array.from(values).sort((a, b) => {
+      // Put (empty) at the end
+      if (a === '(empty)') return 1;
+      if (b === '(empty)') return -1;
+      return a.localeCompare(b, 'de');
+    });
+  }, [filteredData, columnMapping]);
+
+  // Check if a column has active filters
+  const hasColumnFilter = useCallback((columnId: string): boolean => {
+    const filter = columnFilters[columnId];
+    if (!filter) return false;
+    const allValues = getUniqueColumnValues(columnId);
+    return filter.size < allValues.length;
+  }, [columnFilters, getUniqueColumnValues]);
+
+  // Check if a row passes all column filters
+  const rowPassesColumnFilters = useCallback((row: any): boolean => {
+    for (const header of visibleHeaders) {
+      const filter = columnFilters[header.id];
+      if (!filter || filter.size === 0) continue;
+
+      let value: any;
+      if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') {
+        value = row[header.id];
+      } else {
+        const actualName = columnMapping[header.id] || header.id;
+        value = getRowValue(row, header.id, actualName);
+      }
+
+      const stringValue = value !== null && value !== undefined ? String(value) : '(empty)';
+      if (!filter.has(stringValue)) {
+        return false;
+      }
+    }
+    return true;
+  }, [visibleHeaders, columnFilters, columnMapping]);
+
   // Set default sort to first column when data loads
   useEffect(() => {
     if (visibleHeaders.length > 0 && !orderBy) {
@@ -306,6 +379,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       );
     }
 
+    // Apply column filters
+    currentData = currentData.filter(row => rowPassesColumnFilters(row));
+
     // Apply sorting
     if (orderBy) {
       currentData = stableSort(currentData, (a, b) => {
@@ -324,7 +400,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     }
 
     return currentData;
-  }, [filteredData, searchTerm, order, orderBy, columnMapping]);
+  }, [filteredData, searchTerm, order, orderBy, columnMapping, rowPassesColumnFilters]);
 
   // Initialize all rows as included when the base filtered data changes (not when search changes)
   useEffect(() => {
@@ -635,6 +711,88 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     }
   };
 
+  // Check if any column has active filters
+  const hasAnyColumnFilter = useMemo(() => {
+    return visibleHeaders.some(header => hasColumnFilter(header.id));
+  }, [visibleHeaders, hasColumnFilter]);
+
+  // Open filter popover for a column
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>, columnId: string) => {
+    setFilterAnchorEl(event.currentTarget);
+    setActiveFilterColumn(columnId);
+    setFilterSearchTerm('');
+  };
+
+  // Close filter popover
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+    setActiveFilterColumn(null);
+    setFilterSearchTerm('');
+  };
+
+  // Toggle a value in the column filter
+  const handleToggleFilterValue = (columnId: string, value: string) => {
+    setColumnFilters(prev => {
+      const currentFilter = prev[columnId] || new Set(getUniqueColumnValues(columnId));
+      const newFilter = new Set(currentFilter);
+
+      if (newFilter.has(value)) {
+        newFilter.delete(value);
+      } else {
+        newFilter.add(value);
+      }
+
+      return {
+        ...prev,
+        [columnId]: newFilter,
+      };
+    });
+  };
+
+  // Select all values for a column filter
+  const handleSelectAllFilterValues = (columnId: string) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [columnId]: new Set(getUniqueColumnValues(columnId)),
+    }));
+  };
+
+  // Deselect all values for a column filter
+  const handleDeselectAllFilterValues = (columnId: string) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [columnId]: new Set(), // Empty set = nothing selected
+    }));
+  };
+
+  // Clear filter for a column (reset to all selected)
+  const handleClearColumnFilter = (columnId: string) => {
+    setColumnFilters(prev => {
+      const newFilters = { ...prev };
+      delete newFilters[columnId];
+      return newFilters;
+    });
+  };
+
+  // Clear all column filters
+  const handleClearAllColumnFilters = () => {
+    setColumnFilters({});
+  };
+
+  // Initialize column filters when data changes
+  useEffect(() => {
+    // Initialize filters for all visible columns
+    const newFilters: Record<string, Set<string>> = {};
+    visibleHeaders.forEach(header => {
+      if (!columnFilters[header.id]) {
+        newFilters[header.id] = new Set(getUniqueColumnValues(header.id));
+      }
+    });
+    if (Object.keys(newFilters).length > 0) {
+      setColumnFilters(prev => ({ ...newFilters, ...prev }));
+    }
+  }, [visibleHeaders, getUniqueColumnValues]);
+
   const allColumnsSelected = allAvailableHeaders.length > 0 &&
     allAvailableHeaders.every(header => columnVisibility[header.id]);
 
@@ -790,7 +948,12 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 <Switch
                   checked={hideDeselectedRows}
                   onChange={(e) => {
-                    setHideDeselectedRows(e.target.checked);
+                    const newValue = e.target.checked;
+                    setHideDeselectedRows(newValue);
+                    // Persist to localStorage
+                    try {
+                      localStorage.setItem('excel-processor-hide-deselected', String(newValue));
+                    } catch {}
                     setPage(0); // Reset to first page when toggling
                   }}
                   size="small"
@@ -800,22 +963,26 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               sx={{ mr: 1 }}
             />
           </FormGroup>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleSelectAllRows}
-            disabled={filteredAndSortedData.length === 0}
-          >
-            Select All
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleDeselectAllRows}
-            disabled={includedRowIndices.size === 0}
-          >
-            Deselect All
-          </Button>
+          {(searchTerm || hasAnyColumnFilter) && (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleSelectAllRows}
+                disabled={filteredAndSortedData.length === 0}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleDeselectAllRows}
+                disabled={includedRowIndices.size === 0}
+              >
+                Deselect All
+              </Button>
+            </>
+          )}
           <Button
             variant="contained"
             color="primary"
@@ -835,6 +1002,27 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </Button>
         </Box>
       </Box>
+      {/* Column Filter Info and Clear Button */}
+      {hasAnyColumnFilter && (
+        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            size="small"
+            label="Column filters active"
+            color="primary"
+            variant="outlined"
+            onDelete={handleClearAllColumnFilters}
+            deleteIcon={<FilterAltOffIcon />}
+          />
+          <Button
+            size="small"
+            variant="text"
+            onClick={handleClearAllColumnFilters}
+            startIcon={<FilterAltOffIcon />}
+          >
+            Clear all filters
+          </Button>
+        </Box>
+      )}
       <TableContainer component={Paper} sx={{ flexGrow: 1, overflow: 'auto' }}>
         <Table stickyHeader aria-label="detailed data table">
           <TableHead>
@@ -868,13 +1056,32 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   sortDirection={orderBy === headCell.id ? order : false}
                   sx={{ borderRight: index < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}
                 >
-                  <TableSortLabel
-                    active={orderBy === headCell.id}
-                    direction={orderBy === headCell.id ? order : 'asc'}
-                    onClick={(event) => handleRequestSort(event, headCell.id)}
-                  >
-                    {headCell.label}
-                  </TableSortLabel>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <TableSortLabel
+                      active={orderBy === headCell.id}
+                      direction={orderBy === headCell.id ? order : 'asc'}
+                      onClick={(event) => handleRequestSort(event, headCell.id)}
+                    >
+                      {headCell.label}
+                    </TableSortLabel>
+                    <Tooltip title={hasColumnFilter(headCell.id) ? 'Filter active' : 'Filter column'}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleFilterClick(e, headCell.id)}
+                        sx={{
+                          ml: 0.5,
+                          padding: 0.25,
+                          color: hasColumnFilter(headCell.id) ? 'primary.main' : 'action.active',
+                        }}
+                      >
+                        {hasColumnFilter(headCell.id) ? (
+                          <FilterListIcon fontSize="small" />
+                        ) : (
+                          <FilterListIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </TableCell>
               ))}
             </TableRow>
@@ -923,11 +1130,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           variant="contained"
           color="info"
           onClick={() => setShowDashboardDialog(true)}
-          disabled={includedRowIndices.size === 0}
+          disabled={dashboardData.length === 0}
           startIcon={<DashboardIcon />}
           size="small"
         >
-          Dashboard ({includedRowIndices.size})
+          Dashboard ({dashboardData.length})
         </Button>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
@@ -968,10 +1175,124 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           <DashboardView
             data={dashboardData}
             columnMapping={dashboardColumnMapping}
-            nameColumn={getActualColumnName}
+            nameColumn={nameColumn}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Column Filter Popover */}
+      <Popover
+        open={Boolean(filterAnchorEl)}
+        anchorEl={filterAnchorEl}
+        onClose={handleFilterClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            maxHeight: '60vh',
+            width: 320,
+          },
+        }}
+      >
+        {activeFilterColumn && (
+          <Box>
+            {/* Header */}
+            <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Filter: {visibleHeaders.find(h => h.id === activeFilterColumn)?.label}
+              </Typography>
+              <TextField
+                size="small"
+                placeholder="Search values..."
+                value={filterSearchTerm}
+                onChange={(e) => setFilterSearchTerm(e.target.value)}
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+
+            {/* Actions */}
+            <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  size="small"
+                  onClick={() => handleSelectAllFilterValues(activeFilterColumn)}
+                >
+                  Select All
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => handleDeselectAllFilterValues(activeFilterColumn)}
+                >
+                  Deselect All
+                </Button>
+              </Box>
+              <Button
+                size="small"
+                onClick={() => handleClearColumnFilter(activeFilterColumn)}
+                color="error"
+              >
+                Reset
+              </Button>
+            </Box>
+
+            {/* Value List */}
+            <List dense sx={{ maxHeight: '55vh', overflow: 'auto', py: 0 }}>
+              {getUniqueColumnValues(activeFilterColumn)
+                .filter(value => !filterSearchTerm || value.toLowerCase().includes(filterSearchTerm.toLowerCase()))
+                .map((value) => {
+                  const filter = columnFilters[activeFilterColumn];
+                  const isChecked = filter ? filter.has(value) : true;
+                  return (
+                    <ListItemButton
+                      key={value}
+                      dense
+                      onClick={() => handleToggleFilterValue(activeFilterColumn, value)}
+                    >
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <Checkbox
+                          edge="start"
+                          checked={isChecked}
+                          size="small"
+                        />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={value || '(empty)'}
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          style: {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          },
+                        }}
+                      />
+                    </ListItemButton>
+                  );
+                })}
+            </List>
+
+            {/* Footer */}
+            <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+              <Typography variant="caption" color="text.secondary">
+                {columnFilters[activeFilterColumn]?.size || getUniqueColumnValues(activeFilterColumn).length} of {getUniqueColumnValues(activeFilterColumn).length} values selected
+              </Typography>
+            </Box>
+          </Box>
+        )}
+      </Popover>
     </Box>
   );
 };

@@ -101,8 +101,8 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
   const gridColor = theme.palette.divider;
 
   return (
-    <Box sx={{ width: '100%', height: 300 }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <Box sx={{ width: '100%', height: '100%', display: 'flex' }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200} data-chart-id="top-contributors">
         <BarChart
           data={chartData}
           layout="horizontal"

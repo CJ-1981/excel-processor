@@ -222,6 +222,19 @@ export interface PDFGenerationContext {
   textColor?: string;
 }
 
+// Name Merging Types
+export interface NameMergeGroup {
+  id: string;
+  displayName: string;
+  originalNames: string[];
+  createdAt: number;
+}
+
+export interface NameMergeState {
+  mergeGroups: NameMergeGroup[];
+  nameToGroupId: Record<string, string>;
+}
+
 // Dashboard Types
 export interface ColumnStatistics {
   columnName: string;
@@ -234,6 +247,10 @@ export interface ColumnStatistics {
   stdDev: number;
   count: number;
   nonNullCount: number;
+  percentile25: number;
+  percentile75: number;
+  percentile90: number;
+  percentile95: number;
 }
 
 export interface TimeSeriesDataPoint {
@@ -247,6 +264,55 @@ export interface CategoryDistribution {
   category: string;
   value: number;
   count: number;
+  percentage: number;
+}
+
+// Histogram Types
+export interface HistogramBin {
+  binStart: number;
+  binEnd: number;
+  count: number;
+  label: string;
+}
+
+export interface HistogramData {
+  bins: HistogramBin[];
+  mean: number;
+  median: number;
+  min: number;
+  max: number;
+}
+
+// Box Plot Types
+export interface Quartiles {
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  iqr: number;
+  outliers: number[];
+}
+
+// Pareto Types
+export interface ParetoDataPoint {
+  category: string;
+  value: number;
+  cumulativeValue: number;
+  cumulativePercentage: number;
+}
+
+// Range Distribution Types
+export interface ValueRange {
+  label: string;
+  min: number;
+  max: number;
+}
+
+export interface RangeDistributionData {
+  label: string;
+  count: number;
+  amount: number;
   percentage: number;
 }
 

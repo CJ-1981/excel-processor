@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Paper,
   Divider,
   FormControl,
@@ -15,7 +14,15 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Chip,
+  IconButton,
+  Button,
 } from '@mui/material';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+
+// Wrap Responsive with WidthProvider for auto-width detection
+const GridLayout = WidthProvider(Responsive);
 import {
   TrendingUp,
   BarChart,
@@ -24,13 +31,32 @@ import {
   AreaChart as AreaChartIcon,
   StackedLineChart,
   Close,
+  PieChart as PieChartIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  Download,
 } from '@mui/icons-material';
 import TrendChart, { CHART_COLORS } from './TrendChart';
 import TopDonorsChart from './TopDonorsChart';
 import StatisticsTable from './StatisticsTable';
-import { analyzeDataForDashboard, detectNumericColumns, detectDateColumns, calculateDistribution, getTopItems } from '../../utils/statisticsAnalyzer';
+import DistributionHistogram from './DistributionHistogram';
+import BoxPlotChart from './BoxPlotChart';
+import ParetoChart from './ParetoChart';
+import RangeDistributionCharts from './RangeDistributionCharts';
+import {
+  analyzeDataForDashboard,
+  detectNumericColumns,
+  detectDateColumns,
+  calculateDistribution,
+  getTopItems,
+  extractNumericValues,
+  calculateHistogram,
+  calculateQuartiles,
+  calculatePareto,
+  calculateRangeDistribution,
+} from '../../utils/statisticsAnalyzer';
 import type { DashboardAnalysis } from '../../types';
-import { formatDateGerman } from '../../utils/germanFormatter';
+import { formatDateGerman, formatCurrencyGerman } from '../../utils/germanFormatter';
 
 interface DashboardViewProps {
   data: any[];
@@ -47,6 +73,100 @@ const FILENAME_DATE_PATTERN = /(\d{8})/;
 const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn }) => {
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
   const [chartType, setChartType] = useState<ChartType>('area');
+  const [topDonorsCount, setTopDonorsCount] = useState<number>(10);
+  const [paretoDonorsCount, setParetoDonorsCount] = useState<number>(15);
+  const [histogramBins, setHistogramBins] = useState<number>(100);
+  const [histogramZoomMin, setHistogramZoomMin] = useState<number | null>(null);
+  const [histogramZoomMax, setHistogramZoomMax] = useState<number | null>(null);
+
+  // Grid layout state for draggable/resizable charts
+  const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
+  const LAYOUT_VERSION = 5; // Increment to invalidate saved layouts
+  const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
+  const COLS_BREAKPOINTS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
+
+  // Helper function to download any chart as PNG/JPG
+  const downloadChartAsImage = useCallback((chartId: string, format: 'png' | 'jpg' = 'png') => {
+    const chartElement = document.querySelector(`[data-chart-id="${chartId}"] svg`);
+    if (!chartElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(chartElement);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    img.onload = () => {
+      canvas.width = chartElement.clientWidth || 800;
+      canvas.height = chartElement.clientHeight || 400;
+      ctx.drawImage(img, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `chart-${chartId}.${format}`;
+          link.click();
+          URL.revokeObjectURL(url);
+        }
+      }, `image/${format}`, 0.9);
+    };
+
+    img.src = URL.createObjectURL(svgBlob);
+  }, []);
+
+  // Default layout configuration - all charts full width, stacked vertically
+  const defaultLayout = {
+    lg: [
+      { i: 'trend-chart', x: 0, y: 0, w: 12, h: 16, minW: 6, minH: 10 },
+      { i: 'top-contributors', x: 0, y: 16, w: 12, h: 18, minW: 6, minH: 10 },
+      { i: 'statistics-table', x: 0, y: 34, w: 12, h: 12, minW: 6, minH: 4 },
+      { i: 'histogram', x: 0, y: 46, w: 12, h: 16, minW: 6, minH: 8 },
+      { i: 'box-plot', x: 0, y: 62, w: 12, h: 16, minW: 6, minH: 8 },
+      { i: 'pareto', x: 0, y: 78, w: 12, h: 14, minW: 6, minH: 8 },
+      { i: 'range-distribution', x: 0, y: 92, w: 12, h: 18, minW: 6, minH: 10 },
+    ],
+  };
+
+  const [layouts, setLayouts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Check version and invalidate if old
+        if (parsed._version !== LAYOUT_VERSION) {
+          console.log('Layout version mismatch, using defaults');
+          localStorage.removeItem(LAYOUT_STORAGE_KEY);
+          return defaultLayout;
+        }
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Could not load dashboard layout:', e);
+    }
+    return defaultLayout;
+  });
+
+  const handleLayoutChange = useCallback((_layout: any, newLayouts: any) => {
+    setLayouts(newLayouts);
+    try {
+      const toSave = { ...newLayouts, _version: LAYOUT_VERSION };
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('Could not save dashboard layout:', e);
+    }
+  }, []);
+
+  const handleResetLayout = useCallback(() => {
+    setLayouts(defaultLayout);
+    localStorage.removeItem(LAYOUT_STORAGE_KEY);
+  }, [defaultLayout]);
+
+  // Calculate row height for grid (50px per unit)
+  const rowHeight = 50;
 
   // Detect available columns
   const availableNumericColumns = useMemo(() => {
@@ -112,12 +232,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     return aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
   }, [data, selectedDateColumn, selectedValueColumns, useFilenameDates]);
 
-  // Get top contributors for first selected value column
+  // Get top contributors for first selected value column (aggregated by name)
   const topContributorsData = useMemo(() => {
     if (selectedValueColumns.length === 0 || !nameColumn) return [];
 
     const distribution = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
-    return getTopItems(distribution, 10);
+    return getTopItems(distribution, topDonorsCount);
+  }, [data, selectedValueColumns, nameColumn, topDonorsCount]);
+
+  // Get ALL contributors aggregated by name (for donor-level statistics)
+  const allContributorsData = useMemo(() => {
+    if (selectedValueColumns.length === 0 || !nameColumn) return [];
+    return calculateDistribution(data, nameColumn, selectedValueColumns[0]);
   }, [data, selectedValueColumns, nameColumn]);
 
   // Build series configuration for TrendChart
@@ -128,6 +254,132 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       color: CHART_COLORS[index % CHART_COLORS.length],
     }));
   }, [selectedValueColumns, columnMapping]);
+
+  // Get values for the first selected column for distribution charts
+  // IMPORTANT: For donor analysis, we aggregate by unique name first
+  // This means we analyze donor totals, not individual transactions
+  const distributionValues = useMemo(() => {
+    if (selectedValueColumns.length === 0) return [];
+
+    if (nameColumn) {
+      // Aggregate by unique name - each value represents one donor's total
+      return allContributorsData.map(d => d.value);
+    } else {
+      // No name column - use individual transaction values
+      return extractNumericValues(data, selectedValueColumns[0]);
+    }
+  }, [data, selectedValueColumns, nameColumn, allContributorsData]);
+
+  // Calculate histogram data with zoom support
+  const histogramData = useMemo(() => {
+    if (distributionValues.length === 0) {
+      return { bins: [], mean: 0, median: 0, min: 0, max: 0 };
+    }
+
+    // Apply zoom filter if set
+    let filteredValues = distributionValues;
+    if (histogramZoomMin !== null || histogramZoomMax !== null) {
+      filteredValues = distributionValues.filter(v => {
+        if (histogramZoomMin !== null && v < histogramZoomMin) return false;
+        if (histogramZoomMax !== null && v > histogramZoomMax) return false;
+        return true;
+      });
+    }
+
+    return calculateHistogram(filteredValues, histogramBins);
+  }, [distributionValues, histogramBins, histogramZoomMin, histogramZoomMax]);
+
+  // Get overall min/max for zoom reset
+  const distributionMinMax = useMemo(() => {
+    if (distributionValues.length === 0) return { min: 0, max: 0 };
+    const sorted = [...distributionValues].sort((a, b) => a - b);
+    return { min: sorted[0], max: sorted[sorted.length - 1] };
+  }, [distributionValues]);
+
+  // Zoom in (reduce range by 25%)
+  const handleHistogramZoomIn = () => {
+    const currentMin = histogramZoomMin ?? distributionMinMax.min;
+    const currentMax = histogramZoomMax ?? distributionMinMax.max;
+    const range = currentMax - currentMin;
+    const newRange = range * 0.75; // Keep 75% of current range
+    const center = (currentMin + currentMax) / 2;
+
+    setHistogramZoomMin(center - newRange / 2);
+    setHistogramZoomMax(center + newRange / 2);
+  };
+
+  // Zoom out (increase range by ~33%)
+  const handleHistogramZoomOut = () => {
+    const currentMin = histogramZoomMin ?? distributionMinMax.min;
+    const currentMax = histogramZoomMax ?? distributionMinMax.max;
+    const range = currentMax - currentMin;
+
+    // Expand by 33% on each side
+    const expansion = range * 0.33;
+    const newMin = Math.max(distributionMinMax.min, currentMin - expansion);
+    const newMax = Math.min(distributionMinMax.max, currentMax + expansion);
+
+    // If we're back to full range, reset zoom
+    if (newMin <= distributionMinMax.min && newMax >= distributionMinMax.max) {
+      setHistogramZoomMin(null);
+      setHistogramZoomMax(null);
+    } else {
+      setHistogramZoomMin(newMin);
+      setHistogramZoomMax(newMax);
+    }
+  };
+
+  // Pan left (move view to the left by 20% of current range)
+  const handleHistogramPanLeft = () => {
+    if (histogramZoomMin === null || histogramZoomMax === null) return;
+
+    const range = histogramZoomMax - histogramZoomMin;
+    const shift = range * 0.2;
+    const newMin = Math.max(distributionMinMax.min, histogramZoomMin - shift);
+    const shiftDiff = histogramZoomMin - newMin;
+
+    setHistogramZoomMin(newMin);
+    setHistogramZoomMax(histogramZoomMax - shiftDiff);
+  };
+
+  // Pan right (move view to the right by 20% of current range)
+  const handleHistogramPanRight = () => {
+    if (histogramZoomMin === null || histogramZoomMax === null) return;
+
+    const range = histogramZoomMax - histogramZoomMin;
+    const shift = range * 0.2;
+    const newMax = Math.min(distributionMinMax.max, histogramZoomMax + shift);
+    const shiftDiff = newMax - histogramZoomMax;
+
+    setHistogramZoomMin(histogramZoomMin + shiftDiff);
+    setHistogramZoomMax(newMax);
+  };
+
+  // Reset zoom
+  const handleHistogramZoomReset = () => {
+    setHistogramZoomMin(null);
+    setHistogramZoomMax(null);
+  };
+
+  // Calculate quartiles for box plot
+  const quartilesData = useMemo(() => {
+    if (distributionValues.length === 0) {
+      return { min: 0, q1: 0, median: 0, q3: 0, max: 0, iqr: 0, outliers: [] };
+    }
+    return calculateQuartiles(distributionValues);
+  }, [distributionValues]);
+
+  // Calculate Pareto data (use configurable number of contributors)
+  const paretoData = useMemo(() => {
+    if (!allContributorsData || allContributorsData.length === 0) return [];
+    return calculatePareto(allContributorsData.slice(0, paretoDonorsCount));
+  }, [allContributorsData, paretoDonorsCount]);
+
+  // Calculate range distribution
+  const rangeDistributionData = useMemo(() => {
+    if (distributionValues.length === 0) return [];
+    return calculateRangeDistribution(distributionValues);
+  }, [distributionValues]);
 
   // Handle multi-select change
   const handleColumnChange = (event: any) => {
@@ -272,60 +524,92 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
       <Divider sx={{ my: 3 }} />
 
-      {/* Charts Section */}
-      <Grid container spacing={2}>
+      {/* Reset Layout Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={handleResetLayout}
+        >
+          Reset Layout
+        </Button>
+      </Box>
+
+      {/* Charts Section with GridLayout */}
+      <GridLayout
+        className="layout"
+        layouts={layouts}
+        breakpoints={BREAKPOINTS}
+        cols={COLS_BREAKPOINTS}
+        rowHeight={rowHeight}
+        onLayoutChange={handleLayoutChange}
+        draggableHandle=".drag-handle"
+        margin={[16, 16]}
+        isDraggable={true}
+        isResizable={true}
+      >
         {/* Trend Chart */}
-        <Grid size={{ xs: 12 }}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TrendingUp color="primary" />
-                <Typography variant="h6">
-                  {hasTimeSeriesData ? 'Trend Over Time' : 'Trend Analysis'}
-                </Typography>
-              </Box>
-              {hasTimeSeriesData && (
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <InputLabel>Period</InputLabel>
-                    <Select
-                      value={periodType}
-                      label="Period"
-                      onChange={(e) => setPeriodType(e.target.value as PeriodType)}
-                    >
-                      <MenuItem value="monthly">Monthly</MenuItem>
-                      <MenuItem value="quarterly">Quarterly</MenuItem>
-                      <MenuItem value="yearly">Yearly</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <ToggleButtonGroup
-                    value={chartType}
-                    exclusive
-                    onChange={(_, value) => value && setChartType(value)}
-                    size="small"
-                  >
-                    <ToggleButton value="line" title="Line Chart">
-                      <ShowChart fontSize="small" />
-                    </ToggleButton>
-                    <ToggleButton value="area" title="Area Chart">
-                      <AreaChartIcon fontSize="small" />
-                    </ToggleButton>
-                    <ToggleButton value="stacked" title="Stacked Area">
-                      <StackedLineChart fontSize="small" />
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              )}
+        <Paper key="trend-chart" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TrendingUp color="primary" />
+              <Typography variant="h6">
+                {hasTimeSeriesData ? 'Trend Over Time' : 'Trend Analysis'}
+              </Typography>
             </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton size="small" onClick={() => downloadChartAsImage('trend-chart', 'png')} title="Download as PNG">
+                <Download fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => downloadChartAsImage('trend-chart', 'jpg')} title="Download as JPG">
+                <Download fontSize="small" />
+              </IconButton>
+            </Box>
+            {hasTimeSeriesData && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <InputLabel>Period</InputLabel>
+                  <Select
+                    value={periodType}
+                    label="Period"
+                    onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                  >
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                    <MenuItem value="quarterly">Quarterly</MenuItem>
+                    <MenuItem value="yearly">Yearly</MenuItem>
+                  </Select>
+                </FormControl>
+                <ToggleButtonGroup
+                  value={chartType}
+                  exclusive
+                  onChange={(_, value) => value && setChartType(value)}
+                  size="small"
+                >
+                  <ToggleButton value="line" title="Line Chart">
+                    <ShowChart fontSize="small" />
+                  </ToggleButton>
+                  <ToggleButton value="area" title="Area Chart">
+                    <AreaChartIcon fontSize="small" />
+                  </ToggleButton>
+                  <ToggleButton value="stacked" title="Stacked Area">
+                    <StackedLineChart fontSize="small" />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            )}
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }} data-chart-id="trend-chart">
             {hasTimeSeriesData && selectedValueColumns.length > 0 ? (
-              <TrendChart
-                data={multiSeriesTimeData[periodType]}
-                series={seriesConfig}
-                periodType={periodType}
-                type={chartType}
-              />
+              <Box sx={{ height: '100%' }}>
+                <TrendChart
+                  data={multiSeriesTimeData[periodType]}
+                  series={seriesConfig}
+                  periodType={periodType}
+                  type={chartType}
+                />
+              </Box>
             ) : (
-              <Box sx={{ py: 8, textAlign: 'center' }}>
+              <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
                   {selectedValueColumns.length === 0
                     ? 'Select value columns above to see trend analysis.'
@@ -335,36 +619,237 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </Typography>
               </Box>
             )}
-          </Paper>
-        </Grid>
+          </Box>
+        </Paper>
 
         {/* Top Contributors Chart */}
         {topContributorsData.length > 0 && (
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <BarChart color="primary" />
                 <Typography variant="h6">Top Contributors</Typography>
               </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => setTopDonorsCount(prev => Math.max(5, prev - 5))}
+                  disabled={topDonorsCount <= 5}
+                  title="Show fewer"
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
+                  {topDonorsCount} donors
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setTopDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
+                  disabled={topDonorsCount >= allContributorsData.length}
+                  title="Show more"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <TopDonorsChart
                 data={topContributorsData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
+                limit={topDonorsCount}
               />
-            </Paper>
-          </Grid>
+            </Box>
+          </Paper>
         )}
 
         {/* Statistics Table */}
-        <Grid size={{ xs: 12, lg: topContributorsData.length > 0 ? 6 : 12 }}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <TableChart color="primary" />
-              <Typography variant="h6">Descriptive Statistics</Typography>
-            </Box>
+        <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, mb: 2 }}>
+            <TableChart color="primary" />
+            <Typography variant="h6">Descriptive Statistics</Typography>
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
             <StatisticsTable statistics={analysis.numericColumns} />
+          </Box>
+        </Paper>
+
+        {/* Distribution Histogram */}
+        {selectedValueColumns.length > 0 && (
+          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
+              <Typography variant="subtitle1">
+                Distribution Histogram
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title="Fewer bins">
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'center' }}>
+                  {histogramBins} bins
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setHistogramBins(prev => Math.min(200, prev + 10))}
+                  disabled={histogramBins >= 200}
+                  title="More bins"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                <IconButton
+                  size="small"
+                  onClick={handleHistogramZoomOut}
+                  disabled={histogramZoomMin === null && histogramZoomMax === null}
+                  title="Zoom out"
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={handleHistogramZoomIn}
+                  disabled={distributionValues.length === 0}
+                  title="Zoom in"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                {(histogramZoomMin !== null || histogramZoomMax !== null) && (
+                  <>
+                    <IconButton
+                      size="small"
+                      onClick={handleHistogramPanLeft}
+                      disabled={histogramZoomMin !== null && histogramZoomMin <= distributionMinMax.min}
+                      title="Pan left"
+                    >
+                      {'<'}
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={handleHistogramPanRight}
+                      disabled={histogramZoomMax !== null && histogramZoomMax >= distributionMinMax.max}
+                      title="Pan right"
+                    >
+                      {'>'}
+                    </IconButton>
+                    <Button
+                      size="small"
+                      onClick={handleHistogramZoomReset}
+                      sx={{ ml: 0.5 }}
+                    >
+                      Reset
+                    </Button>
+                  </>
+                )}
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <DistributionHistogram
+                data={histogramData}
+                valueLabel={seriesConfig[0]?.label || 'Value'}
+              />
+              {(histogramZoomMin !== null || histogramZoomMax !== null) && (
+                <Typography variant="caption" color="text.secondary" align="center" display="block">
+                  Zoomed: {formatCurrencyGerman(histogramZoomMin ?? distributionMinMax.min)} - {formatCurrencyGerman(histogramZoomMax ?? distributionMinMax.max)}
+                </Typography>
+              )}
+            </Box>
           </Paper>
-        </Grid>
-      </Grid>
+        )}
+
+        {/* Box Plot */}
+        {selectedValueColumns.length > 0 && (
+          <Paper key="box-plot" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', p: 2, pb: 1 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Box Plot Analysis
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('box-plot', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('box-plot', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <BoxPlotChart
+                data={quartilesData}
+                title={seriesConfig[0]?.label || 'Value Distribution'}
+              />
+            </Box>
+          </Paper>
+        )}
+
+        {/* Pareto Chart */}
+        {selectedValueColumns.length > 0 && paretoData.length > 0 && (
+          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
+              <Typography variant="subtitle1">
+                Pareto Analysis (80/20 Rule)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title="Show fewer">
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
+                  {paretoDonorsCount} donors
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setParetoDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
+                  disabled={paretoDonorsCount >= allContributorsData.length}
+                  title="Show more"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <ParetoChart
+                data={paretoData}
+                valueLabel={seriesConfig[0]?.label || 'Value'}
+                showTop={paretoDonorsCount}
+              />
+            </Box>
+          </Paper>
+        )}
+
+        {/* Range Distribution */}
+        {selectedValueColumns.length > 0 && rangeDistributionData.length > 0 && (
+          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
+              <PieChartIcon color="primary" />
+              <Typography variant="h6">Range Distribution</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'png')} title="Download as PNG">
+                <Download fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'jpg')} title="Download as JPG">
+                <Download fontSize="small" />
+              </IconButton>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <RangeDistributionCharts
+                data={rangeDistributionData}
+                valueLabel={seriesConfig[0]?.label || 'Value'}
+              />
+            </Box>
+          </Paper>
+        )}
+      </GridLayout>
     </Box>
   );
 };

@@ -5,14 +5,16 @@ import UniqueNameList from './components/UniqueNameList';
 import DetailedDataView from './components/DetailedDataView';
 import SheetSelector from './components/SheetSelector';
 import FileProgressIndicator from './components/FileProgressIndicator';
+import NameMergingPanel from './components/NameMergingPanel';
 
 import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { ParsedFile, ParseProgress } from './types';
+import type { ParsedFile, ParseProgress, NameMergeState } from './types';
 import * as XLSX from 'xlsx';
 import { processInBatches } from './utils/batchProcessor';
 import { APP_VERSION } from './version';
+import { loadNameMergeState, applyNameMerging } from './utils/nameMergeUtils';
 
 type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
@@ -43,6 +45,11 @@ function App() {
     } catch {
       return {};
     }
+  });
+
+  // State for name merging
+  const [nameMergeState, setNameMergeState] = useState<NameMergeState>(() => {
+    return loadNameMergeState();
   });
 
   // Wrapper to save column visibility to localStorage whenever it changes
@@ -227,13 +234,44 @@ function App() {
     }
     const headerRowIdx = headerRowIndex - 1;
 
-    return mergedData
+    // Apply name merging first
+    const dataWithMerging = applyNameMerging(mergedData, selectedNameColumn, nameMergeState);
+
+    return dataWithMerging
       .filter((_, idx) => idx !== headerRowIdx) // Exclude header row
       .filter(row => {
         const value = getRowValue(row, selectedNameColumn, getActualColumnName);
-        return selectedUniqueNames.includes(value);
+        // Check against original name (before merging) or merged display name
+        const originalName = row._originalName;
+        const mergedDisplayName = row._mergedDisplayName;
+
+        // Match if: selected name matches current value (merged or not),
+        // or if selected name matches the original name before merging
+        return selectedUniqueNames.includes(value) ||
+               (originalName && selectedUniqueNames.includes(originalName)) ||
+               (mergedDisplayName && selectedUniqueNames.includes(mergedDisplayName));
       });
-  }, [mergedData, selectedNameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName]);
+  }, [mergedData, selectedNameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName, nameMergeState]);
+
+  // Get available unique names for the name merging panel
+  const availableUniqueNames = useMemo(() => {
+    if (!selectedNameColumn || mergedData.length === 0) {
+      return [];
+    }
+    const headerRowIdx = headerRowIndex - 1;
+    const names = new Set<string>();
+
+    mergedData
+      .filter((_, idx) => idx !== headerRowIdx)
+      .forEach(row => {
+        const value = row[selectedNameColumn];
+        if (value !== undefined && value !== null && value !== '') {
+          names.add(String(value));
+        }
+      });
+
+    return Array.from(names).sort();
+  }, [mergedData, selectedNameColumn, headerRowIndex]);
 
 
   const detailedViewContent = (
@@ -304,6 +342,15 @@ function App() {
                   selectedNames={selectedUniqueNames}
                   onNamesSelect={handleUniqueNamesSelect}
                 />
+
+                {/* Name Merging Panel */}
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  <NameMergingPanel
+                    availableNames={availableUniqueNames}
+                    mergeState={nameMergeState}
+                    onMergeStateChange={setNameMergeState}
+                  />
+                </Box>
               </>
             )}
 

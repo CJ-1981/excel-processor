@@ -15,10 +15,14 @@ import {
   TableSortLabel,
   TablePagination,
   Checkbox,
-  Divider // Add Divider here
+  Collapse,
+  Button,
+  Chip,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 interface UniqueNameListProps {
   data: any[];
@@ -92,6 +96,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
   const [orderBy, setOrderBy] = useState<string>('name');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showSelectedExpanded, setShowSelectedExpanded] = useState<boolean>(true); // Expand selected names section
 
   const uniqueNames = useMemo(() => {
     if (!nameColumn || data.length === 0) return [];
@@ -144,32 +149,58 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
     setOrderBy(property);
   };
 
-  const displayedNames = useMemo(() => {
+  // Get selected names (sorted)
+  const selectedNamesSorted = useMemo(() => {
+    const selected = uniqueNames.filter(name => selectedNames.includes(name));
+    return [...selected].sort((a, b) => {
+      const orderValue = order === 'desc' ? -1 : 1;
+      return orderValue * String(a).localeCompare(String(b));
+    });
+  }, [uniqueNames, selectedNames, order]);
+
+  // Get selected names that match search (sorted)
+  const selectedMatchingSearchSorted = useMemo(() => {
+    if (!searchTerm) return [];
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return selectedNamesSorted.filter(name =>
+      String(name).toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  }, [selectedNamesSorted, searchTerm]);
 
-    // 1. Get all selected names from the original unique list
-    // These should always be displayed regardless of search term
-    const currentlySelectedNames = uniqueNames.filter(name => selectedNames.includes(name));
-
-    // 2. Filter the *unselected* names based on the search term
-    const unselectedAndFilteredNames = uniqueNames
-      .filter(name => !selectedNames.includes(name)) // Exclude already selected names
-      .filter(name => String(name).toLowerCase().includes(lowerCaseSearchTerm)); // Apply search term
-
-    // Keep selected names at top while maintaining sort order within each group
-    // Clone arrays before sorting to avoid mutation
-    const selectedSorted = [...currentlySelectedNames].sort((a, b) => {
+  // Get unselected names that match search (sorted)
+  const unselectedNamesSorted = useMemo(() => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const unselected = uniqueNames
+      .filter(name => !selectedNames.includes(name))
+      .filter(name => String(name).toLowerCase().includes(lowerCaseSearchTerm));
+    return [...unselected].sort((a, b) => {
       const orderValue = order === 'desc' ? -1 : 1;
       return orderValue * String(a).localeCompare(String(b));
     });
-
-    const unselectedSorted = [...unselectedAndFilteredNames].sort((a, b) => {
-      const orderValue = order === 'desc' ? -1 : 1;
-      return orderValue * String(a).localeCompare(String(b));
-    });
-
-    return [...selectedSorted, ...unselectedSorted];
   }, [uniqueNames, selectedNames, searchTerm, order]);
+
+  // Names to display in the table
+  const displayedNames = useMemo(() => {
+    if (searchTerm) {
+      // When searching: show matching selected first, then matching unselected
+      return [...selectedMatchingSearchSorted, ...unselectedNamesSorted];
+    } else if (showSelectedExpanded) {
+      // Not searching, expanded: show all selected at top, then unselected
+      return [...selectedNamesSorted, ...uniqueNames.filter(name => !selectedNames.includes(name)).sort((a, b) => {
+        const orderValue = order === 'desc' ? -1 : 1;
+        return orderValue * String(a).localeCompare(String(b));
+      })];
+    } else {
+      // Not searching, collapsed: show only unselected
+      return uniqueNames.filter(name => !selectedNames.includes(name)).sort((a, b) => {
+        const orderValue = order === 'desc' ? -1 : 1;
+        return orderValue * String(a).localeCompare(String(b));
+      });
+    }
+  }, [selectedNamesSorted, selectedMatchingSearchSorted, unselectedNamesSorted, uniqueNames, selectedNames, showSelectedExpanded, searchTerm, order]);
+
+  // Count of selected names that match search (for info)
+  const selectedMatchingSearch = selectedMatchingSearchSorted.length;
 
 
   const handleSelectAllClick = (_event: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,6 +242,29 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
   };
 
   const isSelected = (name: string) => selectedNames.indexOf(name) !== -1;
+
+  // Get all names matching current search
+  const allMatchingSearch = useMemo(() => {
+    if (!searchTerm) return [];
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return uniqueNames.filter(name =>
+      String(name).toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  }, [uniqueNames, searchTerm]);
+
+  // Select all names matching search
+  const handleSelectAllSearched = () => {
+    const newSelected = new Set(selectedNames);
+    allMatchingSearch.forEach(name => newSelected.add(name));
+    onNamesSelect(Array.from(newSelected));
+  };
+
+  // Deselect all names matching search
+  const handleDeselectAllSearched = () => {
+    const matchingSet = new Set(allMatchingSearch);
+    const newSelected = selectedNames.filter(name => !matchingSet.has(name));
+    onNamesSelect(newSelected);
+  };
 
   if (!nameColumn || data.length === 0) {
     return null;
@@ -256,6 +310,116 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
         }}
         sx={{ mb: 2 }}
       />
+
+      {/* Selected Names Panel - Collapsible */}
+      {selectedNames.length > 0 && (
+        <Paper sx={{ p: 1.5, mb: 2, bgcolor: 'action.hover' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+            }}
+            onClick={() => setShowSelectedExpanded(!showSelectedExpanded)}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                size="small"
+                label={`${selectedNames.length} selected`}
+                color="primary"
+              />
+              {searchTerm && selectedMatchingSearch > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  ({selectedMatchingSearch} match search)
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNamesSelect([]);
+                }}
+                color="error"
+              >
+                Clear all
+              </Button>
+              <IconButton size="small">
+                {showSelectedExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </IconButton>
+            </Box>
+          </Box>
+
+          <Collapse in={showSelectedExpanded}>
+            <Box
+              sx={{
+                mt: 1.5,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 0.5,
+                maxHeight: 150,
+                overflowY: 'auto',
+              }}
+            >
+              {selectedNamesSorted.map((name) => (
+                <Chip
+                  key={name}
+                  label={name}
+                  size="small"
+                  onDelete={() => handleClick({ stopPropagation: () => {} } as any, name)}
+                  sx={{
+                    maxWidth: 200,
+                    '& .MuiChip-label': {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+          </Collapse>
+        </Paper>
+      )}
+
+      {/* Search Results Info */}
+      {searchTerm && (
+        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="body2" color="text.secondary">
+            {displayedNames.length} result{displayedNames.length !== 1 ? 's' : ''} for "{searchTerm}"
+          </Typography>
+          {selectedMatchingSearch > 0 && (
+            <Chip
+              size="small"
+              label={`${selectedMatchingSearch} selected`}
+              color="primary"
+              variant="outlined"
+            />
+          )}
+          <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleSelectAllSearched}
+              disabled={allMatchingSearch.length === selectedMatchingSearch}
+            >
+              Select all
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={handleDeselectAllSearched}
+              disabled={selectedMatchingSearch === 0}
+            >
+              Deselect all
+            </Button>
+          </Box>
+        </Box>
+      )}
+
       <Paper sx={{ width: '100%', mb: 2 }}>
         <TableContainer>
           <Table stickyHeader aria-label="unique names table">
@@ -265,48 +429,35 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
               orderBy={orderBy}
               onSelectAllClick={handleSelectAllClick}
               onRequestSort={handleRequestSort}
-              rowCount={displayedNames.length} // Use displayedNames.length for rowCount
+              rowCount={uniqueNames.length}
             />
             <TableBody>
               {paginatedDisplayedNames.map((name, index) => {
                 const isItemSelected = isSelected(name);
                 const labelId = `enhanced-table-checkbox-${index}`;
-                
-                // Determine if this is the first unselected item in the displayed list
-                const numSelectedAndDisplayed = displayedNames.filter(n => selectedNames.includes(n)).length;
-                const isFirstUnselected = index === numSelectedAndDisplayed && numSelectedAndDisplayed > 0 && displayedNames.length > numSelectedAndDisplayed;
 
                 return (
-                  <React.Fragment key={name}>
-                    {isFirstUnselected && (
-                      <TableRow>
-                        <TableCell colSpan={headCells.length + 1} sx={{ borderBottom: 'none', p: 0 }}>
-                          <Divider sx={{ my: 1, mx: 2 }} />
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    <TableRow
-                      hover
-                      onClick={(event) => handleClick(event, name)}
-                      role="checkbox"
-                      aria-checked={isItemSelected}
-                      tabIndex={-1}
-                      key={name}
-                      selected={isItemSelected}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          color="primary"
-                          checked={isItemSelected}
-                          inputProps={{ 'aria-labelledby': labelId }}
-                        />
-                      </TableCell>
-                      <TableCell component="th" id={labelId} scope="row" sx={{ minWidth: 150 }}>
-                        <Typography noWrap>{name}</Typography>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
+                  <TableRow
+                    hover
+                    onClick={(event) => handleClick(event, name)}
+                    role="checkbox"
+                    aria-checked={isItemSelected}
+                    tabIndex={-1}
+                    key={name}
+                    selected={isItemSelected}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        color="primary"
+                        checked={isItemSelected}
+                        inputProps={{ 'aria-labelledby': labelId }}
+                      />
+                    </TableCell>
+                    <TableCell component="th" id={labelId} scope="row" sx={{ minWidth: 150 }}>
+                      <Typography noWrap>{name}</Typography>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
               {emptyRows > 0 && (

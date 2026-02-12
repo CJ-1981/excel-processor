@@ -102,6 +102,39 @@ export function formatTodayDateGerman(): string {
 }
 
 /**
+ * Format a number as German currency (e.g., 1234.56 -> "1.234,56 €")
+ */
+export function formatCurrencyGerman(value: number): string {
+  return value.toLocaleString('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Format a number as German percentage (e.g., 45.67 -> "45,67%")
+ * Note: Expects value as percentage (e.g., 45.67), not decimal (e.g., 0.4567)
+ */
+export function formatPercentGerman(value: number): string {
+  return value.toLocaleString('de-DE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }) + '%';
+}
+
+/**
+ * Format a number with German locale (e.g., 1234.56 -> "1.234,56")
+ */
+export function formatNumberGerman(value: number, decimals: number = 2): string {
+  return value.toLocaleString('de-DE', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+/**
  * Convert a number to German words (for amounts)
  * e.g., 1234 -> "eintausend zweihundert vierunddreißig"
  */

@@ -1,4 +1,25 @@
-import type { ColumnStatistics, TimeSeriesDataPoint, CategoryDistribution, DashboardAnalysis } from '../types';
+import type { ColumnStatistics, TimeSeriesDataPoint, CategoryDistribution, DashboardAnalysis, HistogramData, HistogramBin, Quartiles, ParetoDataPoint, RangeDistributionData, ValueRange } from '../types';
+
+/**
+ * Calculate a specific percentile of a sorted array
+ * @param sortedValues - Array of values sorted in ascending order
+ * @param percentile - Percentile to calculate (0-100)
+ */
+export function calculatePercentile(sortedValues: number[], percentile: number): number {
+  if (sortedValues.length === 0) return 0;
+  if (sortedValues.length === 1) return sortedValues[0];
+
+  const index = (percentile / 100) * (sortedValues.length - 1);
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  const fraction = index - lower;
+
+  if (lower === upper) {
+    return sortedValues[lower];
+  }
+
+  return sortedValues[lower] * (1 - fraction) + sortedValues[upper] * fraction;
+}
 
 /**
  * Calculate basic statistics for a numeric column
@@ -32,6 +53,10 @@ export function calculateColumnStatistics(
       stdDev: 0,
       count: data.length,
       nonNullCount: 0,
+      percentile25: 0,
+      percentile75: 0,
+      percentile90: 0,
+      percentile95: 0,
     };
   }
 
@@ -53,6 +78,12 @@ export function calculateColumnStatistics(
   const avgSquaredDiff = squaredDiffs.reduce((acc, val) => acc + val, 0) / values.length;
   const stdDev = Math.sqrt(avgSquaredDiff);
 
+  // Calculate percentiles using sorted values
+  const percentile25 = calculatePercentile(sortedValues, 25);
+  const percentile75 = calculatePercentile(sortedValues, 75);
+  const percentile90 = calculatePercentile(sortedValues, 90);
+  const percentile95 = calculatePercentile(sortedValues, 95);
+
   return {
     columnName: columnKey,
     columnLabel,
@@ -64,6 +95,10 @@ export function calculateColumnStatistics(
     stdDev,
     count: data.length,
     nonNullCount: values.length,
+    percentile25,
+    percentile75,
+    percentile90,
+    percentile95,
   };
 }
 
@@ -403,4 +438,233 @@ export function analyzeDataForDashboard(
     topDonors,
     metadata,
   };
+}
+
+/**
+ * Extract numeric values from a column
+ */
+export function extractNumericValues(data: any[], columnKey: string): number[] {
+  const values: number[] = [];
+  data.forEach(row => {
+    const value = row[columnKey];
+    if (value !== null && value !== undefined && value !== '') {
+      const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+      if (!isNaN(numValue)) {
+        values.push(numValue);
+      }
+    }
+  });
+  return values;
+}
+
+/**
+ * Calculate histogram data for distribution visualization
+ */
+export function calculateHistogram(
+  values: number[],
+  binCount: number = 10
+): HistogramData {
+  if (values.length === 0) {
+    return {
+      bins: [],
+      mean: 0,
+      median: 0,
+      min: 0,
+      max: 0,
+    };
+  }
+
+  const sortedValues = [...values].sort((a, b) => a - b);
+  const min = sortedValues[0];
+  const max = sortedValues[sortedValues.length - 1];
+  const sum = values.reduce((acc, val) => acc + val, 0);
+  const mean = sum / values.length;
+
+  // Calculate median
+  const mid = Math.floor(sortedValues.length / 2);
+  const median = sortedValues.length % 2 !== 0
+    ? sortedValues[mid]
+    : (sortedValues[mid - 1] + sortedValues[mid]) / 2;
+
+  // Handle case where all values are the same
+  if (min === max) {
+    return {
+      bins: [{
+        binStart: min,
+        binEnd: max,
+        count: values.length,
+        label: `${min.toFixed(2)}`,
+      }],
+      mean,
+      median,
+      min,
+      max,
+    };
+  }
+
+  // Calculate bin width
+  const range = max - min;
+  const binWidth = range / binCount;
+
+  // Create bins
+  const bins: HistogramBin[] = [];
+  for (let i = 0; i < binCount; i++) {
+    const binStart = min + i * binWidth;
+    const binEnd = i === binCount - 1 ? max : min + (i + 1) * binWidth;
+
+    bins.push({
+      binStart,
+      binEnd,
+      count: 0,
+      label: `${binStart.toFixed(0)}-${binEnd.toFixed(0)}`,
+    });
+  }
+
+  // Count values in each bin
+  values.forEach(value => {
+    // Find the appropriate bin
+    let binIndex = Math.floor((value - min) / binWidth);
+    // Handle edge case for max value
+    if (binIndex >= binCount) {
+      binIndex = binCount - 1;
+    }
+    bins[binIndex].count++;
+  });
+
+  return {
+    bins,
+    mean,
+    median,
+    min,
+    max,
+  };
+}
+
+/**
+ * Calculate quartiles and outliers for box plot
+ */
+export function calculateQuartiles(values: number[]): Quartiles {
+  if (values.length === 0) {
+    return {
+      min: 0,
+      q1: 0,
+      median: 0,
+      q3: 0,
+      max: 0,
+      iqr: 0,
+      outliers: [],
+    };
+  }
+
+  const sortedValues = [...values].sort((a, b) => a - b);
+
+  const q1 = calculatePercentile(sortedValues, 25);
+  const median = calculatePercentile(sortedValues, 50);
+  const q3 = calculatePercentile(sortedValues, 75);
+  const iqr = q3 - q1;
+
+  // Calculate whiskers (1.5 * IQR rule)
+  const lowerFence = q1 - 1.5 * iqr;
+  const upperFence = q3 + 1.5 * iqr;
+
+  // Find actual min/max within whiskers
+  const whiskerMin = sortedValues.find(v => v >= lowerFence) || sortedValues[0];
+  const whiskerMax = [...sortedValues].reverse().find(v => v <= upperFence) || sortedValues[sortedValues.length - 1];
+
+  // Find outliers
+  const outliers = sortedValues.filter(v => v < lowerFence || v > upperFence);
+
+  return {
+    min: whiskerMin,
+    q1,
+    median,
+    q3,
+    max: whiskerMax,
+    iqr,
+    outliers,
+  };
+}
+
+/**
+ * Calculate Pareto analysis data (80/20 rule)
+ */
+export function calculatePareto(
+  distribution: CategoryDistribution[]
+): ParetoDataPoint[] {
+  if (distribution.length === 0) {
+    return [];
+  }
+
+  // Sort by value descending (should already be sorted, but ensure)
+  const sorted = [...distribution].sort((a, b) => b.value - a.value);
+
+  // Calculate total
+  const total = sorted.reduce((sum, item) => sum + item.value, 0);
+
+  // Calculate cumulative values and percentages
+  let cumulativeValue = 0;
+  return sorted.map(item => {
+    cumulativeValue += item.value;
+    return {
+      category: item.category,
+      value: item.value,
+      cumulativeValue,
+      cumulativePercentage: total > 0 ? (cumulativeValue / total) * 100 : 0,
+    };
+  });
+}
+
+/**
+ * Default value ranges for distribution analysis
+ */
+export const DEFAULT_VALUE_RANGES: ValueRange[] = [
+  { label: '0', min: 0, max: 0 },
+  { label: '1-50', min: 1, max: 50 },
+  { label: '51-100', min: 51, max: 100 },
+  { label: '101-200', min: 101, max: 200 },
+  { label: '201-500', min: 201, max: 500 },
+  { label: '501-1000', min: 501, max: 1000 },
+  { label: '1001+', min: 1001, max: Infinity },
+];
+
+/**
+ * Calculate range distribution for pie charts
+ */
+export function calculateRangeDistribution(
+  values: number[],
+  ranges: ValueRange[] = DEFAULT_VALUE_RANGES
+): RangeDistributionData[] {
+  if (values.length === 0) {
+    return [];
+  }
+
+  const totalAmount = values.reduce((sum, val) => sum + val, 0);
+
+  // Initialize counts for each range
+  const rangeCounts: Map<string, { count: number; amount: number }> = new Map();
+  ranges.forEach(range => {
+    rangeCounts.set(range.label, { count: 0, amount: 0 });
+  });
+
+  // Categorize each value into a range
+  values.forEach(value => {
+    for (const range of ranges) {
+      if (value >= range.min && value <= range.max) {
+        const entry = rangeCounts.get(range.label)!;
+        entry.count++;
+        entry.amount += value;
+        break;
+      }
+    }
+  });
+
+  // Convert to array and filter out empty ranges
+  return Array.from(rangeCounts.entries())
+    .filter(([, data]) => data.count > 0)
+    .map(([label, data]) => ({
+      label,
+      count: data.count,
+      amount: data.amount,
+      percentage: totalAmount > 0 ? (data.amount / totalAmount) * 100 : 0,
+    }));
 }
