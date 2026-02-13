@@ -44,7 +44,6 @@ import TrendChart, { CHART_COLORS } from './TrendChart';
 import TopDonorsChart from './TopDonorsChart';
 import StatisticsTable from './StatisticsTable';
 import DistributionHistogram from './DistributionHistogram';
-import BoxPlotChart from './BoxPlotChart';
 import ParetoChart from './ParetoChart';
 import RangeDistributionCharts from './RangeDistributionCharts';
 import {
@@ -55,7 +54,6 @@ import {
   getTopItems,
   extractNumericValues,
   calculateHistogram,
-  calculateQuartiles,
   calculatePareto,
   calculateRangeDistribution,
 } from '../../utils/statisticsAnalyzer';
@@ -91,6 +89,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [histogramBins, setHistogramBins] = useState<number>(100);
   const [histogramZoomMin, setHistogramZoomMin] = useState<number | null>(null);
   const [histogramZoomMax, setHistogramZoomMax] = useState<number | null>(null);
+  // Box plot zoom (min/max range)
+  // Box plot removed
   // Anonymize unique names on X-axis ticks
   const [anonymizeNames, setAnonymizeNames] = useState<boolean>(() => {
     try {
@@ -106,7 +106,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
-  const LAYOUT_VERSION = 7; // Increment to invalidate saved layouts
+  const LAYOUT_VERSION = 8; // Increment to invalidate saved layouts due to removing Box Plot panel
   const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
   const COLS_BREAKPOINTS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
   const ROW_HEIGHT_KEY = 'excel-processor-dashboard-rowheight';
@@ -120,7 +120,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     // If this panel contains multiple charts (like Range Distribution's two pies),
     // capture the entire wrapper via html2canvas so everything is included.
     const svgAll = Array.from(wrapper.querySelectorAll('svg')) as SVGSVGElement[];
-    if (chartId === 'range-distribution' || svgAll.length > 1) {
+    if (chartId === 'range-distribution' || chartId === 'pareto' || svgAll.length > 1) {
       (async () => {
         try {
           const canvas = await html2canvas(wrapper, {
@@ -754,13 +754,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     setHistogramZoomMax(null);
   };
 
+  // Box plot zoom handlers (mirror histogram behavior)
+  // Box plot removed: zoom handlers removed
+
   // Calculate quartiles for box plot
-  const quartilesData = useMemo(() => {
-    if (distributionValues.length === 0) {
-      return { min: 0, q1: 0, median: 0, q3: 0, max: 0, iqr: 0, outliers: [] };
-    }
-    return calculateQuartiles(distributionValues);
-  }, [distributionValues]);
+  // Box plot removed: quartiles calculation removed
 
   // Calculate Pareto data (use configurable number of contributors)
   const paretoData = useMemo(() => {
@@ -1243,36 +1241,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           </Paper>
         )}
 
-        {/* Box Plot */}
-        {selectedValueColumns.length > 0 && (
-          <Paper key="box-plot" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', p: 2, pb: 1 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Box Plot Analysis
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton size="small" onClick={() => downloadChartAsImage('box-plot', 'png')} title="Download as PNG">
-                  <Download fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => downloadChartAsImage('box-plot', 'jpg')} title="Download as JPG">
-                  <Download fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', 2)} title="Taller (increase height)">
-                  <UnfoldMore fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', -2)} title="Shorter (decrease height)">
-                  <UnfoldLess fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
-              <BoxPlotChart
-                data={quartilesData}
-                title={seriesConfig[0]?.label || 'Value Distribution'}
-              />
-            </Box>
-          </Paper>
-        )}
+        {/* Box Plot removed */}
 
         {/* Pareto Chart */}
         {selectedValueColumns.length > 0 && paretoData.length > 0 && (

@@ -58,12 +58,13 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
   const totalValue = displayData.length > 0 ? displayData[displayData.length - 1].cumulativeValue : 0;
 
   return (
-    <Box sx={{ width: '100%', height: 350 }} data-chart-id="pareto">
-      <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
-        <ComposedChart
-          data={displayData}
-          margin={{ top: 20, right: 60, left: 20, bottom: 70 }}
-        >
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }} data-chart-id="pareto">
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
+          <ComposedChart
+            data={displayData}
+            margin={{ top: 20, right: 60, left: 20, bottom: 70 }}
+          >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
           <XAxis
             dataKey="category"
@@ -157,8 +158,9 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
               fontSize: 12,
             }}
           />
-        </ComposedChart>
-      </ResponsiveContainer>
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Box>
 
       {/* 80/20 Analysis Summary */}
       <Box sx={{ mt: 1, textAlign: 'center' }}>
