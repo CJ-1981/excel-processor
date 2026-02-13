@@ -82,9 +82,38 @@ This is a client-side web application built with React, TypeScript, and Vite, de
 *   `src/templates/`: Built-in PDF templates (German donation receipt).
 *   `src/utils/monthlyAggregator.ts`: Aggregates amounts by month from date-parsed filenames.
 *   `src/utils/germanFormatter.ts`: German date and number formatting utilities.
+*   `src/utils/statisticsAnalyzer.ts`: Column detection, time-series aggregation, and analytics helpers.
+*   `src/utils/logger.ts`: Lightweight debug logger controlled by a localStorage flag.
+*   `src/components/common/ErrorBoundary.tsx`: Safety wrapper to prevent blank screens on runtime errors.
 *   `src/types.ts`: Shared TypeScript type definitions.
 
+## Debug Logging
+
+You can enable verbose, targeted logs for troubleshooting without changing the code:
+
+- Enable: run in DevTools console
+  - `localStorage.setItem('excel-processor-debug', 'true')` then refresh
+- Disable: run in DevTools console
+  - `localStorage.removeItem('excel-processor-debug')` (or set to `'false'`) and refresh
+
+When enabled, the console shows messages/timings for dashboard initialization, column detection, and analysis, prefixed with `[Dashboard]` or `[excel-processor]` timers.
+
+## Troubleshooting
+
+- Dashboard shows blank or hangs
+  - Enable debug logging (see above), reopen the Dashboard, and check the console for `[Dashboard]` messages.
+  - An Error Boundary now wraps the Dashboard dialog, so errors are shown as a message instead of a blank page.
+  - If layout issues persist, click “Reset Layout” in the Dashboard to clear a corrupted saved layout.
+
 ## Version History
+
+### v1.3.0 (2026-02-13)
+*   Dashboard stability: added ErrorBoundary around the Dashboard dialog to avoid blank pages on errors.
+*   Debug instrumentation behind a flag (`excel-processor-debug`) with timings and structured logs.
+*   CSV/Excel parsing consistency: preserve header rows uniformly; avoid misinterpreting first data row as headers.
+*   PDF export: aggregate monthly amounts using dates from filenames for CSV; improved date/amount detection.
+*   Dashboard: defaults to filename dates when no date column exists; dropdown shows only meaningful date sources; respects visible columns from Detailed Data View.
+*   UI clarity: added “From filename” / “From sheet” indicators and disambiguated duplicate labels.
 
 ### v1.2.0 (2025-02-07)
 *   Added PDF export functionality with customizable templates
