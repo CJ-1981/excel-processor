@@ -25,8 +25,9 @@ This is a client-side web application built with React, TypeScript, and Vite, de
     *   **Column Visibility:** Toggle which columns are displayed in the table.
     *   **Numeric Sums:** A summary row at the bottom displays the sum of numeric values for each column.
     *   **Responsive Toolbar:** On small screens, action buttons (Select/Deselect, Export CSV/PDF) wrap and stack; on desktop they remain compact.
-*   **Export to CSV:** Export the currently displayed (filtered, sorted, and visible columns) detailed data to a CSV file.
+*   **Export to CSV:** Export the currently displayed (filtered, sorted, and visible columns) detailed data to a CSV file. Respects included (selected) rows and visible columns.
 *   **Export to PDF:** Generate professional PDF reports with customizable templates.
+    *   Respects included (selected) rows and currently visible columns from the Detailed Data View.
     *   **German Donation Receipt Template:** Pre-built template for German donation receipts (Zuwendungsbestätigung) with:
         *   Donor information (name, address)
         *   Monthly breakdown of donations (Jan-Dec)
