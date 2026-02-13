@@ -100,12 +100,21 @@ You can enable verbose, targeted logs for troubleshooting without changing the c
 
 When enabled, the console shows messages/timings for dashboard initialization, column detection, and analysis, prefixed with `[Dashboard]` or `[excel-processor]` timers.
 
+### Force-reset Dashboard layout (debug)
+
+- To force-clear a potentially corrupted saved Dashboard layout on next open, set:
+  - `localStorage.setItem('excel-processor-dashboard-force-reset', 'true')` then open the Dashboard.
+- The app also performs a one-time auto-reset if it detects an invalid/mismatched saved layout. You can still click “Reset Layout” in the Dashboard at any time.
+
+Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you need to recover from a corrupted layout, use the force-reset flag above, or click “Reset Layout” in the Dashboard.
+
 ## Troubleshooting
 
 - Dashboard shows blank or hangs
   - Enable debug logging (see above), reopen the Dashboard, and check the console for `[Dashboard]` messages.
   - An Error Boundary now wraps the Dashboard dialog, so errors are shown as a message instead of a blank page.
   - If layout issues persist, click “Reset Layout” in the Dashboard to clear a corrupted saved layout.
+  - The app now auto-resets a corrupted or mismatched saved Dashboard layout on first open; you can also trigger a reset with the force flag above.
 - Action buttons overflow on mobile
   - The Detailed Data View toolbar is mobile-aware and now stacks/wraps controls on small screens while keeping desktop layout unchanged.
 

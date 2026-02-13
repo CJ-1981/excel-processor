@@ -11,6 +11,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Autocomplete,
+  TextField,
   Paper,
   Box,
   type SelectChangeEvent,
@@ -219,10 +221,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     setAmountColumn(event.target.value);
   };
 
-  // Handle donor name change
-  const handleDonorNameChange = (event: SelectChangeEvent<string>) => {
-    setDonorName(event.target.value);
-  };
+  // Donor name is handled via Autocomplete (selection or free text)
 
   // Handle monthly amount change
   const handleMonthlyAmountChange = (month: keyof typeof monthlyAmounts, value: number) => {
@@ -345,21 +344,26 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           {context.selectedNames.length > 1 ? (
-            <FormControl fullWidth sx={{ mb: 2 }} size="small">
-              <InputLabel id="donor-name-label">Donor Name</InputLabel>
-              <Select
-                labelId="donor-name-label"
-                value={donorName}
-                label="Donor Name"
-                onChange={handleDonorNameChange}
-              >
-                {context.selectedNames.map((name) => (
-                  <MenuItem key={name} value={name}>
-                    {name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              freeSolo
+              options={context.selectedNames}
+              value={donorName}
+              inputValue={donorName}
+              onChange={(_, newValue) => setDonorName((newValue as string) || '')}
+              onInputChange={(_, newInputValue) => setDonorName(newInputValue)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Donor Name"
+                  size="small"
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    ...params.InputProps,
+                    style: textColor ? { color: textColor } : undefined,
+                  }}
+                />
+              )}
+            />
           ) : (
             <FormField
               type="text"

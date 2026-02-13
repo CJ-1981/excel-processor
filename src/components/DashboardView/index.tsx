@@ -32,6 +32,8 @@ import {
   StackedLineChart,
   Close,
   PieChart as PieChartIcon,
+  UnfoldMore,
+  UnfoldLess,
   Add as AddIcon,
   Remove as RemoveIcon,
   Download,
@@ -57,7 +59,7 @@ import {
 } from '../../utils/statisticsAnalyzer';
 import type { DashboardAnalysis } from '../../types';
 import { formatDateGerman, formatCurrencyGerman } from '../../utils/germanFormatter';
-import { debug, error, time, timeEnd } from '../../utils/logger';
+import { debug, error, time, timeEnd, warn } from '../../utils/logger';
 
 interface DashboardViewProps {
   data: any[];
@@ -181,20 +183,60 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const ITEM_IDS = ['trend-chart', 'top-contributors', 'statistics-table', 'histogram', 'box-plot', 'pareto', 'range-distribution'];
 
   const sanitizeLayouts = (layoutsObj: any) => {
-    const result: any = { ...layoutsObj };
+    const result: any = {};
+    // Only allow known breakpoints and known items; de-duplicate by last occurrence
     for (const bp of Object.keys(BREAKPOINTS)) {
-      if (!result[bp]) {
-        result[bp] = (defaultLayout as any)[bp];
-        continue;
-      }
-      const idsInBp = new Set(result[bp].map((x: any) => x.i));
-      const missing = ITEM_IDS.filter(id => !idsInBp.has(id));
-      if (missing.length > 0) {
-        const defaults = (defaultLayout as any)[bp].filter((x: any) => missing.includes(x.i));
-        result[bp] = [...result[bp], ...defaults];
-      }
+      const cols = (COLS_BREAKPOINTS as any)[bp] || 12;
+      const input = (layoutsObj && layoutsObj[bp]) ? layoutsObj[bp] : (defaultLayout as any)[bp];
+      const byId: Record<string, any> = {};
+      (input || []).forEach((raw: any) => {
+        if (!raw || !raw.i || !ITEM_IDS.includes(raw.i)) return; // drop unknowns
+        const item = { ...raw };
+        // Coerce numbers and clamp into bounds (defensive)
+        const minW = item.minW ?? 1;
+        const minH = item.minH ?? 4;
+        item.w = Number.isFinite(item.w) ? Math.max(minW, Math.min(item.w, cols)) : Math.max(minW, Math.min(6, cols));
+        item.h = Number.isFinite(item.h) ? Math.max(minH, item.h) : Math.max(minH, 10);
+        item.x = Number.isFinite(item.x) ? Math.max(0, Math.min(item.x, Math.max(0, cols - 1))) : 0;
+        item.y = Number.isFinite(item.y) ? Math.max(0, item.y) : 0;
+        byId[item.i] = item; // keep last occurrence
+      });
+      // Ensure all required items exist; merge with defaults for any missing ids
+      const missing = ITEM_IDS.filter(id => !byId[id]);
+      const defaults = (defaultLayout as any)[bp].filter((x: any) => missing.includes(x.i));
+      const items = [...Object.values(byId), ...defaults];
+      result[bp] = items;
     }
     return result;
+  };
+
+  // Heuristic check for obviously broken layouts
+  const isLayoutBroken = (layoutsObj: any): boolean => {
+    try {
+      if (!layoutsObj || typeof layoutsObj !== 'object') return true;
+      for (const bp of Object.keys(BREAKPOINTS)) {
+        const cols = (COLS_BREAKPOINTS as any)[bp] || 12;
+        const arr: any[] = layoutsObj[bp] || [];
+        // Must contain exactly our known set
+        const ids = new Set(arr.map(x => x?.i));
+        for (const id of ITEM_IDS) if (!ids.has(id)) return true;
+        if (arr.length !== ITEM_IDS.length) return true; // extras/duplicates
+        for (const item of arr) {
+          if (!item) return true;
+          const { i, x, y, w, h, minW, minH } = item;
+          if (!i || !ITEM_IDS.includes(i)) return true;
+          if (![x, y, w, h].every((n) => Number.isFinite(n))) return true;
+          if (w <= 0 || h <= 0) return true;
+          if (typeof minW === 'number' && w < minW) return true;
+          if (typeof minH === 'number' && h < minH) return true;
+          if (x < 0 || y < 0) return true;
+          if (x + w > cols) return true;
+        }
+      }
+      return false;
+    } catch {
+      return true;
+    }
   };
 
   const [layouts, setLayouts] = useState(() => {
@@ -215,6 +257,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
     return defaultLayout;
   });
+
+  // Auto-reset if layout appears broken, or when a debug flag is set.
+  useEffect(() => {
+    try {
+      const FORCE_RESET_FLAG = 'excel-processor-dashboard-force-reset';
+      const RESET_MARK_KEY = `${LAYOUT_STORAGE_KEY}-autoreset-v${LAYOUT_VERSION}`;
+      const force = localStorage.getItem(FORCE_RESET_FLAG) === 'true';
+      const alreadyApplied = localStorage.getItem(RESET_MARK_KEY) === 'true';
+      const savedRaw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+
+      if (force) {
+        warn('[Dashboard]', 'Force-reset flag detected; resetting saved layout');
+      }
+
+      if ((force || (savedRaw && isLayoutBroken(JSON.parse(savedRaw)))) && !alreadyApplied) {
+        warn('[Dashboard]', 'Auto-resetting corrupted or mismatched layout');
+        localStorage.removeItem(LAYOUT_STORAGE_KEY);
+        localStorage.setItem(RESET_MARK_KEY, 'true');
+        setLayouts(defaultLayout);
+        // Nudge layout recalculation
+        setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 50);
+      }
+    } catch (e) {
+      console.warn('Auto-reset check failed:', e);
+    }
+    // We only want this to run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLayoutChange = useCallback((_layout: any, newLayouts: any) => {
     setLayouts(newLayouts);
@@ -251,9 +321,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       newLayouts[currentBreakpoint] = arr.map((item: any) =>
         item.i === id ? { ...item, h: Math.max(item.minH || 4, (item.h || 10) + delta) } : item
       );
+      // Persist immediately so manual adjustments survive reload
+      try {
+        const toSave = { ...newLayouts, _version: LAYOUT_VERSION };
+        localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(toSave));
+      } catch (e) {
+        console.warn('Could not save dashboard layout after height adjust:', e);
+      }
       return newLayouts;
     });
   }, [currentBreakpoint]);
+
+  // As a safety net, persist any layout changes whenever state updates
+  useEffect(() => {
+    try {
+      const toSave = { ...(layouts as any), _version: LAYOUT_VERSION };
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('Could not persist dashboard layout from effect:', e);
+    }
+  }, [layouts]);
 
   // Detect available columns
   const availableNumericColumns = useMemo(() => {
@@ -730,6 +817,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         margin={[16, 16]}
         compactType="vertical"
         preventCollision={false}
+        measureBeforeMount
         isDraggable={true}
         isResizable={true}
       >
@@ -749,11 +837,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <IconButton size="small" onClick={() => downloadChartAsImage('trend-chart', 'jpg')} title="Download as JPG">
                 <Download fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', 2)} title="Taller">
-                <AddIcon fontSize="small" />
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', 2)} title="Taller (increase height)">
+                <UnfoldMore fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', -2)} title="Shorter">
-                <RemoveIcon fontSize="small" />
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', -2)} title="Shorter (decrease height)">
+                <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
             {hasTimeSeriesData && (
@@ -828,11 +916,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'jpg')} title="Download as JPG">
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller">
-                  <AddIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title="Shorter">
-                  <RemoveIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
@@ -871,11 +959,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             <TableChart color="primary" />
             <Typography variant="h6">Descriptive Statistics</Typography>
             <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', 2)} title="Taller">
-                <AddIcon fontSize="small" />
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', 2)} title="Taller (increase height)">
+                <UnfoldMore fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', -2)} title="Shorter">
-                <RemoveIcon fontSize="small" />
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', -2)} title="Shorter (decrease height)">
+                <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
           </Box>
@@ -909,11 +997,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 >
                   <AddIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title="Taller">
-                  <AddIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title="Shorter">
-                  <RemoveIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
                 </IconButton>
                 <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                 <IconButton
@@ -989,11 +1077,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <IconButton size="small" onClick={() => downloadChartAsImage('box-plot', 'jpg')} title="Download as JPG">
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', 2)} title="Taller">
-                  <AddIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', -2)} title="Shorter">
-                  <RemoveIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
                 </IconButton>
               </Box>
             </Box>
@@ -1017,11 +1105,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller">
-                  <AddIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title="Shorter">
-                  <RemoveIcon fontSize="small" />
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title="Show fewer">
                   <RemoveIcon fontSize="small" />
@@ -1063,11 +1151,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'jpg')} title="Download as JPG">
                 <Download fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', 2)} title="Taller">
-                <AddIcon fontSize="small" />
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', 2)} title="Taller (increase height)">
+                <UnfoldMore fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', -2)} title="Shorter">
-                <RemoveIcon fontSize="small" />
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', -2)} title="Shorter (decrease height)">
+                <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
             <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>

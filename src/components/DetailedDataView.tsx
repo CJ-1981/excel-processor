@@ -305,6 +305,19 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     }
   }, [autoDeselectZeros]);
 
+  // When opening the Dashboard dialog, nudge charts to measure correctly after dialogs' transition
+  useEffect(() => {
+    if (showDashboardDialog) {
+      try {
+        // Immediate and delayed resize events to catch post-transition layout
+        window.dispatchEvent(new Event('resize'));
+        const t1 = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 80);
+        const t2 = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 200);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
+      } catch {}
+    }
+  }, [showDashboardDialog]);
+
 
   // Headers that are currently visible
   const visibleHeaders = useMemo(() => {
@@ -1270,6 +1283,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         fullScreen
         open={showDashboardDialog}
         onClose={() => setShowDashboardDialog(false)}
+        TransitionProps={{
+          onEntered: () => { try { window.dispatchEvent(new Event('resize')); } catch {} },
+        }}
       >
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
