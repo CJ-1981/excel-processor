@@ -25,9 +25,9 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>Upload Excel File(s)</Typography>
+      <Typography variant="h6" gutterBottom>Upload Excel/CSV File(s)</Typography>
       <input
-        accept=".xlsx, .xls"
+        accept=".xlsx, .xls, .csv"
         style={{ display: 'none' }}
         id="raised-button-file"
         multiple // Allow multiple file selection

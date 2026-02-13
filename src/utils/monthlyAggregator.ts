@@ -22,9 +22,94 @@ export interface MonthlyAggregation {
  * Aggregate amounts by month from data rows
  * Parses dates from _sourceFileName field (yyyymmdd format)
  */
+function parseExcelSerialDate(n: number): Date | null {
+  if (!isFinite(n)) return null;
+  // Excel serial date (days since 1899-12-30)
+  const excelEpoch = new Date(Date.UTC(1899, 11, 30)).getTime();
+  const ms = excelEpoch + n * 24 * 60 * 60 * 1000;
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function parseDateFromString(s: string): Date | null {
+  const str = String(s).trim();
+  if (!str) return null;
+
+  // Try ISO-like YYYY-MM-DD or YYYY/MM/DD
+  let m = str.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10) - 1;
+    const d = parseInt(m[3], 10);
+    const date = new Date(y, mo, d);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // Try German dd.mm.yyyy or dd/mm/yyyy
+  m = str.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+  if (m) {
+    const d = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10) - 1;
+    const yRaw = parseInt(m[3], 10);
+    const y = yRaw < 100 ? 2000 + yRaw : yRaw;
+    const date = new Date(y, mo, d);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // Try compact yyyymmdd inside the string
+  m = str.match(/(\d{4})(\d{2})(\d{2})/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10) - 1;
+    const d = parseInt(m[3], 10);
+    const date = new Date(y, mo, d);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
+}
+
+function parseDateValue(value: unknown): Date | null {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === 'number') {
+    // Treat as Excel serial if in plausible range; else as timestamp
+    if (value > 20000 && value < 80000) {
+      return parseExcelSerialDate(value);
+    }
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === 'string') {
+    return parseDateFromString(value);
+  }
+  return null;
+}
+
+function findDateInRow(row: any): Date | null {
+  for (const key of Object.keys(row)) {
+    if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
+    const v = row[key];
+    if (typeof v === 'string') {
+      const d = parseDateFromString(v);
+      if (d) return d;
+    } else if (typeof v === 'number') {
+      const d = parseDateValue(v);
+      if (d) return d;
+    } else if (v instanceof Date) {
+      const d = parseDateValue(v);
+      if (d) return d;
+    }
+  }
+  return null;
+}
+
 export function aggregateByMonth(
   data: any[],
   amountColumn: string,
+  dateColumn?: string | null, // New optional parameter
   datePattern: RegExp = /(\d{8})/
 ): MonthlyAggregation {
   // Initialize monthly totals
@@ -35,28 +120,46 @@ export function aggregateByMonth(
 
   // Process each data row
   for (const row of data) {
-    const fileName = row._sourceFileName || '';
-    const match = fileName.match(datePattern);
+    let date: Date | null = null;
 
-    if (match) {
-      const dateStr = match[1];
-      const yearNum = parseInt(dateStr.substring(0, 4), 10);
-      const monthNum = parseInt(dateStr.substring(4, 6), 10) - 1; // 0-indexed
-      const dayNum = parseInt(dateStr.substring(6, 8), 10);
+    // 1) Try date from provided column
+    if (dateColumn && row[dateColumn]) {
+      date = parseDateValue(row[dateColumn]);
+    }
 
-      const date = new Date(yearNum, monthNum, dayNum);
+    // 2) Fallback to parsing from metadata filename
+    if (!date) {
+      const fileName = row._sourceFileName || '';
+      const match = fileName.match(datePattern);
+      if (match) {
+        const dateStr = match[1];
+        const yearNum = parseInt(dateStr.substring(0, 4), 10);
+        const monthNum = parseInt(dateStr.substring(4, 6), 10) - 1;
+        const dayNum = parseInt(dateStr.substring(6, 8), 10);
+        const d = new Date(yearNum, monthNum, dayNum);
+        if (!isNaN(d.getTime())) {
+          date = d;
+        }
+      }
+    }
+
+    // 3) Fallback to scanning other string fields (e.g., a "Source File" data column)
+    if (!date) {
+      date = findDateInRow(row);
+    }
+
+    if (date) {
+      const yearNum = date.getFullYear();
+      const monthNum = date.getMonth();
 
       // Update year and date range
       if (minDate === null || date < minDate) minDate = date;
       if (maxDate === null || date > maxDate) maxDate = date;
-
-      // Use the year from filenames (should be consistent across files)
-      if (year === null) {
-        year = yearNum;
-      }
+      if (year === null) year = yearNum;
 
       // Add amount to corresponding month
-      const amount = parseFloat(row[amountColumn]) || 0;
+      const rawAmount = row[amountColumn];
+      const amount = typeof rawAmount === 'number' ? rawAmount : parseFloat(String(rawAmount).replace(/\s/g, '')) || 0;
       if (monthNum >= 0 && monthNum < 12) {
         monthlyTotals[monthNum] += amount;
       }

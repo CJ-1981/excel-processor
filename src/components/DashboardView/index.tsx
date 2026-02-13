@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -57,6 +57,7 @@ import {
 } from '../../utils/statisticsAnalyzer';
 import type { DashboardAnalysis } from '../../types';
 import { formatDateGerman, formatCurrencyGerman } from '../../utils/germanFormatter';
+import { debug, error, time, timeEnd } from '../../utils/logger';
 
 interface DashboardViewProps {
   data: any[];
@@ -68,9 +69,17 @@ type PeriodType = 'monthly' | 'quarterly' | 'yearly';
 type ChartType = 'line' | 'area' | 'stacked';
 
 // Date pattern for extracting dates from filenames (YYYYMMDD format)
+// Updated to be more specific - looks for 8 digits in a row
 const FILENAME_DATE_PATTERN = /(\d{8})/;
 
 const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn }) => {
+  useEffect(() => {
+    debug('[Dashboard]', 'mount', {
+      rows: data.length,
+      cols: data.length > 0 ? Object.keys(data[0]).length : 0,
+      nameColumn,
+    });
+  }, []);
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
   const [chartType, setChartType] = useState<ChartType>('area');
   const [topDonorsCount, setTopDonorsCount] = useState<number>(10);
@@ -170,11 +179,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Detect available columns
   const availableNumericColumns = useMemo(() => {
-    return detectNumericColumns(data);
+    time('detectNumericColumns');
+    let cols: string[] = [];
+    try {
+      cols = detectNumericColumns(data);
+    } catch (e: any) {
+      error('[Dashboard]', 'detectNumericColumns failed', e);
+      cols = [];
+    } finally {
+      timeEnd('detectNumericColumns');
+    }
+    debug('[Dashboard]', 'numeric columns', cols);
+    return cols;
   }, [data]);
 
+  // Note: all column keys for selection are derived on-demand by each control
+
   const availableDateColumns = useMemo(() => {
-    return detectDateColumns(data);
+    time('detectDateColumns');
+    let cols: string[] = [];
+    try {
+      cols = detectDateColumns(data);
+    } catch (e: any) {
+      error('[Dashboard]', 'detectDateColumns failed', e);
+      cols = [];
+    } finally {
+      timeEnd('detectDateColumns');
+    }
+    debug('[Dashboard]', 'date columns', cols);
+    return cols;
   }, [data]);
 
   // Check if dates can be extracted from filenames
@@ -189,28 +222,58 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [selectedValueColumns, setSelectedValueColumns] = useState<string[]>([]);
   const [selectedDateColumn, setSelectedDateColumn] = useState<string | null>(null);
   const [useFilenameDates, setUseFilenameDates] = useState<boolean>(false);
+  // Track if user explicitly toggled the filename-dates switch to avoid auto-re-enabling
+  const [userToggledFilenameDates, setUserToggledFilenameDates] = useState<boolean>(false);
 
   // Set defaults when columns are detected
   React.useEffect(() => {
     // Auto-select only if there's exactly one numeric column
     if (availableNumericColumns.length === 1 && selectedValueColumns.length === 0) {
       setSelectedValueColumns([availableNumericColumns[0]]);
+      debug('[Dashboard]', 'auto-select numeric column', availableNumericColumns[0]);
     }
   }, [availableNumericColumns, selectedValueColumns]);
 
   React.useEffect(() => {
     if (availableDateColumns.length > 0 && !selectedDateColumn) {
       setSelectedDateColumn(availableDateColumns[0]);
+      debug('[Dashboard]', 'auto-select date column', availableDateColumns[0]);
     }
     // Auto-enable filename dates if no date columns but filename dates available
-    if (availableDateColumns.length === 0 && hasFilenameDates) {
+    if (availableDateColumns.length === 0 && hasFilenameDates && !useFilenameDates && !userToggledFilenameDates) {
       setUseFilenameDates(true);
+      debug('[Dashboard]', 'auto-enable filename dates');
     }
-  }, [availableDateColumns, hasFilenameDates]);
+  }, [availableDateColumns, hasFilenameDates, useFilenameDates, selectedDateColumn, userToggledFilenameDates]);
+
+  // If the underlying dataset changes identity (e.g. new file), clear manual toggle so auto behavior can apply for new data
+  React.useEffect(() => {
+    setUserToggledFilenameDates(false);
+  }, [data]);
 
   // Analyze data for dashboard
   const analysis: DashboardAnalysis = useMemo(() => {
-    return analyzeDataForDashboard(data, columnMapping, nameColumn);
+    time('analyzeDataForDashboard');
+    try {
+      const result = analyzeDataForDashboard(data, columnMapping, nameColumn);
+      debug('[Dashboard]', 'analysis complete', {
+        numericStats: result.numericColumns?.length || 0,
+        topDonors: result.topDonors?.length || 0,
+        rows: result.metadata?.filteredRows,
+      });
+      return result;
+    } catch (e: any) {
+      error('[Dashboard]', 'analyzeDataForDashboard failed', e);
+      return {
+        numericColumns: [],
+        timeSeries: {},
+        distributions: {},
+        topDonors: [],
+        metadata: { totalRows: data.length, filteredRows: data.length },
+      } as DashboardAnalysis;
+    } finally {
+      timeEnd('analyzeDataForDashboard');
+    }
   }, [data, columnMapping, nameColumn]);
 
   // Get time series for selected columns (multi-series)
@@ -221,6 +284,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
     // If using filename dates, extract from _sourceFileName
     if (useFilenameDates) {
+      debug('[Dashboard]', 'aggregating by filename dates', { selectedValueColumns });
       return aggregateByFilenameDateMultiple(data, selectedValueColumns);
     }
 
@@ -229,6 +293,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       return { monthly: [], quarterly: [], yearly: [] };
     }
 
+    debug('[Dashboard]', 'aggregating by time', { selectedDateColumn, selectedValueColumns });
     return aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
   }, [data, selectedDateColumn, selectedValueColumns, useFilenameDates]);
 
@@ -459,7 +524,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               control={
                 <Checkbox
                   checked={useFilenameDates}
-                  onChange={(e) => setUseFilenameDates(e.target.checked)}
+                  onChange={(e) => {
+                    setUseFilenameDates(e.target.checked);
+                    setUserToggledFilenameDates(true);
+                  }}
                   size="small"
                 />
               }
@@ -474,14 +542,40 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 value={selectedDateColumn || ''}
                 label="Date Column (for trends)"
                 onChange={(e) => setSelectedDateColumn(e.target.value || null)}
-                disabled={availableDateColumns.length === 0}
               >
                 <MenuItem value="">
                   <em>None</em>
                 </MenuItem>
-                {availableDateColumns.map((col) => (
+                {(() => {
+                  const options = availableDateColumns.length > 0
+                    ? availableDateColumns
+                    : (hasFilenameDates ? ['_sourceFileName'] : []);
+                  return options;
+                })().map((col) => (
                   <MenuItem key={col} value={col}>
-                    {columnMapping[col] || col}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography sx={{ flex: 1 }}>
+                        {columnMapping[col] || col}
+                      </Typography>
+                      {col === '_sourceFileName' && (
+                        <Chip
+                          label="From filename"
+                          size="small"
+                          variant="outlined"
+                          color="info"
+                          sx={{ fontSize: '0.7rem', height: 20, '& .MuiChip-label': { fontSize: '0.65rem' } }}
+                        />
+                      )}
+                      {col !== '_sourceFileName' && availableDateColumns.length > 0 && !availableDateColumns.includes(col) && (
+                        <Chip
+                          label="Not date"
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          sx={{ fontSize: '0.7rem', height: 20, '& .MuiChip-label': { fontSize: '0.65rem' } }}
+                        />
+                      )}
+                    </Box>
                   </MenuItem>
                 ))}
               </Select>
@@ -549,7 +643,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         isResizable={true}
       >
         {/* Trend Chart */}
-        <Paper key="trend-chart" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper key="trend-chart" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <TrendingUp color="primary" />
@@ -600,7 +694,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           </Box>
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }} data-chart-id="trend-chart">
             {hasTimeSeriesData && selectedValueColumns.length > 0 ? (
-              <Box sx={{ height: '100%' }}>
+              <Box sx={{ height: '100%', width: '100%', display: 'flex' }}>
                 <TrendChart
                   data={multiSeriesTimeData[periodType]}
                   series={seriesConfig}
@@ -624,9 +718,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Top Contributors Chart */}
         {topContributorsData.length > 0 && (
-          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper key="top-contributors" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <BarChart color="primary" />
                 <Typography variant="h6">Top Contributors</Typography>
               </Box>
@@ -669,19 +763,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         )}
 
         {/* Statistics Table */}
-        <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper key="statistics-table" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, mb: 2 }}>
             <TableChart color="primary" />
             <Typography variant="h6">Descriptive Statistics</Typography>
           </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
             <StatisticsTable statistics={analysis.numericColumns} />
           </Box>
         </Paper>
 
         {/* Distribution Histogram */}
         {selectedValueColumns.length > 0 && (
-          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper key="histogram" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
                 Distribution Histogram
@@ -750,7 +844,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 )}
               </Box>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
               <DistributionHistogram
                 data={histogramData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -766,7 +860,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Box Plot */}
         {selectedValueColumns.length > 0 && (
-          <Paper key="box-plot" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper key="box-plot" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1" gutterBottom>
                 Box Plot Analysis
@@ -780,7 +874,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </IconButton>
               </Box>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
               <BoxPlotChart
                 data={quartilesData}
                 title={seriesConfig[0]?.label || 'Value Distribution'}
@@ -791,7 +885,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Pareto Chart */}
         {selectedValueColumns.length > 0 && paretoData.length > 0 && (
-          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper key="pareto" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
                 Pareto Analysis (80/20 Rule)
@@ -816,7 +910,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </IconButton>
               </Box>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
               <ParetoChart
                 data={paretoData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -828,7 +922,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Range Distribution */}
         {selectedValueColumns.length > 0 && rangeDistributionData.length > 0 && (
-          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper key="range-distribution" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
               <Typography variant="h6">Range Distribution</Typography>
@@ -841,7 +935,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <Download fontSize="small" />
               </IconButton>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
               <RangeDistributionCharts
                 data={rangeDistributionData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -872,19 +966,25 @@ function aggregateByTimeMultiple(
     if (typeof value !== 'string') return null;
     const strValue = value.trim();
 
-    if (/^\d{8}$/.test(strValue)) {
-      const year = parseInt(strValue.substring(0, 4), 10);
-      const month = parseInt(strValue.substring(4, 6), 10) - 1;
-      const day = parseInt(strValue.substring(6, 8), 10);
+    // Try to find YYYYMMDD pattern (handles "20250105", "2025-01-05", "20250105_data.csv")
+    const patternMatch = strValue.match(/(\d{4})(\d{2})(\d{2})/);
+    if (patternMatch) {
+      const year = parseInt(patternMatch[1], 10);
+      const month = parseInt(patternMatch[2], 10) - 1;
+      const day = parseInt(patternMatch[3], 10);
       return new Date(year, month, day);
     }
+
+    // Check for YYYY-MM-DD pattern
     if (/^\d{4}-\d{2}-\d{2}$/.test(strValue)) {
       return new Date(strValue);
     }
+    // Check for DD.MM.YYYY pattern (German format)
     if (/^\d{2}\.\d{2}\.\d{4}$/.test(strValue)) {
       const parts = strValue.split('.');
       return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
     }
+    // Check for MM/DD/YYYY pattern
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(strValue)) {
       const parts = strValue.split('/');
       return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
@@ -892,8 +992,41 @@ function aggregateByTimeMultiple(
     return null;
   };
 
+  // Helper to extract date from filename (YYYYMMDD pattern)
+  const extractDateFromFilename = (filename: string): Date | null => {
+    if (!filename) return null;
+
+    // Try to match exactly 8 digits (YYYYMMDD format)
+    const exactMatch = filename.match(/\b\d{8}\b/);
+    if (exactMatch) {
+      const dateStr = exactMatch[0];
+      const year = parseInt(dateStr.substring(0, 4), 10);
+      const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+      const day = parseInt(dateStr.substring(6, 8), 10);
+      return new Date(year, month, day);
+    }
+
+    // Try to find YYYYMMDD pattern anywhere in filename (e.g., "data-20250105.csv")
+    const patternMatch = filename.match(/(\d{4})(\d{2})(\d{2})/);
+    if (patternMatch) {
+      const year = parseInt(patternMatch[1], 10);
+      const month = parseInt(patternMatch[2], 10) - 1;
+      const day = parseInt(patternMatch[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return null;
+  };
+
   data.forEach(row => {
-    const date = parseDateValue(row[dateColumn]);
+    // Handle _sourceFileName column specially - extract date from filename
+    let date: Date | null = null;
+    if (dateColumn === '_sourceFileName') {
+      date = extractDateFromFilename(row._sourceFileName);
+    } else {
+      date = parseDateValue(row[dateColumn]);
+    }
+
     if (!date) return;
 
     // Get all values for this row

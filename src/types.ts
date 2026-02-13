@@ -8,6 +8,7 @@ export interface ParsedSheet {
 export interface ParsedFile {
   fileName: string;
   sheets: ParsedSheet[];
+  isCSV?: boolean; // True if file was parsed as CSV
 }
 
 /**

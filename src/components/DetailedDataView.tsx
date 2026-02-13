@@ -17,6 +17,8 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as XLSX from 'xlsx';
 import { PDFExportDialog } from './PDFExport';
 import DashboardView from './DashboardView';
+import ErrorBoundary from './common/ErrorBoundary';
+import { debug } from '../utils/logger';
 import type { PDFGenerationContext } from '../types';
 
 interface DetailedDataViewProps {
@@ -145,6 +147,10 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
   // Helper to get the actual column name from the header row
   const getActualColumnName = useMemo(() => {
     if (!nameColumn || data.length === 0) return nameColumn;
+    const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+    // If the selected column key is already human-readable, use it directly
+    if (!isPlaceholder(nameColumn)) return nameColumn;
+
     const headerRowIdx = headerRowIndex - 1;
     if (headerRowIdx >= 0 && headerRowIdx < data.length) {
       const headerRow = data[headerRowIdx];
@@ -173,10 +179,23 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     console.log('DetailedDataView - headerRowIndex:', headerRowIndex, 'headerRowIdx:', headerRowIdx);
     if (headerRowIdx < 0 || headerRowIdx >= data.length) return {};
 
+    // If keys are already human-readable, use identity mapping
+    const sampleRow = data[0];
+    // Exclude all metadata/system keys (starting with underscore) from detection
+    const nonMetaKeys = Object.keys(sampleRow).filter(k => !k.startsWith('_'));
+    const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+    const allPlaceholders = nonMetaKeys.length > 0 && nonMetaKeys.every(isPlaceholder);
+
+    const mapping: Record<string, string> = {};
+    if (!allPlaceholders) {
+      Object.keys(sampleRow).forEach(key => { mapping[key] = key; });
+      console.log('DetailedDataView - columnMapping (identity):', mapping);
+      return mapping;
+    }
+
+    // Otherwise, derive mapping from the chosen header row
     const headerRow = data[headerRowIdx];
     console.log('DetailedDataView - headerRow sample:', headerRow);
-    const mapping: Record<string, string> = {};
-
     Object.keys(headerRow).forEach(key => {
       const value = headerRow[key];
       if (value !== undefined && value !== null && value !== '') {
@@ -215,7 +234,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
   const allAvailableHeaders = useMemo(() => {
     if (filteredData.length === 0) return [];
     const keys = Object.keys(filteredData[0]);
-    const dynamicHeaders: HeadCell[] = [];
+    let dynamicHeaders: HeadCell[] = [];
 
     // Always add source file columns first if they exist
     if (keys.includes('_sourceFileName')) {
@@ -233,6 +252,19 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           numeric: typeof filteredData[0][key] === 'number'
         });
       });
+
+    // Disambiguate duplicate labels (e.g., data column named "Source File" vs metadata column)
+    const counts: Record<string, number> = {};
+    dynamicHeaders.forEach(h => { counts[h.label] = (counts[h.label] || 0) + 1; });
+    if (Object.values(counts).some(c => c > 1)) {
+      dynamicHeaders = dynamicHeaders.map(h => {
+        if (counts[h.label] > 1) {
+          const isMeta = h.id === '_sourceFileName' || h.id === '_sourceSheetName';
+          return { ...h, label: `${h.label} ${isMeta ? '(origin)' : '(data)'}` } as HeadCell;
+        }
+        return h;
+      });
+    }
 
     // If custom order exists, sort by it
     if (columnOrder.length > 0) {
@@ -501,13 +533,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     return totals;
   }, [filteredAndSortedData, visibleHeaders, columnMapping, includedRowIndices]);
 
-  // Prepare dashboard data (only included rows with only visible columns)
+  // Prepare dashboard data (only included rows and visible columns; always include origin metadata)
   const dashboardData = useMemo(() => {
-    if (filteredAndSortedData.length === 0 || visibleHeaders.length === 0) {
+    if (filteredAndSortedData.length === 0) {
       return [];
     }
 
-    // Get the list of visible column IDs
+    // Build the list of visible column IDs
     const visibleColumnIds = visibleHeaders.map(h => h.id);
 
     // Filter to included rows and only visible columns
@@ -515,10 +547,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       .filter((row) => includedRowIndices.has(row._stableIndex))
       .map(row => {
         const filteredRow: Record<string, any> = {};
+        // Always include metadata columns for downstream features (e.g., filename date extraction)
+        if (row._sourceFileName !== undefined) filteredRow._sourceFileName = row._sourceFileName;
+        if (row._sourceSheetName !== undefined) filteredRow._sourceSheetName = row._sourceSheetName;
         visibleColumnIds.forEach(colId => {
-          // Skip internal properties
           if (colId === '_stableIndex') return;
-          // Access the value directly using the column ID (the original key in the row)
           filteredRow[colId] = row[colId];
         });
         return filteredRow;
@@ -531,8 +564,21 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     visibleHeaders.forEach(header => {
       mapping[header.id] = header.label;
     });
+    // Provide friendly labels for metadata columns even if not visible
+    mapping._sourceFileName = mapping._sourceFileName || 'Origin File';
+    mapping._sourceSheetName = mapping._sourceSheetName || 'Origin Sheet';
     return mapping;
   }, [visibleHeaders]);
+
+  // Debug: log when dashboard data prepared or dialog opened
+  useEffect(() => {
+    if (!showDashboardDialog) return;
+    debug('[Dashboard]', 'dialog open; prepared data', {
+      rows: dashboardData.length,
+      cols: dashboardData.length > 0 ? Object.keys(dashboardData[0]).length : 0,
+      sampleCols: dashboardData.length > 0 ? Object.keys(dashboardData[0]).slice(0, 10) : [],
+    });
+  }, [showDashboardDialog, dashboardData]);
 
 
   const handleExportCsv = () => {
@@ -885,7 +931,36 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                                     onClick={(e) => e.stopPropagation()}
                                   />
                                 }
-                                label={header.label}
+                                label={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                    <Typography variant="body2">{header.label}</Typography>
+                                    {header.id === '_sourceFileName' && (
+                                      <Chip
+                                        label="From filename"
+                                        size="small"
+                                        variant="outlined"
+                                        color="info"
+                                        sx={{
+                                          fontSize: '0.7rem',
+                                          height: 20,
+                                          '& .MuiChip-label': { fontSize: '0.65rem' },
+                                        }}
+                                      />
+                                    )}
+                                    {header.id === '_sourceSheetName' && (
+                                      <Chip
+                                        label="From sheet"
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                          fontSize: '0.7rem',
+                                          height: 20,
+                                          '& .MuiChip-label': { fontSize: '0.65rem' },
+                                        }}
+                                      />
+                                    )}
+                                  </Box>
+                                }
                                 sx={{ ml: 0, flex: 1 }}
                               />
                             </MenuItem>
@@ -1126,16 +1201,26 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         </Table>
       </TableContainer>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button
-          variant="contained"
-          color="info"
-          onClick={() => setShowDashboardDialog(true)}
-          disabled={dashboardData.length === 0}
-          startIcon={<DashboardIcon />}
-          size="small"
-        >
-          Dashboard ({dashboardData.length})
-        </Button>
+          <Button
+            variant="contained"
+            color="info"
+            onClick={() => {
+              debug('[Dashboard]', 'Open clicked', {
+                includedVisibleRows: filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length,
+                totalVisibleRows: filteredAndSortedData.length,
+                visibleHeaders: visibleHeaders.map(h => h.id),
+              });
+              setShowDashboardDialog(true);
+            }}
+            disabled={(() => {
+              const visibleIncluded = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
+              return visibleIncluded === 0;
+            })()}
+            startIcon={<DashboardIcon />}
+            size="small"
+          >
+            Dashboard ({(() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)()})
+          </Button>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
           component="div"
@@ -1172,11 +1257,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
-          <DashboardView
-            data={dashboardData}
-            columnMapping={dashboardColumnMapping}
-            nameColumn={nameColumn}
-          />
+          <ErrorBoundary title="Dashboard failed to render.">
+            <DashboardView
+              data={dashboardData}
+              columnMapping={dashboardColumnMapping}
+              nameColumn={nameColumn}
+            />
+          </ErrorBoundary>
         </DialogContent>
       </Dialog>
 

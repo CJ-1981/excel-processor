@@ -52,6 +52,8 @@ function App() {
     return loadNameMergeState();
   });
 
+
+
   // Wrapper to save column visibility to localStorage whenever it changes
   const handleSetColumnVisibility = (newVisibility: React.SetStateAction<Record<string, boolean>>) => {
     setDetailedViewColumnVisibility((prev) => {
@@ -89,14 +91,23 @@ function App() {
           // Read file as ArrayBuffer
           const arrayBuffer = await file.arrayBuffer();
 
-          // Parse Excel file
+          // Detect if file is CSV
+          const isCSV = file.name.toLowerCase().endsWith('.csv');
+
+          // Parse Excel/CSV file
           const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          // Use column-letter headers so header rows remain in data (user can pick which row is header)
+          // This keeps behavior consistent across Excel and CSV files
           const sheets = workbook.SheetNames.map(sheetName => ({
             sheetName,
-            data: XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]),
+            data: XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+              header: 'A',      // keys like A, B, C ... so header rows are preserved as data
+              defval: '',       // fill empty cells with empty string to avoid undefined
+              blankrows: false, // skip completely blank rows
+            }),
           }));
 
-          return { fileName: file.name, sheets };
+          return { fileName: file.name, sheets, isCSV };
         },
         {
           concurrency: 3,
@@ -110,9 +121,21 @@ function App() {
         }
       );
 
-      setParsedFiles(results);
-      setStatus('files_uploaded');
+      // If one file with one sheet is uploaded, auto-merge and skip selection
+      if (results.length === 1 && results[0].sheets.length === 1) {
+        const singleSheet = results[0];
+        const sheetIdentifier = `${singleSheet.fileName}::${singleSheet.sheets[0].sheetName}`;
+        
+        // We need to set the parsed files so that the rest of the app can use it
+        setParsedFiles(results);
+        
+        // Directly call merge with the results to avoid state update race conditions
+        handleMergeSheets([sheetIdentifier], results);
 
+      } else {
+        setParsedFiles(results);
+        setStatus('files_uploaded');
+      }
     } catch (error) {
       console.error("Error parsing files:", error);
       setStatus('ready');
@@ -120,13 +143,14 @@ function App() {
   };
 
 
-  const handleMergeSheets = (selectedSheetIdentifiers: string[]) => {
+  const handleMergeSheets = (selectedSheetIdentifiers: string[], files?: ParsedFile[]) => {
     console.log('Merging sheets:', selectedSheetIdentifiers);
+    const fileSource = files || parsedFiles; // Use direct files if provided, else from state
 
     const sheetsToMerge: any[][][] = []; // Changed to array of arrays of objects
     selectedSheetIdentifiers.forEach(identifier => {
       const [fileName, sheetName] = identifier.split('::');
-      const file = parsedFiles.find(f => f.fileName === fileName);
+      const file = fileSource.find(f => f.fileName === fileName);
       const sheet = file?.sheets.find(s => s.sheetName === sheetName);
       if (sheet?.data) {
         // Augment each row with source file and sheet name
@@ -158,8 +182,13 @@ function App() {
 
     setMergedData(combinedData);
     console.log('Merged data created. Total rows:', combinedData.length);
-    console.log('Sample row:', combinedData[0]);
-    console.log('All columns:', Object.keys(combinedData[0]));
+    
+    // Add a check to prevent error on empty data
+    if (combinedData.length > 0) {
+      console.log('Sample row:', combinedData[0]);
+      console.log('All columns:', Object.keys(combinedData[0]));
+    }
+    
     setStatus('data_merged');
   };
 
@@ -188,6 +217,8 @@ function App() {
   // Helper to get the actual column name from the header row
   const getActualColumnName = useMemo(() => {
     if (!selectedNameColumn || mergedData.length === 0) return selectedNameColumn;
+    const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+    if (!isPlaceholder(selectedNameColumn)) return selectedNameColumn;
     const headerRowIdx = headerRowIndex - 1;
     if (headerRowIdx >= 0 && headerRowIdx < mergedData.length) {
       const headerRow = mergedData[headerRowIdx];
@@ -206,26 +237,7 @@ function App() {
     return undefined;
   };
 
-  // Create column mapping
-  const columnMapping = useMemo(() => {
-    if (mergedData.length === 0) return {};
-    const headerRowIdx = headerRowIndex - 1;
-    if (headerRowIdx < 0 || headerRowIdx >= mergedData.length) return {};
-
-    const headerRow = mergedData[headerRowIdx];
-    const mapping: Record<string, string> = {};
-
-    Object.keys(headerRow).forEach(key => {
-      const value = headerRow[key];
-      if (value !== undefined && value !== null && value !== '') {
-        mapping[key] = String(value);
-      } else {
-        mapping[key] = key;
-      }
-    });
-
-    return mapping;
-  }, [mergedData, headerRowIndex]);
+  // (deprecated) legacy columnMapping removed; see new mapping logic below
 
   // Compute filtered data for details view
   const filteredData = useMemo(() => {
@@ -272,6 +284,43 @@ function App() {
 
     return Array.from(names).sort();
   }, [mergedData, selectedNameColumn, headerRowIndex]);
+
+  // Build a column mapping for DetailedDataView. If keys are already human-readable
+  // (not placeholder letters like A, B, C or __EMPTY_*), use identity mapping.
+  const columnMapping = useMemo(() => {
+    if (mergedData.length === 0) return {};
+    const headerRowIdx = headerRowIndex - 1;
+
+    const firstRow = mergedData[0];
+    // Exclude all metadata/system keys (starting with underscore) from detection
+    const nonMetaKeys = Object.keys(firstRow).filter(k => !k.startsWith('_'));
+    const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+    const allPlaceholders = nonMetaKeys.length > 0 && nonMetaKeys.every(isPlaceholder);
+
+    const mapping: Record<string, string> = {};
+
+    if (!allPlaceholders) {
+      // Keys are already meaningful headers; map identity
+      Object.keys(firstRow).forEach(key => { mapping[key] = key; });
+      return mapping;
+    }
+
+    // Fallback: use selected header row's values to map original keys to display labels
+    if (headerRowIdx >= 0 && headerRowIdx < mergedData.length) {
+      const headerRow = mergedData[headerRowIdx];
+      Object.keys(headerRow).forEach(key => {
+        const value = headerRow[key];
+        if (value !== undefined && value !== null && value !== '') {
+          mapping[key] = String(value);
+        } else {
+          mapping[key] = key;
+        }
+      });
+      return mapping;
+    }
+
+    return mapping;
+  }, [mergedData, headerRowIndex]);
 
 
   const detailedViewContent = (

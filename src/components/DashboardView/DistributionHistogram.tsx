@@ -12,7 +12,6 @@ import {
 } from 'recharts';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { HistogramData } from '../../types';
-import { calculateHistogram } from '../../utils/statisticsAnalyzer';
 import { formatCurrencyGerman } from '../../utils/germanFormatter';
 
 interface DistributionHistogramProps {

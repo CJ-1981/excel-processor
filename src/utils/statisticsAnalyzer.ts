@@ -169,11 +169,21 @@ export function detectDateColumns(data: any[]): string[] {
 
   // Common date patterns
   const datePatterns = [
-    /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
-    /^\d{2}\/\d{2}\/\d{4}$/, // MM/DD/YYYY or DD/MM/YYYY
-    /^\d{2}\.\d{2}\.\d{4}$/, // DD.MM.YYYY (German)
+    /^\d{4}-\d{1,2}-\d{1,2}$/, // YYYY-M-D or YYYY-MM-DD
+    /^\d{1,2}\/\d{1,2}\/\d{2,4}$/, // M/D/YYYY or D/M/YYYY
+    /^\d{1,2}\.\d{1,2}\.\d{2,4}$/, // D.M.YYYY (German)
     /^\d{8}$/, // YYYYMMDD
   ];
+  const embeddedPattern = /(\d{8})/; // Embedded YYYYMMDD inside strings
+
+  // Helper: parse Excel serial numbers (days since 1899-12-30)
+  const parseExcelSerial = (n: number): Date | null => {
+    if (!isFinite(n)) return null;
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30)).getTime();
+    const ms = excelEpoch + n * 24 * 60 * 60 * 1000;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? null : d;
+  };
 
   data.forEach(row => {
     Object.keys(row).forEach(key => {
@@ -193,13 +203,47 @@ export function detectDateColumns(data: any[]): string[] {
 
         // Check if it's a string matching date patterns
         if (typeof value === 'string') {
-          const matchesPattern = datePatterns.some(pattern => pattern.test(value.trim()));
+          const trimmed = value.trim();
+          const matchesPattern = datePatterns.some(pattern => pattern.test(trimmed));
           if (matchesPattern) {
             if (!dateColumns.includes(key)) {
               dateColumns.push(key);
             }
             checkedColumns.add(key);
             return;
+          }
+          // Also detect embedded yyyymmdd inside strings (e.g., filenames)
+          if (embeddedPattern.test(trimmed)) {
+            if (!dateColumns.includes(key)) {
+              dateColumns.push(key);
+            }
+            checkedColumns.add(key);
+            return;
+          }
+        }
+
+        // Check if it's a plausible Excel serial date number
+        if (typeof value === 'number') {
+          // Excel serials typically fall in this broad range for contemporary dates
+          if (value > 20000 && value < 80000) {
+            const d = parseExcelSerial(value);
+            if (d) {
+              if (!dateColumns.includes(key)) {
+                dateColumns.push(key);
+              }
+              checkedColumns.add(key);
+              return;
+            }
+          } else if (value > 1e11 && value < 1e13) {
+            // Likely a Unix timestamp in milliseconds (1973-2286)
+            const d = new Date(value);
+            if (!isNaN(d.getTime())) {
+              if (!dateColumns.includes(key)) {
+                dateColumns.push(key);
+              }
+              checkedColumns.add(key);
+              return;
+            }
           }
         }
       }
@@ -213,10 +257,34 @@ export function detectDateColumns(data: any[]): string[] {
  * Parse a date value from various formats
  */
 export function parseDate(value: any): Date | null {
-  if (value instanceof Date) return value;
+  if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+  if (typeof value === 'number') {
+    // Excel serial range first
+    if (value > 20000 && value < 80000) {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30)).getTime();
+      const ms = excelEpoch + value * 24 * 60 * 60 * 1000;
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? null : d;
+    } else if (value > 1e11 && value < 1e13) {
+      // Treat as Unix timestamp in ms
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  }
   if (typeof value !== 'string') return null;
 
   const strValue = value.trim();
+
+  // If the string contains an embedded YYYYMMDD, prefer that
+  const embedded = /(\d{8})/.exec(strValue);
+  if (embedded) {
+    const dateStr = embedded[1];
+    const year = parseInt(dateStr.substring(0, 4), 10);
+    const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+    const day = parseInt(dateStr.substring(6, 8), 10);
+    return new Date(year, month, day);
+  }
 
   // Try YYYYMMDD format
   if (/^\d{8}$/.test(strValue)) {
@@ -227,26 +295,29 @@ export function parseDate(value: any): Date | null {
   }
 
   // Try ISO format (YYYY-MM-DD)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(strValue)) {
-    return new Date(strValue);
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(strValue)) {
+    const [y, m, d] = strValue.split('-').map(s => parseInt(s, 10));
+    return new Date(y, m - 1, d);
   }
 
   // Try German format (DD.MM.YYYY)
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(strValue)) {
+  if (/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(strValue)) {
     const parts = strValue.split('.');
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
+    const yearRaw = parseInt(parts[2], 10);
+    const year = parts[2].length === 2 ? 2000 + yearRaw : yearRaw;
     return new Date(year, month, day);
   }
 
   // Try slash format (MM/DD/YYYY or DD/MM/YYYY)
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(strValue)) {
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(strValue)) {
     const parts = strValue.split('/');
     // Assume DD/MM/YYYY (more common in Europe)
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
+    const yearRaw = parseInt(parts[2], 10);
+    const year = parts[2].length === 2 ? 2000 + yearRaw : yearRaw;
     return new Date(year, month, day);
   }
 

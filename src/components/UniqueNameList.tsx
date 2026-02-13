@@ -104,17 +104,17 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
     // Convert headerRowIndex (1-indexed) to array index
     const headerRowIdx = headerRowIndex - 1;
 
-    // The nameColumn is the original key (e.g., "__EMPTY_0")
-    // But we need to find what value is at that position in the header row
-    // and use that as the actual column name for lookups
+    // Resolve actual column name when placeholder keys (e.g., A, B, __EMPTY) are used.
+    // If the key is already human-readable, use it directly.
     let actualColumnName = nameColumn;
-
-    if (headerRowIdx >= 0 && headerRowIdx < data.length) {
-      const headerRow = data[headerRowIdx];
-      // Get the value from the header row at this column position
-      const headerValue = headerRow[nameColumn];
-      if (headerValue !== undefined && headerValue !== null && headerValue !== '') {
-        actualColumnName = String(headerValue);
+    const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+    if (isPlaceholder(nameColumn)) {
+      if (headerRowIdx >= 0 && headerRowIdx < data.length) {
+        const headerRow = data[headerRowIdx];
+        const headerValue = headerRow[nameColumn];
+        if (headerValue !== undefined && headerValue !== null && headerValue !== '') {
+          actualColumnName = String(headerValue);
+        }
       }
     }
 

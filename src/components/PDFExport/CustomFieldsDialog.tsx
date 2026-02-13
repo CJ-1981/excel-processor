@@ -90,6 +90,10 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       // Filter to only include columns that have numeric values in the data
       const numericCols: Array<{id: string, label: string}> = [];
 
+      const isPureNumericString = (str: string): boolean => {
+        return /^[-]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(String(str).trim());
+      };
+
       for (const header of context.visibleHeaders) {
         // Skip only specific metadata columns, not all columns starting with _
         // __EMPTY columns are valid data columns from Excel
@@ -99,7 +103,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         for (const row of context.data) {
           const value = row[header.id];
           if (value !== null && value !== undefined && value !== '') {
-            if (typeof value === 'number') {
+            if (typeof value === 'number' || (typeof value === 'string' && isPureNumericString(value))) {
               numericCols.push({ id: header.id, label: header.label });
               break;
             }
@@ -151,9 +155,39 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   // Run monthly aggregation when amount column changes
   useEffect(() => {
     if (amountColumn && context.data.length > 0) {
-      // Filter data to only include selected rows
-      const selectedData = context.data.filter((_, idx) => context.includedIndices.has(idx));
-      const aggregation = aggregateByMonth(selectedData, amountColumn);
+      // Filter data to only include selected rows (use stable index on rows)
+      const selectedData = context.data.filter((row: any) => context.includedIndices.has(row._stableIndex));
+
+      // Determine if all sources are CSV files
+      const allCsv = context.sourceFiles.length > 0 && context.sourceFiles.every(name => name.toLowerCase().endsWith('.csv'));
+
+      // If CSV, prefer a column that likely contains date information.
+      // Heuristics: a visible column labeled like "Source File" (data column, not metadata), or any column whose
+      // values parse as dates in at least one selected row. Otherwise leave undefined to fallback to filename scan.
+      let dateColumn: string | undefined = undefined;
+      if (allCsv) {
+        // Try a data column labeled 'Source File' but not the metadata field
+        const sourceFileDataHeader = context.visibleHeaders.find(
+          h => h.label.toLowerCase().includes('source file') && h.id !== '_sourceFileName'
+        );
+
+        if (sourceFileDataHeader) {
+          dateColumn = sourceFileDataHeader.id;
+        } else {
+          // Validate by sampling rows with a simple date parse regex
+          const dateLike = (val: any) => typeof val === 'string' && /(\d{4}[\/-]\d{1,2}[\/-]\d{1,2})|(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4})|(\d{8})/.test(val);
+          for (const header of context.visibleHeaders) {
+            if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') continue;
+            const anyDate = selectedData.some(row => dateLike(row[header.id]));
+            if (anyDate) {
+              dateColumn = header.id;
+              break;
+            }
+          }
+        }
+      }
+
+      const aggregation = aggregateByMonth(selectedData, amountColumn, dateColumn);
 
       setMonthlyAmounts({
         jan: aggregation.jan,
@@ -173,7 +207,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setTotalAmount(aggregation.total);
       setDonationPeriod(aggregation.dateRange);
     }
-  }, [amountColumn, context.data, context.includedIndices]);
+  }, [amountColumn, context.data, context.includedIndices, context.visibleHeaders, context.sourceFiles]);
 
   // Update amount in words when total changes
   useEffect(() => {

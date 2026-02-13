@@ -26,6 +26,10 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
 
       // Get column headers from the data structure
       const rawHeaders = Object.keys(data[0]);
+      const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+      // Exclude all metadata/system keys that start with underscore (e.g., _source*, __rowNum__)
+      const nonMetaKeys = rawHeaders.filter(h => !h.startsWith('_'));
+      const hasRealHeaders = nonMetaKeys.length > 0 && !nonMetaKeys.every(isPlaceholder);
       const rowsToScan = Math.min(3, data.length);
       const allColumns: ColumnOption[] = [];
 
@@ -76,13 +80,16 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
       if (firstNonEmpty) {
         console.log('ColumnSelector - auto-selecting:', firstNonEmpty);
         setSelectedColumn(firstNonEmpty.original);
-        setSelectedRowIndex(firstNonEmpty.rowIndex);
-        onColumnSelect(firstNonEmpty.original, firstNonEmpty.rowIndex);
+        // If headers are already in keys (CSV), use headerRowIndex = 0
+        const effectiveRowIndex = hasRealHeaders ? 0 : firstNonEmpty.rowIndex;
+        setSelectedRowIndex(effectiveRowIndex);
+        onColumnSelect(firstNonEmpty.original, effectiveRowIndex);
       } else if (allColumns.length > 0) {
         console.log('ColumnSelector - selecting first available:', allColumns[0]);
         setSelectedColumn(allColumns[0].original);
-        setSelectedRowIndex(allColumns[0].rowIndex);
-        onColumnSelect(allColumns[0].original, allColumns[0].rowIndex);
+        const effectiveRowIndex = hasRealHeaders ? 0 : allColumns[0].rowIndex;
+        setSelectedRowIndex(effectiveRowIndex);
+        onColumnSelect(allColumns[0].original, effectiveRowIndex);
       } else {
         console.log('ColumnSelector - no columns to select!');
       }
@@ -100,8 +107,14 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     if (selectedCol) {
       console.log('ColumnSelector - user selected:', selectedCol);
       setSelectedColumn(originalColumnName);
-      setSelectedRowIndex(rowIndex);
-      onColumnSelect(originalColumnName, rowIndex);
+      // Detect if headers are already in keys (CSV) and override to 0
+      const rawHeaders = Object.keys(data[0] || {});
+      const isPlaceholder = (k: string) => /^[A-Z]+$/.test(k) || /^__EMPTY/.test(k);
+      const nonMetaKeys = rawHeaders.filter(h => !h.startsWith('_'));
+      const hasRealHeaders = nonMetaKeys.length > 0 && !nonMetaKeys.every(isPlaceholder);
+      const effectiveRowIndex = hasRealHeaders ? 0 : rowIndex;
+      setSelectedRowIndex(effectiveRowIndex);
+      onColumnSelect(originalColumnName, effectiveRowIndex);
     }
   };
 
@@ -169,4 +182,3 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
 };
 
 export default ColumnSelector;
-
