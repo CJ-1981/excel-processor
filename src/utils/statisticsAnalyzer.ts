@@ -689,13 +689,13 @@ export function calculatePareto(
  * Default value ranges for distribution analysis
  */
 export const DEFAULT_VALUE_RANGES: ValueRange[] = [
-  { label: '0', min: 0, max: 0 },
-  { label: '1-50', min: 1, max: 50 },
-  { label: '51-100', min: 51, max: 100 },
-  { label: '101-200', min: 101, max: 200 },
-  { label: '201-500', min: 201, max: 500 },
-  { label: '501-1000', min: 501, max: 1000 },
-  { label: '1001+', min: 1001, max: Infinity },
+  { label: '0 EUR', min: 0, max: 0 },
+  { label: '1-50 EUR', min: 1, max: 50 },
+  { label: '51-100 EUR', min: 51, max: 100 },
+  { label: '101-200 EUR', min: 101, max: 200 },
+  { label: '201-500 EUR', min: 201, max: 500 },
+  { label: '501-1000 EUR', min: 501, max: 1000 },
+  { label: '1001+ EUR', min: 1001, max: Infinity },
 ];
 
 /**

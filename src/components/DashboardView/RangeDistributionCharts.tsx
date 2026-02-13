@@ -1,11 +1,16 @@
 import React from 'react';
 import {
-  PieChart,
-  Pie,
-  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
   Legend,
+  Label,
+  LabelList,
 } from 'recharts';
 import { Box, Typography, useTheme, Paper } from '@mui/material';
 import type { RangeDistributionData } from '../../types';
@@ -64,13 +69,11 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
     chartType: 'amount' as const,
   }));
 
-  // Custom tooltip
+  // Custom tooltip for bars
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload || payload.length === 0) return null;
-
-    const data = payload[0].payload;
-    const isCountChart = data.chartType === 'count';
-
+    const d = payload[0].payload;
+    const isCount = d.chartType === 'count';
     return (
       <Box
         sx={{
@@ -81,39 +84,13 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
           boxShadow: theme.shadows[2],
         }}
       >
-        <Typography variant="subtitle2" gutterBottom>
-          {data.name}
-        </Typography>
+        <Typography variant="subtitle2" gutterBottom>{d.name}</Typography>
         <Typography variant="body2">
-          {isCountChart
-            ? `Donors: ${data.value} (${formatPercentGerman(data.percentage)})`
-            : `Amount: ${formatCurrencyGerman(data.value)} (${formatPercentGerman(data.percentage)})`}
+          {isCount
+            ? `Donors: ${d.value} (${formatPercentGerman(d.percentage)})`
+            : `Amount: ${formatCurrencyGerman(d.value)} (${formatPercentGerman(d.percentage)})`}
         </Typography>
       </Box>
-    );
-  };
-
-  // Custom label renderer
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (percent < 0.05) return null; // Don't show labels for small slices
-
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        fontSize={11}
-        fontWeight="bold"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
     );
   };
 
@@ -121,41 +98,25 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
     <Box sx={{ width: '100%' }} data-chart-id={chartId}>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         {/* Donors by Count */}
-        <Paper sx={{ flex: 1, minWidth: 280, p: 2 }}>
+        <Paper sx={{ flex: 1, minWidth: 320, p: 2 }}>
           <Typography variant="subtitle1" gutterBottom align="center">
             By Donor Count
           </Typography>
-          <Box sx={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={150} minHeight={200}>
-              <PieChart>
-                <Pie
-                  data={countData}
-                  cx="50%"
-                  cy="40%"
-                  labelLine={false}
-                  label={renderCustomLabel}
-                  outerRadius={70}
-                  dataKey="value"
-                  nameKey="name"
-                >
-                  {countData.map((_, index) => (
-                    <Cell
-                      key={`cell-count-${index}`}
-                      fill={PIE_COLORS[index % PIE_COLORS.length]}
-                    />
-                  ))}
-                </Pie>
+          <Box sx={{ height: 360 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={220}>
+              <BarChart data={countData} layout="vertical" margin={{ top: 10, right: 100, left: 24, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  layout="horizontal"
-                  align="center"
-                  verticalAlign="bottom"
-                  wrapperStyle={{ paddingTop: 10 }}
-                  formatter={(value: string) => (
-                    <span style={{ fontSize: 11 }}>{value}</span>
-                  )}
-                />
-              </PieChart>
+                <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                <Bar dataKey="value" name="Count">
+                  {countData.map((_, index) => (
+                    <Cell key={`cell-count-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                  <LabelList dataKey="value" position="right" fontSize={11} fill={theme.palette.text.secondary} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </Box>
           <Typography variant="caption" color="text.secondary" align="center" display="block">
@@ -164,41 +125,25 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
         </Paper>
 
         {/* Donors by Amount */}
-        <Paper sx={{ flex: 1, minWidth: 280, p: 2 }}>
+        <Paper sx={{ flex: 1, minWidth: 320, p: 2 }}>
           <Typography variant="subtitle1" gutterBottom align="center">
             By Total {valueLabel}
           </Typography>
-          <Box sx={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={150} minHeight={200}>
-              <PieChart>
-                <Pie
-                  data={amountData}
-                  cx="50%"
-                  cy="40%"
-                  labelLine={false}
-                  label={renderCustomLabel}
-                  outerRadius={70}
-                  dataKey="value"
-                  nameKey="name"
-                >
-                  {amountData.map((_, index) => (
-                    <Cell
-                      key={`cell-amount-${index}`}
-                      fill={PIE_COLORS[index % PIE_COLORS.length]}
-                    />
-                  ))}
-                </Pie>
+          <Box sx={{ height: 360 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={220}>
+              <BarChart data={amountData} layout="vertical" margin={{ top: 10, right: 120, left: 24, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} tickFormatter={(v) => formatCurrencyGerman(v as number)} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  layout="horizontal"
-                  align="center"
-                  verticalAlign="bottom"
-                  wrapperStyle={{ paddingTop: 10 }}
-                  formatter={(value: string) => (
-                    <span style={{ fontSize: 11 }}>{value}</span>
-                  )}
-                />
-              </PieChart>
+                <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                <Bar dataKey="value" name={valueLabel}>
+                  {amountData.map((_, index) => (
+                    <Cell key={`cell-amount-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                  <LabelList dataKey="value" position="right" fontSize={11} fill={theme.palette.text.secondary} formatter={(v: number) => formatCurrencyGerman(v)} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </Box>
           <Typography variant="caption" color="text.secondary" align="center" display="block">
