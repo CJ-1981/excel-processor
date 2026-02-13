@@ -24,6 +24,7 @@ This is a client-side web application built with React, TypeScript, and Vite, de
     *   **Pagination:** Efficiently navigate through large datasets.
     *   **Column Visibility:** Toggle which columns are displayed in the table.
     *   **Numeric Sums:** A summary row at the bottom displays the sum of numeric values for each column.
+    *   **Responsive Toolbar:** On small screens, action buttons (Select/Deselect, Export CSV/PDF) wrap and stack; on desktop they remain compact.
 *   **Export to CSV:** Export the currently displayed (filtered, sorted, and visible columns) detailed data to a CSV file.
 *   **Export to PDF:** Generate professional PDF reports with customizable templates.
     *   **German Donation Receipt Template:** Pre-built template for German donation receipts (Zuwendungsbestätigung) with:
@@ -104,6 +105,8 @@ When enabled, the console shows messages/timings for dashboard initialization, c
   - Enable debug logging (see above), reopen the Dashboard, and check the console for `[Dashboard]` messages.
   - An Error Boundary now wraps the Dashboard dialog, so errors are shown as a message instead of a blank page.
   - If layout issues persist, click “Reset Layout” in the Dashboard to clear a corrupted saved layout.
+- Action buttons overflow on mobile
+  - The Detailed Data View toolbar is mobile-aware and now stacks/wraps controls on small screens while keeping desktop layout unchanged.
 
 ## Version History
 

@@ -976,7 +976,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </Menu>
         </Box>
       </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: { xs: 'flex-start', md: 'space-between' }, mb: 2 }}>
         <TextField
           variant="outlined"
           size="small"
@@ -1000,9 +1000,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               </InputAdornment>
             ),
           }}
-          sx={{ width: '30%' }}
+          sx={{ width: { xs: '100%', md: '30%' } }}
         />
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
             {includedRowIndices.size} of {filteredAndSortedData.length} rows selected
           </Typography>
@@ -1045,6 +1045,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 size="small"
                 onClick={handleSelectAllRows}
                 disabled={filteredAndSortedData.length === 0}
+                sx={{ width: { xs: '100%', md: 'auto' } }}
               >
                 Select All
               </Button>
@@ -1053,6 +1054,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 size="small"
                 onClick={handleDeselectAllRows}
                 disabled={includedRowIndices.size === 0}
+                sx={{ width: { xs: '100%', md: 'auto' } }}
               >
                 Deselect All
               </Button>
@@ -1063,6 +1065,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             color="primary"
             onClick={handleExportCsv}
             disabled={includedRowIndices.size === 0}
+            sx={{ width: { xs: '100%', md: 'auto' } }}
           >
             Export as CSV ({includedRowIndices.size})
           </Button>
@@ -1072,6 +1075,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             onClick={() => setShowPDFDialog(true)}
             disabled={includedRowIndices.size === 0}
             startIcon={<PictureAsPdfIcon />}
+            sx={{ width: { xs: '100%', md: 'auto' } }}
           >
             PDF ({includedRowIndices.size})
           </Button>
