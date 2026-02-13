@@ -57,8 +57,20 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
   const [editingGroup, setEditingGroup] = useState<NameMergeGroup | null>(null);
   const [newDisplayName, setNewDisplayName] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  // Collapse the whole panel by default; user can expand when needed
-  const [collapsed, setCollapsed] = useState<boolean>(true);
+  // Collapse the whole panel by default; persist user choice in localStorage
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('excel-processor-name-merge-collapsed');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('excel-processor-name-merge-collapsed', String(collapsed));
+    } catch {}
+  }, [collapsed]);
 
   // Filter names based on search term
   const filteredNames = useMemo(() => {
