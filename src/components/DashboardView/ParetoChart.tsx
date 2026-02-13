@@ -21,6 +21,7 @@ interface ParetoChartProps {
   barColor?: string;
   lineColor?: string;
   showTop?: number;
+  anonymize?: boolean; // hide names on X-axis
 }
 
 const ParetoChart: React.FC<ParetoChartProps> = ({
@@ -29,6 +30,7 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
   barColor,
   lineColor,
   showTop = 15,
+  anonymize = false,
 }) => {
   const theme = useTheme();
   const primaryBarColor = barColor || theme.palette.primary.main;
@@ -71,6 +73,7 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
             textAnchor="end"
             interval={0}
             height={60}
+            tickFormatter={anonymize ? (() => '') as any : undefined}
           />
           <YAxis
             yAxisId="left"

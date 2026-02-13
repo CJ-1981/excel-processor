@@ -18,12 +18,14 @@ interface TopDonorsChartProps {
   data: CategoryDistribution[];
   valueLabel: string;
   limit?: number;
+  anonymize?: boolean; // hide names on X-axis
 }
 
 const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
   data,
   valueLabel,
   limit = 10,
+  anonymize = false,
 }) => {
   const theme = useTheme();
   const COLORS = getChartColors();
@@ -180,6 +182,7 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
             angle={-45}
             textAnchor="end"
             height={100}
+            tickFormatter={anonymize ? (() => '') as any : undefined}
           />
           <YAxis
             stroke={theme.palette.text.primary}

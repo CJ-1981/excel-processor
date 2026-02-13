@@ -16,6 +16,7 @@ import {
   Chip,
   IconButton,
   Button,
+  Switch,
 } from '@mui/material';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
@@ -90,6 +91,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [histogramBins, setHistogramBins] = useState<number>(100);
   const [histogramZoomMin, setHistogramZoomMin] = useState<number | null>(null);
   const [histogramZoomMax, setHistogramZoomMax] = useState<number | null>(null);
+  // Anonymize unique names on X-axis ticks
+  const [anonymizeNames, setAnonymizeNames] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('excel-processor-anonymize-names');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('excel-processor-anonymize-names', String(anonymizeNames)); } catch {}
+  }, [anonymizeNames]);
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
@@ -792,16 +805,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   return (
     <Box sx={{ width: '100%', p: 2 }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Data Dashboard
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Showing {analysis.metadata.filteredRows} rows
-          {analysis.metadata.dateRange && (
-            <> from {formatDateGerman(analysis.metadata.dateRange.start)} to {formatDateGerman(analysis.metadata.dateRange.end)}</>
-          )}
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Data Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Showing {analysis.metadata.filteredRows} rows
+            {analysis.metadata.dateRange && (
+              <> from {formatDateGerman(analysis.metadata.dateRange.start)} to {formatDateGerman(analysis.metadata.dateRange.end)}</>
+            )}
+          </Typography>
+        </Box>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={anonymizeNames}
+              onChange={(e) => setAnonymizeNames(e.target.checked)}
+              size="small"
+            />
+          }
+          label={<Typography variant="body2">Anonymize names (hide X-axis)</Typography>}
+        />
       </Box>
 
       {/* Column Selectors */}
@@ -1099,6 +1124,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 data={topContributorsData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
                 limit={topDonorsCount}
+                anonymize={anonymizeNames}
               />
             </Box>
           </Paper>
@@ -1289,6 +1315,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 data={paretoData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
                 showTop={paretoDonorsCount}
+                anonymize={anonymizeNames}
               />
             </Box>
           </Paper>
