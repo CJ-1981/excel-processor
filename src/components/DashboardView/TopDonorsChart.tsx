@@ -182,7 +182,12 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
             angle={-45}
             textAnchor="end"
             height={100}
-            tickFormatter={anonymize ? (() => '') as any : undefined}
+            interval={anonymize ? 0 : undefined}
+            tickFormatter={anonymize ? ((_: any, index: number) => {
+              const n = chartData.length;
+              const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
+              return index % step === 0 ? String(index + 1) : '';
+            }) as any : undefined}
           />
           <YAxis
             stroke={theme.palette.text.primary}

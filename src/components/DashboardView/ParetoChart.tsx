@@ -74,7 +74,11 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
             textAnchor="end"
             interval={0}
             height={60}
-            tickFormatter={anonymize ? (() => '') as any : undefined}
+            tickFormatter={anonymize ? ((_: any, index: number) => {
+              const n = displayData.length;
+              const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
+              return index % step === 0 ? String(index + 1) : '';
+            }) as any : undefined}
           />
           <YAxis
             yAxisId="left"
