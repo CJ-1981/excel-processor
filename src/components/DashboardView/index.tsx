@@ -90,9 +90,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
-  const LAYOUT_VERSION = 6; // Increment to invalidate saved layouts
+  const LAYOUT_VERSION = 7; // Increment to invalidate saved layouts
   const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
   const COLS_BREAKPOINTS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
+  const ROW_HEIGHT_KEY = 'excel-processor-dashboard-rowheight';
+  const [currentBreakpoint, setCurrentBreakpoint] = useState<keyof typeof BREAKPOINTS>('lg');
 
   // Helper function to download any chart as PNG/JPG
   const downloadChartAsImage = useCallback((chartId: string, format: 'png' | 'jpg' = 'png') => {
@@ -127,7 +129,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     img.src = URL.createObjectURL(svgBlob);
   }, []);
 
-  // Default layout configuration - all charts full width, stacked vertically
+  // Default layout configuration for all breakpoints - full width, stacked vertically
   const defaultLayout = {
     lg: [
       { i: 'trend-chart', x: 0, y: 0, w: 12, h: 16, minW: 6, minH: 10 },
@@ -138,6 +140,61 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       { i: 'pareto', x: 0, y: 78, w: 12, h: 14, minW: 6, minH: 8 },
       { i: 'range-distribution', x: 0, y: 92, w: 12, h: 18, minW: 6, minH: 10 },
     ],
+    md: [
+      { i: 'trend-chart', x: 0, y: 0, w: 10, h: 16, minW: 5, minH: 10 },
+      { i: 'top-contributors', x: 0, y: 16, w: 10, h: 18, minW: 5, minH: 10 },
+      { i: 'statistics-table', x: 0, y: 34, w: 10, h: 12, minW: 5, minH: 4 },
+      { i: 'histogram', x: 0, y: 46, w: 10, h: 16, minW: 5, minH: 8 },
+      { i: 'box-plot', x: 0, y: 62, w: 10, h: 16, minW: 5, minH: 8 },
+      { i: 'pareto', x: 0, y: 78, w: 10, h: 14, minW: 5, minH: 8 },
+      { i: 'range-distribution', x: 0, y: 92, w: 10, h: 18, minW: 5, minH: 10 },
+    ],
+    sm: [
+      { i: 'trend-chart', x: 0, y: 0, w: 6, h: 16, minW: 3, minH: 10 },
+      { i: 'top-contributors', x: 0, y: 16, w: 6, h: 18, minW: 3, minH: 10 },
+      { i: 'statistics-table', x: 0, y: 34, w: 6, h: 12, minW: 3, minH: 4 },
+      { i: 'histogram', x: 0, y: 46, w: 6, h: 16, minW: 3, minH: 8 },
+      { i: 'box-plot', x: 0, y: 62, w: 6, h: 16, minW: 3, minH: 8 },
+      { i: 'pareto', x: 0, y: 78, w: 6, h: 14, minW: 3, minH: 8 },
+      { i: 'range-distribution', x: 0, y: 92, w: 6, h: 18, minW: 3, minH: 10 },
+    ],
+    xs: [
+      { i: 'trend-chart', x: 0, y: 0, w: 4, h: 16, minW: 2, minH: 10 },
+      { i: 'top-contributors', x: 0, y: 16, w: 4, h: 18, minW: 2, minH: 10 },
+      { i: 'statistics-table', x: 0, y: 34, w: 4, h: 12, minW: 2, minH: 4 },
+      { i: 'histogram', x: 0, y: 46, w: 4, h: 16, minW: 2, minH: 8 },
+      { i: 'box-plot', x: 0, y: 62, w: 4, h: 16, minW: 2, minH: 8 },
+      { i: 'pareto', x: 0, y: 78, w: 4, h: 14, minW: 2, minH: 8 },
+      { i: 'range-distribution', x: 0, y: 92, w: 4, h: 18, minW: 2, minH: 10 },
+    ],
+    xxs: [
+      { i: 'trend-chart', x: 0, y: 0, w: 2, h: 16, minW: 2, minH: 10 },
+      { i: 'top-contributors', x: 0, y: 16, w: 2, h: 18, minW: 2, minH: 10 },
+      { i: 'statistics-table', x: 0, y: 34, w: 2, h: 12, minW: 2, minH: 4 },
+      { i: 'histogram', x: 0, y: 46, w: 2, h: 16, minW: 2, minH: 8 },
+      { i: 'box-plot', x: 0, y: 62, w: 2, h: 16, minW: 2, minH: 8 },
+      { i: 'pareto', x: 0, y: 78, w: 2, h: 14, minW: 2, minH: 8 },
+      { i: 'range-distribution', x: 0, y: 92, w: 2, h: 18, minW: 2, minH: 10 },
+    ],
+  } as const;
+
+  const ITEM_IDS = ['trend-chart', 'top-contributors', 'statistics-table', 'histogram', 'box-plot', 'pareto', 'range-distribution'];
+
+  const sanitizeLayouts = (layoutsObj: any) => {
+    const result: any = { ...layoutsObj };
+    for (const bp of Object.keys(BREAKPOINTS)) {
+      if (!result[bp]) {
+        result[bp] = (defaultLayout as any)[bp];
+        continue;
+      }
+      const idsInBp = new Set(result[bp].map((x: any) => x.i));
+      const missing = ITEM_IDS.filter(id => !idsInBp.has(id));
+      if (missing.length > 0) {
+        const defaults = (defaultLayout as any)[bp].filter((x: any) => missing.includes(x.i));
+        result[bp] = [...result[bp], ...defaults];
+      }
+    }
+    return result;
   };
 
   const [layouts, setLayouts] = useState(() => {
@@ -151,7 +208,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           localStorage.removeItem(LAYOUT_STORAGE_KEY);
           return defaultLayout;
         }
-        return parsed;
+        return sanitizeLayouts(parsed);
       }
     } catch (e) {
       console.warn('Could not load dashboard layout:', e);
@@ -174,8 +231,29 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     localStorage.removeItem(LAYOUT_STORAGE_KEY);
   }, [defaultLayout]);
 
-  // Calculate row height for grid (50px per unit)
-  const rowHeight = 50;
+  // Row height for grid (user adjustable)
+  const [rowHeight, setRowHeight] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(ROW_HEIGHT_KEY);
+      return saved ? parseInt(saved, 10) || 50 : 50;
+    } catch {
+      return 50;
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(ROW_HEIGHT_KEY, String(rowHeight)); } catch {}
+  }, [rowHeight]);
+
+  const handleAdjustWidgetHeight = useCallback((id: string, delta: number) => {
+    setLayouts((prev: any) => {
+      const newLayouts = { ...prev } as any;
+      const arr = newLayouts[currentBreakpoint] || [];
+      newLayouts[currentBreakpoint] = arr.map((item: any) =>
+        item.i === id ? { ...item, h: Math.max(item.minH || 4, (item.h || 10) + delta) } : item
+      );
+      return newLayouts;
+    });
+  }, [currentBreakpoint]);
 
   // Detect available columns
   const availableNumericColumns = useMemo(() => {
@@ -618,8 +696,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
       <Divider sx={{ my: 3 }} />
 
-      {/* Reset Layout Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      {/* Layout controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" color="text.secondary">Row height</Typography>
+          <FormControl size="small" sx={{ minWidth: 80 }}>
+            <Select value={rowHeight} onChange={(e) => setRowHeight(Number(e.target.value))}>
+              {[30, 40, 50, 60, 70, 80].map(v => (
+                <MenuItem key={v} value={v}>{v}px</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         <Button
           variant="outlined"
           size="small"
@@ -637,13 +725,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         cols={COLS_BREAKPOINTS}
         rowHeight={rowHeight}
         onLayoutChange={handleLayoutChange}
+        onBreakpointChange={(bp) => setCurrentBreakpoint(bp as any)}
         draggableHandle=".drag-handle"
         margin={[16, 16]}
+        compactType="vertical"
+        preventCollision={false}
         isDraggable={true}
         isResizable={true}
       >
         {/* Trend Chart */}
-        <Paper key="trend-chart" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+        <Paper key="trend-chart" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <TrendingUp color="primary" />
@@ -657,6 +748,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
               <IconButton size="small" onClick={() => downloadChartAsImage('trend-chart', 'jpg')} title="Download as JPG">
                 <Download fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', 2)} title="Taller">
+                <AddIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', -2)} title="Shorter">
+                <RemoveIcon fontSize="small" />
               </IconButton>
             </Box>
             {hasTimeSeriesData && (
@@ -718,7 +815,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Top Contributors Chart */}
         {topContributorsData.length > 0 && (
-          <Paper key="top-contributors" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <BarChart color="primary" />
@@ -730,6 +827,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </IconButton>
                 <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'jpg')} title="Download as JPG">
                   <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title="Shorter">
+                  <RemoveIcon fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
@@ -763,10 +866,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         )}
 
         {/* Statistics Table */}
-        <Paper key="statistics-table" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+        <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, mb: 2 }}>
             <TableChart color="primary" />
             <Typography variant="h6">Descriptive Statistics</Typography>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', 2)} title="Taller">
+                <AddIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', -2)} title="Shorter">
+                <RemoveIcon fontSize="small" />
+              </IconButton>
+            </Box>
           </Box>
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
             <StatisticsTable statistics={analysis.numericColumns} />
@@ -775,7 +886,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Distribution Histogram */}
         {selectedValueColumns.length > 0 && (
-          <Paper key="histogram" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
                 Distribution Histogram
@@ -797,6 +908,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   title="More bins"
                 >
                   <AddIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title="Taller">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title="Shorter">
+                  <RemoveIcon fontSize="small" />
                 </IconButton>
                 <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                 <IconButton
@@ -860,7 +977,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Box Plot */}
         {selectedValueColumns.length > 0 && (
-          <Paper key="box-plot" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+          <Paper key="box-plot" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1" gutterBottom>
                 Box Plot Analysis
@@ -871,6 +988,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </IconButton>
                 <IconButton size="small" onClick={() => downloadChartAsImage('box-plot', 'jpg')} title="Download as JPG">
                   <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', 2)} title="Taller">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('box-plot', -2)} title="Shorter">
+                  <RemoveIcon fontSize="small" />
                 </IconButton>
               </Box>
             </Box>
@@ -885,7 +1008,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Pareto Chart */}
         {selectedValueColumns.length > 0 && paretoData.length > 0 && (
-          <Paper key="pareto" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
                 Pareto Analysis (80/20 Rule)
@@ -893,6 +1016,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
                   <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title="Shorter">
+                  <RemoveIcon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title="Show fewer">
                   <RemoveIcon fontSize="small" />
@@ -922,7 +1051,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Range Distribution */}
         {selectedValueColumns.length > 0 && rangeDistributionData.length > 0 && (
-          <Paper key="range-distribution" sx={{ p: 0, height: 400, display: 'flex', flexDirection: 'column' }}>
+          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
               <Typography variant="h6">Range Distribution</Typography>
@@ -933,6 +1062,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
               <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'jpg')} title="Download as JPG">
                 <Download fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', 2)} title="Taller">
+                <AddIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', -2)} title="Shorter">
+                <RemoveIcon fontSize="small" />
               </IconButton>
             </Box>
             <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
