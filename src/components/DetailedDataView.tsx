@@ -1038,51 +1038,71 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   size="small"
                 />
               }
-              label="Hide deselected"
+              label={
+                <Tooltip title="Temporarily hide deselected rows; selection still applies to exports" arrow>
+                  <span>Hide deselected</span>
+                </Tooltip>
+              }
               sx={{ mr: 1 }}
             />
           </FormGroup>
           {(searchTerm || hasAnyColumnFilter) && (
             <>
+              <Tooltip title="Select all currently visible rows (after search/filters)" arrow>
+                <span>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleSelectAllRows}
+                    disabled={filteredAndSortedData.length === 0}
+                    sx={{ width: { xs: '100%', md: 'auto' } }}
+                  >
+                    Select All
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip title="Deselect all currently visible rows (after search/filters)" arrow>
+                <span>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleDeselectAllRows}
+                    disabled={includedRowIndices.size === 0}
+                    sx={{ width: { xs: '100%', md: 'auto' } }}
+                  >
+                    Deselect All
+                  </Button>
+                </span>
+              </Tooltip>
+            </>
+          )}
+          <Tooltip title="Exports included rows and currently visible columns" arrow>
+            <span>
               <Button
-                variant="outlined"
-                size="small"
-                onClick={handleSelectAllRows}
-                disabled={filteredAndSortedData.length === 0}
-                sx={{ width: { xs: '100%', md: 'auto' } }}
-              >
-                Select All
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleDeselectAllRows}
+                variant="contained"
+                color="primary"
+                onClick={handleExportCsv}
                 disabled={includedRowIndices.size === 0}
                 sx={{ width: { xs: '100%', md: 'auto' } }}
               >
-                Deselect All
+                Export as CSV ({includedRowIndices.size})
               </Button>
-            </>
-          )}
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleExportCsv}
-            disabled={includedRowIndices.size === 0}
-            sx={{ width: { xs: '100%', md: 'auto' } }}
-          >
-            Export as CSV ({includedRowIndices.size})
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => setShowPDFDialog(true)}
-            disabled={includedRowIndices.size === 0}
-            startIcon={<PictureAsPdfIcon />}
-            sx={{ width: { xs: '100%', md: 'auto' } }}
-          >
-            PDF ({includedRowIndices.size})
-          </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title="Generates PDF using included rows and visible columns" arrow>
+            <span>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => setShowPDFDialog(true)}
+                disabled={includedRowIndices.size === 0}
+                startIcon={<PictureAsPdfIcon />}
+                sx={{ width: { xs: '100%', md: 'auto' } }}
+              >
+                PDF ({includedRowIndices.size})
+              </Button>
+            </span>
+          </Tooltip>
         </Box>
       </Box>
       {/* Column Filter Info and Clear Button */}
