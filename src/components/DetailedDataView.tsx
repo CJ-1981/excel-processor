@@ -1015,7 +1015,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   size="small"
                 />
               }
-              label="Auto-deselect empty/zero-value rows"
+              label={
+                <Tooltip title="Only checks currently visible data columns" arrow>
+                  <span>Auto-deselect empty/zero-value rows</span>
+                </Tooltip>
+              }
               sx={{ mr: 1 }}
             />
             <FormControlLabel
