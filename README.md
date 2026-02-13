@@ -107,7 +107,7 @@ When enabled, the console shows messages/timings for dashboard initialization, c
 
 ## Version History
 
-### v1.3.0 (2026-02-13)
+### v1.4.0 (2026-02-13)
 *   Dashboard stability: added ErrorBoundary around the Dashboard dialog to avoid blank pages on errors.
 *   Debug instrumentation behind a flag (`excel-processor-debug`) with timings and structured logs.
 *   CSV/Excel parsing consistency: preserve header rows uniformly; avoid misinterpreting first data row as headers.
