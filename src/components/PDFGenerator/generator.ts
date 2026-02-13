@@ -78,9 +78,11 @@ export async function generatePDF(
   }
 
   // Download PDF
-  const fileName = context.selectedNames.length > 1
-    ? 'report.pdf'
-    : `${context.selectedNames[0]}_report.pdf`;
+  // Format: {donorName}_{YYYY-MM-DD}.pdf or report_{YYYY-MM-DD}.pdf
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const fileName = context.customFields?.donorName
+    ? `${context.customFields.donorName}_${today}.pdf`
+    : `report_${today}.pdf`;
 
   doc.save(fileName);
 }
