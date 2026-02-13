@@ -8,8 +8,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  Customized,
 } from 'recharts';
 import { Box, Typography, useTheme } from '@mui/material';
 
@@ -161,6 +161,42 @@ const TrendChart: React.FC<TrendChartProps> = ({
 
   const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
 
+  // Inline SVG legend so exports include it
+  const renderInlineLegend = ({ width, margin }: any) => {
+    const itemHeight = 16;
+    const padding = 6;
+    const gap = 6;
+    const approxChar = 7; // approximate px per character
+    const maxLabelLen = Math.max(0, ...series.map(s => s.label.length));
+    const legendWidth = Math.min(220, 16 + 8 + maxLabelLen * approxChar + padding * 2);
+    const legendHeight = padding * 2 + series.length * itemHeight + (series.length - 1) * gap;
+    const startX = Math.max(10, (width || 0) - (margin?.right || 0) - legendWidth - 10);
+    const startY = (margin?.top || 0) + 5;
+
+    return (
+      <g>
+        <rect x={startX} y={startY} width={legendWidth} height={legendHeight} rx={6} ry={6}
+              fill="#fff" fillOpacity={0.85} stroke={theme.palette.divider} />
+        {series.map((s, idx) => {
+          const y = startY + padding + idx * (itemHeight + gap);
+          const color = s.color || CHART_COLORS[idx % CHART_COLORS.length];
+          return (
+            <g key={s.key}>
+              <rect x={startX + padding} y={y + 2} width={12} height={12} fill={color} stroke={color} />
+              <text x={startX + padding + 12 + 6}
+                    y={y + 12}
+                    fill={theme.palette.text.primary}
+                    fontSize={12}
+                    alignmentBaseline="baseline">
+                {s.label}
+              </text>
+            </g>
+          );
+        })}
+      </g>
+    );
+  };
+
   return (
     <ResponsiveContainer width="100%" height="100%" debounce={1}>
       <ChartComponent data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -177,7 +213,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
           tickFormatter={(value) => formatTooltipValue(value)}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend />
+        <Customized component={renderInlineLegend} />
         {renderSeries()}
       </ChartComponent>
     </ResponsiveContainer>

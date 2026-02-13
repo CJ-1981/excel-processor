@@ -100,35 +100,86 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Helper function to download any chart as PNG/JPG
   const downloadChartAsImage = useCallback((chartId: string, format: 'png' | 'jpg' = 'png') => {
-    const chartElement = document.querySelector(`[data-chart-id="${chartId}"] svg`);
-    if (!chartElement) return;
+    const wrapper = document.querySelector(`[data-chart-id="${chartId}"]`) as HTMLElement | null;
+    if (!wrapper) return;
 
-    const svgData = new XMLSerializer().serializeToString(chartElement);
+    // Pick the largest SVG inside the wrapper (avoid tiny icon svgs)
+    const svgCandidates = Array.from(wrapper.querySelectorAll('svg')) as SVGSVGElement[];
+    const svgEl = svgCandidates.length > 0
+      ? svgCandidates.reduce((best, el) => {
+          const r = el.getBoundingClientRect();
+          const area = (r.width || 0) * (r.height || 0);
+          const br = best.getBoundingClientRect();
+          const bArea = (br.width || 0) * (br.height || 0);
+          return area > bArea ? el : best;
+        }, svgCandidates[0])
+      : null;
+    if (!svgEl) return;
+
+    // Measure displayed size of the chart area
+    const rect = wrapper.getBoundingClientRect();
+    const displayWidth = Math.max(1, Math.round(rect.width)) || (svgEl as any).clientWidth || 800;
+    const displayHeight = Math.max(1, Math.round(rect.height)) || (svgEl as any).clientHeight || 400;
+
+    // Clone and enforce explicit size + namespaces for reliable rasterization
+    const cloned = svgEl.cloneNode(true) as SVGSVGElement;
+    cloned.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    cloned.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    cloned.setAttribute('width', `${displayWidth}`);
+    cloned.setAttribute('height', `${displayHeight}`);
+    if (!cloned.getAttribute('viewBox')) {
+      cloned.setAttribute('viewBox', `0 0 ${displayWidth} ${displayHeight}`);
+    }
+    const svgData = new XMLSerializer().serializeToString(cloned);
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
 
     const img = new Image();
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      URL.revokeObjectURL(svgUrl);
+      return;
+    }
+
+    // Account for device pixel ratio for sharper output
+    const scale = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+    canvas.width = displayWidth * scale;
+    canvas.height = displayHeight * scale;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     img.onload = () => {
-      canvas.width = chartElement.clientWidth || 800;
-      canvas.height = chartElement.clientHeight || 400;
-      ctx.drawImage(img, 0, 0);
+      try {
+        // Always paint a white background so PNGs aren't transparent
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, displayWidth, displayHeight);
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `chart-${chartId}.${format}`;
-          link.click();
-          URL.revokeObjectURL(url);
-        }
-      }, `image/${format}`, 0.9);
+        // Draw and scale SVG image to the measured size
+        ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
+
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `chart-${chartId}.${format}`;
+            link.click();
+            URL.revokeObjectURL(url);
+          }
+          URL.revokeObjectURL(svgUrl);
+        }, mime, 0.92);
+      } catch {
+        URL.revokeObjectURL(svgUrl);
+      }
     };
 
-    img.src = URL.createObjectURL(svgBlob);
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+    };
+    img.src = svgUrl;
   }, []);
 
   // Default layout configuration for all breakpoints - full width, stacked vertically
