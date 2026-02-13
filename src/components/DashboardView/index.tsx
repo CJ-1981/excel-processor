@@ -20,6 +20,7 @@ import {
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import html2canvas from 'html2canvas';
 
 // Wrap Responsive with WidthProvider for auto-width detection
 const GridLayout = WidthProvider(Responsive);
@@ -67,7 +68,7 @@ interface DashboardViewProps {
   nameColumn: string | null;
 }
 
-type PeriodType = 'monthly' | 'quarterly' | 'yearly';
+type PeriodType = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 type ChartType = 'line' | 'area' | 'stacked';
 
 // Date pattern for extracting dates from filenames (YYYYMMDD format)
@@ -103,8 +104,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     const wrapper = document.querySelector(`[data-chart-id="${chartId}"]`) as HTMLElement | null;
     if (!wrapper) return;
 
+    // If this panel contains multiple charts (like Range Distribution's two pies),
+    // capture the entire wrapper via html2canvas so everything is included.
+    const svgAll = Array.from(wrapper.querySelectorAll('svg')) as SVGSVGElement[];
+    if (chartId === 'range-distribution' || svgAll.length > 1) {
+      (async () => {
+        try {
+          const canvas = await html2canvas(wrapper, {
+            backgroundColor: '#ffffff',
+            scale: Math.max(1, Math.floor(window.devicePixelRatio || 1)),
+            useCORS: true,
+          });
+          const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+          canvas.toBlob((blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `chart-${chartId}.${format}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, mime, 0.92);
+        } catch {}
+      })();
+      return;
+    }
+
     // Pick the largest SVG inside the wrapper (avoid tiny icon svgs)
-    const svgCandidates = Array.from(wrapper.querySelectorAll('svg')) as SVGSVGElement[];
+    const svgCandidates = svgAll;
     const svgEl = svgCandidates.length > 0
       ? svgCandidates.reduce((best, el) => {
           const r = el.getBoundingClientRect();
@@ -114,12 +143,60 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           return area > bArea ? el : best;
         }, svgCandidates[0])
       : null;
-    if (!svgEl) return;
+    
+    // If no SVG exists (or selection failed), fallback to html2canvas of wrapper
+    if (!svgEl) {
+      (async () => {
+        try {
+          const canvas = await html2canvas(wrapper, {
+            backgroundColor: '#ffffff',
+            scale: Math.max(1, Math.floor(window.devicePixelRatio || 1)),
+            useCORS: true,
+          });
+          const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+          canvas.toBlob((blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `chart-${chartId}.${format}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, mime, 0.92);
+        } catch {}
+      })();
+      return;
+    }
 
     // Measure displayed size of the chart area
     const rect = wrapper.getBoundingClientRect();
-    const displayWidth = Math.max(1, Math.round(rect.width)) || (svgEl as any).clientWidth || 800;
-    const displayHeight = Math.max(1, Math.round(rect.height)) || (svgEl as any).clientHeight || 400;
+    let displayWidth = Math.max(1, Math.round(rect.width));
+    let displayHeight = Math.max(1, Math.round(rect.height));
+    if (!displayWidth || !displayHeight) {
+      // Try viewBox or bbox if wrapper has no size
+      const vb = svgEl.getAttribute('viewBox');
+      if (vb) {
+        const parts = vb.split(/\s+/).map(Number);
+        if (parts.length === 4) {
+          displayWidth = parts[2];
+          displayHeight = parts[3];
+        }
+      } else {
+        try {
+          const bbox = (svgEl as any).getBBox?.();
+          if (bbox && bbox.width && bbox.height) {
+            displayWidth = bbox.width;
+            displayHeight = bbox.height;
+          }
+        } catch {}
+      }
+      if (!displayWidth || !displayHeight) {
+        displayWidth = wrapper.offsetWidth || 800;
+        displayHeight = wrapper.offsetHeight || 400;
+      }
+    }
 
     // Clone and enforce explicit size + namespaces for reliable rasterization
     const cloned = svgEl.cloneNode(true) as SVGSVGElement;
@@ -166,7 +243,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             const link = document.createElement('a');
             link.href = url;
             link.download = `chart-${chartId}.${format}`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             URL.revokeObjectURL(url);
           }
           URL.revokeObjectURL(svgUrl);
@@ -176,8 +255,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       }
     };
 
-    img.onerror = () => {
+    img.onerror = async () => {
       URL.revokeObjectURL(svgUrl);
+      // Fallback: rasterize the wrapper via html2canvas
+      try {
+        const canvas = await html2canvas(wrapper, {
+          backgroundColor: '#ffffff',
+          scale: Math.max(1, Math.floor(window.devicePixelRatio || 1)),
+          useCORS: true,
+        });
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `chart-${chartId}.${format}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, mime, 0.92);
+      } catch {}
     };
     img.src = svgUrl;
   }, []);
@@ -495,7 +594,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Get time series for selected columns (multi-series)
   const multiSeriesTimeData = useMemo(() => {
     if (selectedValueColumns.length === 0) {
-      return { monthly: [], quarterly: [], yearly: [] };
+      return { weekly: [], monthly: [], quarterly: [], yearly: [] } as any;
     }
 
     // If using filename dates, extract from _sourceFileName
@@ -506,7 +605,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
     // Otherwise use the selected date column
     if (!selectedDateColumn) {
-      return { monthly: [], quarterly: [], yearly: [] };
+      return { weekly: [], monthly: [], quarterly: [], yearly: [] } as any;
     }
 
     debug('[Dashboard]', 'aggregating by time', { selectedDateColumn, selectedValueColumns });
@@ -897,13 +996,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             </Box>
             {hasTimeSeriesData && (
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 100 }}>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
                   <InputLabel>Period</InputLabel>
                   <Select
                     value={periodType}
                     label="Period"
                     onChange={(e) => setPeriodType(e.target.value as PeriodType)}
                   >
+                    <MenuItem value="weekly">Weekly</MenuItem>
                     <MenuItem value="monthly">Monthly</MenuItem>
                     <MenuItem value="quarterly">Quarterly</MenuItem>
                     <MenuItem value="yearly">Yearly</MenuItem>
@@ -1034,6 +1134,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'png')} title="Download as PNG">
                   <Download fontSize="small" />
                 </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
                 <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title="Fewer bins">
                   <RemoveIcon fontSize="small" />
                 </IconButton>
@@ -1156,6 +1259,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
                   <Download fontSize="small" />
                 </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
                 <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller (increase height)">
                   <UnfoldMore fontSize="small" />
                 </IconButton>
@@ -1229,7 +1335,8 @@ function aggregateByTimeMultiple(
   data: any[],
   dateColumn: string,
   valueColumns: string[]
-): { monthly: any[]; quarterly: any[]; yearly: any[] } {
+): { weekly: any[]; monthly: any[]; quarterly: any[]; yearly: any[] } {
+  const weeklyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
   const monthlyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
   const quarterlyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
   const yearlyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
@@ -1264,6 +1371,26 @@ function aggregateByTimeMultiple(
       return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
     }
     return null;
+  };
+
+  // Helper to get ISO week info (week-year, week number, week start Monday)
+  const getISOWeekInfo = (d: Date) => {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = (date.getUTCDay() + 6) % 7; // Monday=0
+    // Thursday in current week decides the year
+    date.setUTCDate(date.getUTCDate() - day + 3);
+    const weekYear = date.getUTCFullYear();
+    // Week 1 is the week with Jan 4th
+    const jan4 = new Date(Date.UTC(weekYear, 0, 4));
+    const jan4Day = (jan4.getUTCDay() + 6) % 7;
+    const week1Start = new Date(jan4);
+    week1Start.setUTCDate(jan4.getUTCDate() - jan4Day);
+    const weekNo = 1 + Math.round((date.getTime() - week1Start.getTime()) / 604800000);
+    // Compute Monday of this week (based on original date)
+    const monday = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const monOffset = (monday.getUTCDay() + 6) % 7;
+    monday.setUTCDate(monday.getUTCDate() - monOffset);
+    return { weekYear, weekNo, monday };
   };
 
   // Helper to extract date from filename (YYYYMMDD pattern)
@@ -1308,6 +1435,27 @@ function aggregateByTimeMultiple(
     valueColumns.forEach(col => {
       rowValues[col] = parseFloat(row[col]) || 0;
     });
+
+    // Weekly (ISO week)
+    const { weekYear, weekNo, monday } = getISOWeekInfo(date);
+    const weeklyKey = `${weekYear}-W${String(weekNo).padStart(2, '0')}`;
+    const weeklyDate = new Date(monday);
+    if (!weeklyAggregated.has(weeklyKey)) {
+      weeklyAggregated.set(weeklyKey, {
+        date: weeklyDate,
+        values: Object.fromEntries(valueColumns.map(c => [c, 0])),
+        count: 0,
+        // Track the latest actual source date seen within this week for labeling
+        latest: date,
+      } as any);
+    }
+    const weeklyEntry: any = weeklyAggregated.get(weeklyKey)!;
+    valueColumns.forEach(col => { weeklyEntry.values[col] += rowValues[col]; });
+    weeklyEntry.count += 1;
+    // Update latest source date for this week
+    if (!weeklyEntry.latest || (date && date.getTime() > weeklyEntry.latest.getTime())) {
+      weeklyEntry.latest = date;
+    }
 
     // Monthly
     const monthlyKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -1354,17 +1502,31 @@ function aggregateByTimeMultiple(
   });
 
   // Convert to arrays and sort by date
-  const sortByDate = (map: Map<string, { date: Date; values: Record<string, number>; count: number }>) =>
+  const sortByDate = (
+    map: Map<string, { date: Date; values: Record<string, number>; count: number }>,
+    labelFormatter?: (key: string, d: { date: Date }) => string
+  ) =>
     Array.from(map.entries())
-      .map(([period, data]) => ({
-        period,
-        count: data.count,
-        date: data.date,
-        ...data.values,
+      .map(([key, d]) => ({
+        period: labelFormatter ? labelFormatter(key, d as any) : key,
+        count: d.count,
+        date: d.date,
+        ...d.values,
       }))
       .sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
 
+  const fmtMonthDay = (dt: Date) => {
+    try {
+      const m = dt.toLocaleString('en-US', { month: 'short' });
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${m} ${day}`;
+    } catch {
+      return `${dt.getMonth() + 1}/${dt.getDate()}`;
+    }
+  };
+
   return {
+    weekly: sortByDate(weeklyAggregated, (key, d) => `${key} (${fmtMonthDay(((d as any).latest as Date) || d.date)})`),
     monthly: sortByDate(monthlyAggregated),
     quarterly: sortByDate(quarterlyAggregated),
     yearly: sortByDate(yearlyAggregated),
@@ -1377,7 +1539,8 @@ function aggregateByTimeMultiple(
 function aggregateByFilenameDateMultiple(
   data: any[],
   valueColumns: string[]
-): { monthly: any[]; quarterly: any[]; yearly: any[] } {
+): { weekly: any[]; monthly: any[]; quarterly: any[]; yearly: any[] } {
+  const weeklyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
   const monthlyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
   const quarterlyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
   const yearlyAggregated = new Map<string, { date: Date; values: Record<string, number>; count: number }>();
@@ -1390,12 +1553,43 @@ function aggregateByFilenameDateMultiple(
       const dateStr = match[1];
       const yearNum = parseInt(dateStr.substring(0, 4), 10);
       const monthNum = parseInt(dateStr.substring(4, 6), 10) - 1;
+      const dayNum = parseInt(dateStr.substring(6, 8), 10);
 
       // Get all values for this row
       const rowValues: Record<string, number> = {};
       valueColumns.forEach(col => {
         rowValues[col] = parseFloat(row[col]) || 0;
       });
+
+      // Weekly (ISO)
+      const baseDate = new Date(yearNum, monthNum, dayNum || 1);
+      const dUTC = new Date(Date.UTC(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate()));
+      const day = (dUTC.getUTCDay() + 6) % 7;
+      dUTC.setUTCDate(dUTC.getUTCDate() - day + 3);
+      const weekYear = dUTC.getUTCFullYear();
+      const jan4 = new Date(Date.UTC(weekYear, 0, 4));
+      const jan4Day = (jan4.getUTCDay() + 6) % 7;
+      const week1Start = new Date(jan4);
+      week1Start.setUTCDate(jan4.getUTCDate() - jan4Day);
+      const weekNo = 1 + Math.round((dUTC.getTime() - week1Start.getTime()) / 604800000);
+      const monday = new Date(Date.UTC(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate()));
+      const monOffset = (monday.getUTCDay() + 6) % 7;
+      monday.setUTCDate(monday.getUTCDate() - monOffset);
+      const weeklyKey = `${weekYear}-W${String(weekNo).padStart(2, '0')}`;
+      if (!weeklyAggregated.has(weeklyKey)) {
+        weeklyAggregated.set(weeklyKey, {
+          date: new Date(monday),
+          values: Object.fromEntries(valueColumns.map(c => [c, 0])),
+          count: 0,
+          latest: baseDate,
+        } as any);
+      }
+      const wEntry: any = weeklyAggregated.get(weeklyKey)!;
+      valueColumns.forEach(col => { wEntry.values[col] += rowValues[col]; });
+      wEntry.count += 1;
+      if (!wEntry.latest || baseDate.getTime() > wEntry.latest.getTime()) {
+        wEntry.latest = baseDate;
+      }
 
       // Monthly
       const monthlyKey = `${yearNum}-${String(monthNum + 1).padStart(2, '0')}`;
@@ -1443,17 +1637,31 @@ function aggregateByFilenameDateMultiple(
   });
 
   // Convert to arrays and sort by date
-  const sortByDate = (map: Map<string, { date: Date; values: Record<string, number>; count: number }>) =>
+  const sortByDate = (
+    map: Map<string, { date: Date; values: Record<string, number>; count: number }>,
+    labelFormatter?: (key: string, d: { date: Date }) => string
+  ) =>
     Array.from(map.entries())
-      .map(([period, data]) => ({
-        period,
-        count: data.count,
-        date: data.date,
-        ...data.values,
+      .map(([key, d]) => ({
+        period: labelFormatter ? labelFormatter(key, d as any) : key,
+        count: d.count,
+        date: d.date,
+        ...d.values,
       }))
       .sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
 
+  const fmtMonthDay = (dt: Date) => {
+    try {
+      const m = dt.toLocaleString('en-US', { month: 'short' });
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${m} ${day}`;
+    } catch {
+      return `${dt.getMonth() + 1}/${dt.getDate()}`;
+    }
+  };
+
   return {
+    weekly: sortByDate(weeklyAggregated, (key, d) => `${key} (${fmtMonthDay(((d as any).latest as Date) || d.date)})`),
     monthly: sortByDate(monthlyAggregated),
     quarterly: sortByDate(quarterlyAggregated),
     yearly: sortByDate(yearlyAggregated),

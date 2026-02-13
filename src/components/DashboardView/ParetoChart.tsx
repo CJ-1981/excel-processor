@@ -56,8 +56,8 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
   const totalValue = displayData.length > 0 ? displayData[displayData.length - 1].cumulativeValue : 0;
 
   return (
-    <Box sx={{ width: '100%', height: 350 }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200} data-chart-id="pareto">
+    <Box sx={{ width: '100%', height: 350 }} data-chart-id="pareto">
+      <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
         <ComposedChart
           data={displayData}
           margin={{ top: 20, right: 60, left: 20, bottom: 70 }}
