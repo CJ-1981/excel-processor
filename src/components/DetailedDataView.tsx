@@ -434,7 +434,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     return currentData;
   }, [filteredData, searchTerm, order, orderBy, columnMapping, rowPassesColumnFilters]);
 
-  // Initialize all rows as included when the base filtered data changes (not when search changes)
+  // Initialize all rows as included when the base filtered data or visible columns change
   useEffect(() => {
     if (filteredData.length === 0) {
       setIncludedRowIndices(new Set());
@@ -447,11 +447,14 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     };
 
     // Helper function to check if a row has no valid numeric values
-    // Uses allAvailableHeaders instead of visibleHeaders to avoid dependency issues
-    const hasNoValidNumericValues = (row: any, allColumnIds: Set<string>): boolean => {
-      for (const [key, value] of Object.entries(row)) {
-        if (!allColumnIds.has(key)) continue;
-        if (key === '_sourceFileName' || key === '_sourceSheetName') continue;
+    // Evaluates only currently visible (non-metadata) columns
+    const hasNoValidNumericValues = (row: any, visibleColumnIds: Set<string>): boolean => {
+      if (visibleColumnIds.size === 0) {
+        // If there are no visible data columns, do not auto-deselect anything
+        return false;
+      }
+      for (const key of visibleColumnIds) {
+        const value = (row as any)[key];
         if (value === null || value === undefined || value === '' || typeof value === 'boolean') {
           continue;
         }
@@ -477,27 +480,24 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       return true;
     };
 
-    // Get all column IDs from ALL rows (not just first row, and not depending on visibleHeaders)
-    const allColumnIds = new Set<string>();
-    filteredData.forEach(row => {
-      Object.keys(row).forEach(key => {
-        if (key !== '_sourceFileName' && key !== '_sourceSheetName') {
-          allColumnIds.add(key);
-        }
-      });
-    });
+    // Build the set of currently visible, non-metadata column IDs
+    const visibleDataColumnIds = new Set<string>(
+      visibleHeaders
+        .map(h => h.id)
+        .filter(id => id !== '_sourceFileName' && id !== '_sourceSheetName')
+    );
 
     // Select all rows using stable indices
     const newSet = new Set<number>();
     filteredData.forEach((row, index) => {
-      if (autoDeselectZeros && hasNoValidNumericValues(row, allColumnIds)) {
+      if (autoDeselectZeros && hasNoValidNumericValues(row, visibleDataColumnIds)) {
         return;
       }
       newSet.add(index);
     });
 
     setIncludedRowIndices(newSet);
-  }, [filteredData, autoDeselectZeros]); // Only depend on filteredData and autoDeselectZeros
+  }, [filteredData, autoDeselectZeros, visibleHeaders]); // Recompute when visible columns change
 
   // Calculate column totals (only for included rows)
   const columnTotals = useMemo(() => {
