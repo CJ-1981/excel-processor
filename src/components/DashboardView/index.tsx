@@ -1122,65 +1122,57 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Top Contributors Chart */}
-        <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-              <BarChart color="primary" />
-              <Typography variant="h6">Top Contributors</Typography>
+        {topContributorsData.length > 0 && (
+          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                <BarChart color="primary" />
+                <Typography variant="h6">Top Contributors</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => setTopDonorsCount(prev => Math.max(5, prev - 5))}
+                  disabled={topDonorsCount <= 5}
+                  title="Show fewer"
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
+                  {topDonorsCount} donors
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setTopDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
+                  disabled={topDonorsCount >= allContributorsData.length}
+                  title="Show more"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'png')} title="Download as PNG">
-                <Download fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'jpg')} title="Download as JPG">
-                <Download fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller (increase height)">
-                <UnfoldMore fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title="Shorter (decrease height)">
-                <UnfoldLess fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => setTopDonorsCount(prev => Math.max(5, prev - 5))}
-                disabled={topDonorsCount <= 5}
-                title="Show fewer"
-              >
-                <RemoveIcon fontSize="small" />
-              </IconButton>
-              <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
-                {topDonorsCount} donors
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={() => setTopDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
-                disabled={topDonorsCount >= allContributorsData.length}
-                title="Show more"
-              >
-                <AddIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {topContributorsData.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <TopDonorsChart
                 data={topContributorsData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
                 limit={topDonorsCount}
                 anonymize={anonymizeNames}
               />
-            ) : (
-              <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  {(!selectedValueColumns || selectedValueColumns.length === 0 || !nameColumn)
-                    ? 'Select a name column and value column to see top contributors.'
-                    : 'No top contributors data available for the selected columns.'}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Paper>
+            </Box>
+          </Paper>
+        )}
 
         {/* Statistics Table */}
         <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1202,170 +1194,157 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Distribution Histogram */}
-        <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="subtitle1">
-              Distribution Histogram
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'png')} title="Download as PNG">
-                <Download fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'jpg')} title="Download as JPG">
-                <Download fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title="Fewer bins">
-                <RemoveIcon fontSize="small" />
-              </IconButton>
-              <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'center' }}>
-                {histogramBins} bins
+        {(selectedValueColumns || []).length > 0 && (
+          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
+              <Typography variant="subtitle1">
+                Distribution Histogram
               </Typography>
-              <IconButton
-                size="small"
-                onClick={() => setHistogramBins(prev => Math.min(200, prev + 10))}
-                disabled={histogramBins >= 200}
-                title="More bins"
-              >
-                <AddIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title="Taller (increase height)">
-                <UnfoldMore fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title="Shorter (decrease height)">
-                <UnfoldLess fontSize="small" />
-              </IconButton>
-              <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-              <IconButton
-                size="small"
-                onClick={handleHistogramZoomOut}
-                disabled={histogramZoomMin === null && histogramZoomMax === null}
-                title="Zoom out"
-              >
-                <RemoveIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={handleHistogramZoomIn}
-                disabled={distributionValues.length === 0}
-                title="Zoom in"
-              >
-                <AddIcon fontSize="small" />
-              </IconButton>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title="Fewer bins">
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'center' }}>
+                  {histogramBins} bins
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setHistogramBins(prev => Math.min(200, prev + 10))}
+                  disabled={histogramBins >= 200}
+                  title="More bins"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
+                </IconButton>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                <IconButton
+                  size="small"
+                  onClick={handleHistogramZoomOut}
+                  disabled={histogramZoomMin === null && histogramZoomMax === null}
+                  title="Zoom out"
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={handleHistogramZoomIn}
+                  disabled={distributionValues.length === 0}
+                  title="Zoom in"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                {(histogramZoomMin !== null || histogramZoomMax !== null) && (
+                  <>
+                    <IconButton
+                      size="small"
+                      onClick={handleHistogramPanLeft}
+                      disabled={histogramZoomMin !== null && histogramZoomMin <= distributionMinMax.min}
+                      title="Pan left"
+                    >
+                      {'<'}
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={handleHistogramPanRight}
+                      disabled={histogramZoomMax !== null && histogramZoomMax >= distributionMinMax.max}
+                      title="Pan right"
+                    >
+                      {'>'}
+                    </IconButton>
+                    <Button
+                      size="small"
+                      onClick={handleHistogramZoomReset}
+                      sx={{ ml: 0.5 }}
+                    >
+                      Reset
+                    </Button>
+                  </>
+                )}
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
+              <DistributionHistogram
+                data={histogramData}
+                valueLabel={seriesConfig[0]?.label || 'Value'}
+              />
               {(histogramZoomMin !== null || histogramZoomMax !== null) && (
-                <>
-                  <IconButton
-                    size="small"
-                    onClick={handleHistogramPanLeft}
-                    disabled={histogramZoomMin !== null && histogramZoomMin <= distributionMinMax.min}
-                    title="Pan left"
-                  >
-                    {'<'}
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={handleHistogramPanRight}
-                    disabled={histogramZoomMax !== null && histogramZoomMax >= distributionMinMax.max}
-                    title="Pan right"
-                  >
-                    {'>'}
-                  </IconButton>
-                  <Button
-                    size="small"
-                    onClick={handleHistogramZoomReset}
-                    sx={{ ml: 0.5 }}
-                  >
-                    Reset
-                  </Button>
-                </>
+                <Typography variant="caption" color="text.secondary" align="center" display="block">
+                  Zoomed: {formatCurrencyGerman(histogramZoomMin ?? distributionMinMax.min)} - {formatCurrencyGerman(histogramZoomMax ?? distributionMinMax.max)}
+                </Typography>
               )}
             </Box>
-          </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
-            {(selectedValueColumns || []).length > 0 ? (
-              <>
-                <DistributionHistogram
-                  data={histogramData}
-                  valueLabel={seriesConfig[0]?.label || 'Value'}
-                />
-                {(histogramZoomMin !== null || histogramZoomMax !== null) && (
-                  <Typography variant="caption" color="text.secondary" align="center" display="block">
-                    Zoomed: {formatCurrencyGerman(histogramZoomMin ?? distributionMinMax.min)} - {formatCurrencyGerman(histogramZoomMax ?? distributionMinMax.max)}
-                  </Typography>
-                )}
-              </>
-            ) : (
-              <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Select value columns above to see the distribution histogram.
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Paper>
+          </Paper>
+        )}
 
         {/* Box Plot removed */}
 
         {/* Pareto Chart */}
-        <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
-            <Typography variant="subtitle1">
-              Pareto Analysis (80/20 Rule)
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
-                <Download fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'jpg')} title="Download as JPG">
-                <Download fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller (increase height)">
-                <UnfoldMore fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title="Shorter (decrease height)">
-                <UnfoldLess fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title="Show fewer">
-                <RemoveIcon fontSize="small" />
-              </IconButton>
-              <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
-                {paretoDonorsCount} donors
+        {(selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
+          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
+              <Typography variant="subtitle1">
+                Pareto Analysis (80/20 Rule)
               </Typography>
-              <IconButton
-                size="small"
-                onClick={() => setParetoDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
-                disabled={paretoDonorsCount >= allContributorsData.length}
-                title="Show more"
-              >
-                <AddIcon fontSize="small" />
-              </IconButton>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'jpg')} title="Download as JPG">
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller (increase height)">
+                  <UnfoldMore fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title="Shorter (decrease height)">
+                  <UnfoldLess fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title="Show fewer"
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
+                  {paretoDonorsCount} donors
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setParetoDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
+                  disabled={paretoDonorsCount >= allContributorsData.length}
+                  title="Show more"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Box>
-          </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
-            {(selectedValueColumns || []).length > 0 && paretoData.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
               <ParetoChart
                 data={paretoData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
                 showTop={paretoDonorsCount}
                 anonymize={anonymizeNames}
               />
-            ) : (
-              <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  {(!selectedValueColumns || selectedValueColumns.length === 0)
-                    ? 'Select value columns above to see the Pareto analysis.'
-                    : 'No Pareto data available for the selected columns.'}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Paper>
+            </Box>
+          </Paper>
+        )}
 
         {/* Range Distribution */}
-        <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
-            <PieChartIcon color="primary" />
-            <Typography variant="h6">Range Distribution</Typography>
-            <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+        {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
+          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
+              <PieChartIcon color="primary" />
+              <Typography variant="h6">Range Distribution</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
               <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'png')} title="Download as PNG">
                 <Download fontSize="small" />
               </IconButton>
@@ -1379,22 +1358,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
-          </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
-            {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
               <RangeDistributionCharts
                 data={rangeDistributionData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
               />
-            ) : (
-              <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Select value columns above to see the range distribution.
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Paper>
+            </Box>
+          </Paper>
+        )}
       </GridLayout>
     </Box>
   );
