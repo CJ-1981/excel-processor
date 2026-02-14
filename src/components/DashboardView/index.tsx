@@ -106,7 +106,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
-  const LAYOUT_VERSION = 9; // Increment to invalidate saved layouts due to removing Box Plot panel
+  const LAYOUT_VERSION = 10; // Increment to invalidate saved layouts due to removing Box Plot panel
   const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
   const COLS_BREAKPOINTS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
   const ROW_HEIGHT_KEY = 'excel-processor-dashboard-rowheight';
@@ -298,40 +298,40 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const defaultLayout = {
     lg: [
       { i: 'trend-chart', x: 0, y: 0, w: 12, h: 16, minW: 6, minH: 10 },
-      { i: 'top-contributors', x: 0, y: 16, w: 12, h: 18, minW: 6, minH: 10 },
-      { i: 'statistics-table', x: 0, y: 34, w: 12, h: 12, minW: 6, minH: 4 },
+      { i: 'statistics-table', x: 0, y: 16, w: 12, h: 12, minW: 6, minH: 4 },
+      { i: 'top-contributors', x: 0, y: 28, w: 12, h: 18, minW: 6, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 12, h: 16, minW: 6, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 12, h: 14, minW: 6, minH: 8 },
       { i: 'range-distribution', x: 0, y: 76, w: 12, h: 18, minW: 6, minH: 10 },
     ],
     md: [
       { i: 'trend-chart', x: 0, y: 0, w: 10, h: 16, minW: 5, minH: 10 },
-      { i: 'top-contributors', x: 0, y: 16, w: 10, h: 18, minW: 5, minH: 10 },
-      { i: 'statistics-table', x: 0, y: 34, w: 10, h: 12, minW: 5, minH: 4 },
+      { i: 'statistics-table', x: 0, y: 16, w: 10, h: 12, minW: 5, minH: 4 },
+      { i: 'top-contributors', x: 0, y: 28, w: 10, h: 18, minW: 5, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 10, h: 16, minW: 5, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 10, h: 14, minW: 5, minH: 8 },
       { i: 'range-distribution', x: 0, y: 76, w: 10, h: 18, minW: 5, minH: 10 },
     ],
     sm: [
       { i: 'trend-chart', x: 0, y: 0, w: 6, h: 16, minW: 3, minH: 10 },
-      { i: 'top-contributors', x: 0, y: 16, w: 6, h: 18, minW: 3, minH: 10 },
-      { i: 'statistics-table', x: 0, y: 34, w: 6, h: 12, minW: 3, minH: 4 },
+      { i: 'statistics-table', x: 0, y: 16, w: 6, h: 12, minW: 3, minH: 4 },
+      { i: 'top-contributors', x: 0, y: 28, w: 6, h: 18, minW: 3, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 6, h: 16, minW: 3, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 6, h: 14, minW: 3, minH: 8 },
       { i: 'range-distribution', x: 0, y: 76, w: 6, h: 18, minW: 3, minH: 10 },
     ],
     xs: [
       { i: 'trend-chart', x: 0, y: 0, w: 4, h: 16, minW: 2, minH: 10 },
-      { i: 'top-contributors', x: 0, y: 16, w: 4, h: 18, minW: 2, minH: 10 },
-      { i: 'statistics-table', x: 0, y: 34, w: 4, h: 12, minW: 2, minH: 4 },
+      { i: 'statistics-table', x: 0, y: 16, w: 4, h: 12, minW: 2, minH: 4 },
+      { i: 'top-contributors', x: 0, y: 28, w: 4, h: 18, minW: 2, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 4, h: 16, minW: 2, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 4, h: 14, minW: 2, minH: 8 },
       { i: 'range-distribution', x: 0, y: 76, w: 4, h: 18, minW: 2, minH: 10 },
     ],
     xxs: [
       { i: 'trend-chart', x: 0, y: 0, w: 2, h: 16, minW: 2, minH: 10 },
-      { i: 'top-contributors', x: 0, y: 16, w: 2, h: 18, minW: 2, minH: 10 },
-      { i: 'statistics-table', x: 0, y: 34, w: 2, h: 12, minW: 2, minH: 4 },
+      { i: 'statistics-table', x: 0, y: 16, w: 2, h: 12, minW: 2, minH: 4 },
+      { i: 'top-contributors', x: 0, y: 28, w: 2, h: 18, minW: 2, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 2, h: 16, minW: 2, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 2, h: 14, minW: 2, minH: 8 },
       { i: 'range-distribution', x: 0, y: 76, w: 2, h: 18, minW: 2, minH: 10 },
