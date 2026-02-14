@@ -573,18 +573,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     const currentCount = (selectedValueColumns || []).length;
     const prevCount = prevSelectedCountRef.current;
 
-    // Detect 0 <-> non-zero transition
-    if ((prevCount === 0 && currentCount > 0) || (prevCount > 0 && currentCount === 0)) {
-      debug('[Dashboard]', 'Column selection transition detected, resetting layout', { from: prevCount, to: currentCount });
-      setLayouts(defaultLayout);
-      try {
-        localStorage.removeItem(LAYOUT_STORAGE_KEY);
-      } catch (e) {
-        console.warn('Could not clear layout on column transition:', e);
+    // Only act if count actually changed
+    if (currentCount !== prevCount) {
+      // Detect 0 <-> non-zero transition
+      if ((prevCount === 0 && currentCount > 0) || (prevCount > 0 && currentCount === 0)) {
+        debug('[Dashboard]', 'Column selection transition detected, resetting layout', { from: prevCount, to: currentCount });
+        setLayouts(defaultLayout);
+        try {
+          localStorage.removeItem(LAYOUT_STORAGE_KEY);
+        } catch (e) {
+          console.warn('Could not clear layout on column transition:', e);
+        }
       }
-    }
 
-    prevSelectedCountRef.current = currentCount;
+      prevSelectedCountRef.current = currentCount;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedValueColumns]);
 
