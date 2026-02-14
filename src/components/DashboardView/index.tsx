@@ -555,6 +555,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
   // Track if we've done initial auto-selection to avoid re-selecting after user deselects
   const didAutoSelectValueColumns = React.useRef(false);
+  // Track previous selected count to detect 0 <-> non-zero transitions
+  const prevSelectedCountRef = React.useRef<number>(0);
 
   // Set defaults when columns are detected (only on initial mount)
   React.useEffect(() => {
@@ -565,6 +567,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       debug('[Dashboard]', 'auto-select all numeric columns', availableNumericColumns.length);
     }
   }, [availableNumericColumns]);
+
+  // Auto-reset layout when transitioning between no columns and having columns
+  React.useEffect(() => {
+    const currentCount = (selectedValueColumns || []).length;
+    const prevCount = prevSelectedCountRef.current;
+
+    // Detect 0 <-> non-zero transition
+    if ((prevCount === 0 && currentCount > 0) || (prevCount > 0 && currentCount === 0)) {
+      debug('[Dashboard]', 'Column selection transition detected, resetting layout', { from: prevCount, to: currentCount });
+      setLayouts(defaultLayout);
+      try {
+        localStorage.removeItem(LAYOUT_STORAGE_KEY);
+      } catch (e) {
+        console.warn('Could not clear layout on column transition:', e);
+      }
+    }
+
+    prevSelectedCountRef.current = currentCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedValueColumns]);
 
   React.useEffect(() => {
     if (availableDateColumns.length > 0 && !selectedDateColumn) {
