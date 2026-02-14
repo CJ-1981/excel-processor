@@ -46,6 +46,7 @@ import StatisticsTable from './StatisticsTable';
 import DistributionHistogram from './DistributionHistogram';
 import ParetoChart from './ParetoChart';
 import RangeDistributionCharts from './RangeDistributionCharts';
+import DraggableColumnSelector from './DraggableColumnSelector';
 import {
   analyzeDataForDashboard,
   detectNumericColumns,
@@ -76,11 +77,7 @@ const FILENAME_DATE_PATTERN = /(\d{8})/;
 
 const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn }) => {
   useEffect(() => {
-    debug('[Dashboard]', 'mount', {
-      rows: data.length,
-      cols: data.length > 0 ? Object.keys(data[0]).length : 0,
-      nameColumn,
-    });
+
   }, []);
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
   const [chartType, setChartType] = useState<ChartType>('area');
@@ -512,7 +509,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     } finally {
       timeEnd('detectNumericColumns');
     }
-    debug('[Dashboard]', 'numeric columns', cols);
+
     return cols;
   }, [data]);
 
@@ -529,7 +526,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     } finally {
       timeEnd('detectDateColumns');
     }
-    debug('[Dashboard]', 'date columns', cols);
+
     return cols;
   }, [data]);
 
@@ -551,20 +548,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Track if we've done initial auto-selection to avoid re-selecting after user deselects
   const didAutoSelectValueColumns = React.useRef<string[]>([]);
 
-  // Trigger a resize event when selectedValueColumns changes, especially when charts become visible
-  useEffect(() => {
-    if (selectedValueColumns && selectedValueColumns.length > 0) {
-      const timeoutId = setTimeout(() => {
-        try {
-          window.dispatchEvent(new Event('resize'));
-          debug('[Dashboard]', 'Dispatched resize event after columns selected');
-        } catch (e) {
-          warn('[Dashboard]', 'Failed to dispatch resize event', e);
-        }
-      }, 100); // Small delay to allow initial render
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedValueColumns]);
+
 
   // Set defaults when columns are detected (only on initial load)
   React.useEffect(() => {
@@ -572,19 +556,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     if (didAutoSelectValueColumns.current.length === 0 && availableNumericColumns.length > 0) {
       setSelectedValueColumns(availableNumericColumns);
       didAutoSelectValueColumns.current = availableNumericColumns;
-      debug('[Dashboard]', 'auto-select all numeric columns', availableNumericColumns.length);
+
     }
   }, [availableNumericColumns, selectedValueColumns]);
 
   React.useEffect(() => {
     if (availableDateColumns.length > 0 && !selectedDateColumn) {
       setSelectedDateColumn(availableDateColumns[0]);
-      debug('[Dashboard]', 'auto-select date column', availableDateColumns[0]);
+
     }
     // Auto-enable filename dates if no date columns but filename dates available
     if (availableDateColumns.length === 0 && hasFilenameDates && !useFilenameDates && !userToggledFilenameDates) {
       setUseFilenameDates(true);
-      debug('[Dashboard]', 'auto-enable filename dates');
+
     }
   }, [availableDateColumns, hasFilenameDates, useFilenameDates, selectedDateColumn, userToggledFilenameDates]);
 
@@ -593,16 +577,48 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     setUserToggledFilenameDates(false);
   }, [data]);
 
+  const handleToggleColumn = useCallback((column: string) => {
+    setSelectedValueColumns(prev => {
+      const isCurrentlySelected = prev.includes(column);
+      let newSelected: string[];
+      if (isCurrentlySelected) {
+        newSelected = prev.filter(c => c !== column);
+      } else {
+        newSelected = [...prev, column];
+      }
+      // Preserve order of currently selected columns, but add new ones at the end in their original available order
+      const orderedSelected = availableNumericColumns.filter(c => newSelected.includes(c));
+      const remainingSelected = newSelected.filter(c => !orderedSelected.includes(c));
+      return [...orderedSelected, ...remainingSelected];
+    });
+  }, [availableNumericColumns]);
+
+  const handleReorderColumns = useCallback((result: any) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const reorderedColumns = Array.from(selectedValueColumns);
+    const [removed] = reorderedColumns.splice(result.source.index, 1);
+    reorderedColumns.splice(result.destination.index, 0, removed);
+
+    setSelectedValueColumns(reorderedColumns);
+  }, [selectedValueColumns]);
+
+  const handleSelectAllColumns = useCallback(() => {
+    setSelectedValueColumns(availableNumericColumns);
+  }, [availableNumericColumns]);
+
+  const handleDeselectAllColumns = useCallback(() => {
+    setSelectedValueColumns([]);
+  }, []);
+
   // Analyze data for dashboard
   const analysis: DashboardAnalysis = useMemo(() => {
     time('analyzeDataForDashboard');
     try {
       const result = analyzeDataForDashboard(data, columnMapping, nameColumn);
-      debug('[Dashboard]', 'analysis complete', {
-        numericStats: result.numericColumns?.length || 0,
-        topDonors: result.topDonors?.length || 0,
-        rows: result.metadata?.filteredRows,
-      });
+
       return result;
     } catch (e: any) {
       error('[Dashboard]', 'analyzeDataForDashboard failed', e);
@@ -626,7 +642,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
     // If using filename dates, extract from _sourceFileName
     if (useFilenameDates) {
-      debug('[Dashboard]', 'aggregating by filename dates', { selectedValueColumns });
+
       return aggregateByFilenameDateMultiple(data, selectedValueColumns);
     }
 
@@ -635,8 +651,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       return { weekly: [], monthly: [], quarterly: [], yearly: [] } as any;
     }
 
-    debug('[Dashboard]', 'aggregating by time', { selectedDateColumn, selectedValueColumns });
-    return aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
+
+    const result = aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
+
+    return result;
   }, [data, selectedDateColumn, selectedValueColumns, useFilenameDates]);
 
   // Get top contributors for first selected value column (aggregated by name)
@@ -644,13 +662,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     if ((selectedValueColumns || []).length === 0 || !nameColumn) return [];
 
     const distribution = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
-    return getTopItems(distribution, topDonorsCount);
+    const result = getTopItems(distribution, topDonorsCount);
+
+    return result;
   }, [data, selectedValueColumns, nameColumn, topDonorsCount]);
 
   // Get ALL contributors aggregated by name (for donor-level statistics)
   const allContributorsData = useMemo(() => {
     if ((selectedValueColumns || []).length === 0 || !nameColumn) return [];
-    return calculateDistribution(data, nameColumn, selectedValueColumns[0]);
+    const result = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
+
+    return result;
   }, [data, selectedValueColumns, nameColumn]);
 
   // Build series configuration for TrendChart
@@ -668,13 +690,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const distributionValues = useMemo(() => {
     if ((selectedValueColumns || []).length === 0) return [];
 
-    if (nameColumn) {
-      // Aggregate by unique name - each value represents one donor's total
-      return allContributorsData.map(d => d.value);
-    } else {
-      // No name column - use individual transaction values
-      return extractNumericValues(data, selectedValueColumns[0]);
-    }
+    const result = nameColumn
+      ? allContributorsData.map(d => d.value)
+      : extractNumericValues(data, selectedValueColumns[0]);
+
+    return result;
   }, [data, selectedValueColumns, nameColumn, allContributorsData]);
 
   // Calculate histogram data with zoom support
@@ -693,7 +713,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       });
     }
 
-    return calculateHistogram(filteredValues, histogramBins);
+    const result = calculateHistogram(filteredValues, histogramBins);
+
+    return result;
   }, [distributionValues, histogramBins, histogramZoomMin, histogramZoomMax]);
 
   // Get overall min/max for zoom reset
@@ -777,35 +799,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Calculate Pareto data (use configurable number of contributors)
   const paretoData = useMemo(() => {
     if (!allContributorsData || allContributorsData.length === 0) return [];
-    return calculatePareto(allContributorsData.slice(0, paretoDonorsCount));
+    const result = calculatePareto(allContributorsData.slice(0, paretoDonorsCount));
+
+    return result;
   }, [allContributorsData, paretoDonorsCount]);
 
   // Calculate range distribution
   const rangeDistributionData = useMemo(() => {
     if (distributionValues.length === 0) return [];
-    return calculateRangeDistribution(distributionValues);
+    const result = calculateRangeDistribution(distributionValues);
+
+    return result;
   }, [distributionValues]);
 
-  // Handle multi-select change
-  const handleColumnChange = (event: any) => {
-    const value = event.target.value as string[];
 
-    if (value.includes('__select-all__')) {
-      if (selectedValueColumns.length === availableNumericColumns.length) {
-        setSelectedValueColumns([]);
-      } else {
-        setSelectedValueColumns(availableNumericColumns);
-      }
-      return;
-    }
-
-    if (value.includes('__deselect-all__')) {
-      setSelectedValueColumns([]);
-      return;
-    }
-
-    setSelectedValueColumns(value);
-  };
 
   // Handle removing a single column
   const handleRemoveColumn = (colToRemove: string) => {
@@ -857,44 +864,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           Configure Dashboard Charts
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 250 }}>
-            <InputLabel>Value Columns (multiple)</InputLabel>
-            <Select
-              multiple
-              value={selectedValueColumns || []}
-              label="Value Columns (multiple)"
-              onChange={handleColumnChange}
-              renderValue={() => (
-                <Typography variant="body2" color="text.secondary">
-                  {(selectedValueColumns || []).length === 0
-                    ? 'Select columns...'
-                    : `${(selectedValueColumns || []).length} column${(selectedValueColumns || []).length > 1 ? 's' : ''} selected`}
-                </Typography>
-              )}
-            >
-              <MenuItem value="__select-all__">
-                <Checkbox
-                  checked={availableNumericColumns.length > 0 && selectedValueColumns.length === availableNumericColumns.length}
-                  indeterminate={selectedValueColumns.length > 0 && selectedValueColumns.length < availableNumericColumns.length}
-                  size="small"
-                />
-                Select All
-              </MenuItem>
-              <MenuItem value="__deselect-all__">
-                <Checkbox
-                  checked={selectedValueColumns.length === 0}
-                  size="small"
-                />
-                Deselect All
-              </MenuItem>
-              {availableNumericColumns.map((col) => (
-                <MenuItem key={col} value={col}>
-                  <Checkbox checked={(selectedValueColumns || []).indexOf(col) > -1} size="small" />
-                  {columnMapping[col] || col}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <DraggableColumnSelector
+            label="Value Columns (multiple)"
+            options={availableNumericColumns}
+            selected={selectedValueColumns}
+            columnMapping={columnMapping}
+            onToggle={handleToggleColumn}
+            onReorder={handleReorderColumns}
+            onSelectAll={handleSelectAllColumns}
+            onDeselectAll={handleDeselectAllColumns}
+          />
 
           {hasFilenameDates && (
             <FormControlLabel
