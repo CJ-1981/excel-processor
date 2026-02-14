@@ -556,10 +556,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Set defaults when columns are detected
   React.useEffect(() => {
-    // Auto-select only if there's exactly one numeric column
-    if (availableNumericColumns.length === 1 && (selectedValueColumns || []).length === 0) {
-      setSelectedValueColumns([availableNumericColumns[0]]);
-      debug('[Dashboard]', 'auto-select numeric column', availableNumericColumns[0]);
+    // Auto-select all numeric columns if available and none selected yet
+    if ((selectedValueColumns || []).length === 0 && availableNumericColumns.length > 0) {
+      setSelectedValueColumns(availableNumericColumns);
+      debug('[Dashboard]', 'auto-select all numeric columns', availableNumericColumns.length);
     }
   }, [availableNumericColumns, selectedValueColumns]);
 
