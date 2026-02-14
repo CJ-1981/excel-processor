@@ -102,7 +102,9 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
     return (
       <Box
         sx={{
-          height: 300,
+          width: '100%',
+          height: '100%',
+          minHeight: 300,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
