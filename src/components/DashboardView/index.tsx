@@ -553,15 +553,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Track if user explicitly toggled the filename-dates switch to avoid auto-re-enabling
   const [userToggledFilenameDates, setUserToggledFilenameDates] = useState<boolean>(false);
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
+  // Track if we've done initial auto-selection to avoid re-selecting after user deselects
+  const didAutoSelectValueColumns = React.useRef(false);
 
-  // Set defaults when columns are detected
+  // Set defaults when columns are detected (only on initial mount)
   React.useEffect(() => {
-    // Auto-select all numeric columns if available and none selected yet
-    if ((selectedValueColumns || []).length === 0 && availableNumericColumns.length > 0) {
+    // Auto-select all numeric columns only once on initial load
+    if (!didAutoSelectValueColumns.current && availableNumericColumns.length > 0) {
       setSelectedValueColumns(availableNumericColumns);
+      didAutoSelectValueColumns.current = true;
       debug('[Dashboard]', 'auto-select all numeric columns', availableNumericColumns.length);
     }
-  }, [availableNumericColumns, selectedValueColumns]);
+  }, [availableNumericColumns]);
 
   React.useEffect(() => {
     if (availableDateColumns.length > 0 && !selectedDateColumn) {
