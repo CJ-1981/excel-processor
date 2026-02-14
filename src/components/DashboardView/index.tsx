@@ -552,11 +552,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [useFilenameDates, setUseFilenameDates] = useState<boolean>(false);
   // Track if user explicitly toggled the filename-dates switch to avoid auto-re-enabling
   const [userToggledFilenameDates, setUserToggledFilenameDates] = useState<boolean>(false);
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
 
   // Set defaults when columns are detected
   React.useEffect(() => {
     // Auto-select only if there's exactly one numeric column
-    if (availableNumericColumns.length === 1 && selectedValueColumns.length === 0) {
+    if (availableNumericColumns.length === 1 && (selectedValueColumns || []).length === 0) {
       setSelectedValueColumns([availableNumericColumns[0]]);
       debug('[Dashboard]', 'auto-select numeric column', availableNumericColumns[0]);
     }
@@ -606,7 +607,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Get time series for selected columns (multi-series)
   const multiSeriesTimeData = useMemo(() => {
-    if (selectedValueColumns.length === 0) {
+    if ((selectedValueColumns || []).length === 0) {
       return { weekly: [], monthly: [], quarterly: [], yearly: [] } as any;
     }
 
@@ -627,7 +628,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Get top contributors for first selected value column (aggregated by name)
   const topContributorsData = useMemo(() => {
-    if (selectedValueColumns.length === 0 || !nameColumn) return [];
+    if ((selectedValueColumns || []).length === 0 || !nameColumn) return [];
 
     const distribution = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
     return getTopItems(distribution, topDonorsCount);
@@ -635,24 +636,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Get ALL contributors aggregated by name (for donor-level statistics)
   const allContributorsData = useMemo(() => {
-    if (selectedValueColumns.length === 0 || !nameColumn) return [];
+    if ((selectedValueColumns || []).length === 0 || !nameColumn) return [];
     return calculateDistribution(data, nameColumn, selectedValueColumns[0]);
   }, [data, selectedValueColumns, nameColumn]);
 
   // Build series configuration for TrendChart
   const seriesConfig = useMemo(() => {
-    return selectedValueColumns.map((col, index) => ({
+    return (selectedValueColumns || []).map((col, index) => ({
       key: col,
       label: columnMapping[col] || col,
-      color: CHART_COLORS[index % CHART_COLORS.length],
+      color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
     }));
-  }, [selectedValueColumns, columnMapping]);
+  }, [selectedValueColumns, columnMapping, colorOverrides]);
 
   // Get values for the first selected column for distribution charts
   // IMPORTANT: For donor analysis, we aggregate by unique name first
   // This means we analyze donor totals, not individual transactions
   const distributionValues = useMemo(() => {
-    if (selectedValueColumns.length === 0) return [];
+    if ((selectedValueColumns || []).length === 0) return [];
 
     if (nameColumn) {
       // Aggregate by unique name - each value represents one donor's total
@@ -774,21 +775,31 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Handle multi-select change
   const handleColumnChange = (event: any) => {
-    const value = event.target.value;
-    // On autofill we get a string when clicking the clear button
-    if (typeof value === 'string') {
-      setSelectedValueColumns(value === '' ? [] : [value]);
-    } else {
-      setSelectedValueColumns(value);
+    const value = event.target.value as string[];
+
+    if (value.includes('__select-all__')) {
+      if (selectedValueColumns.length === availableNumericColumns.length) {
+        setSelectedValueColumns([]);
+      } else {
+        setSelectedValueColumns(availableNumericColumns);
+      }
+      return;
     }
+
+    if (value.includes('__deselect-all__')) {
+      setSelectedValueColumns([]);
+      return;
+    }
+
+    setSelectedValueColumns(value);
   };
 
   // Handle removing a single column
   const handleRemoveColumn = (colToRemove: string) => {
-    setSelectedValueColumns(prev => prev.filter(col => col !== colToRemove));
+    setSelectedValueColumns(prev => (prev || []).filter(col => col !== colToRemove));
   };
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="h6" color="text.secondary">
@@ -837,20 +848,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             <InputLabel>Value Columns (multiple)</InputLabel>
             <Select
               multiple
-              value={selectedValueColumns}
+              value={selectedValueColumns || []}
               label="Value Columns (multiple)"
               onChange={handleColumnChange}
               renderValue={() => (
                 <Typography variant="body2" color="text.secondary">
-                  {selectedValueColumns.length === 0
+                  {(selectedValueColumns || []).length === 0
                     ? 'Select columns...'
-                    : `${selectedValueColumns.length} column${selectedValueColumns.length > 1 ? 's' : ''} selected`}
+                    : `${(selectedValueColumns || []).length} column${(selectedValueColumns || []).length > 1 ? 's' : ''} selected`}
                 </Typography>
               )}
             >
+              <MenuItem value="__select-all__">
+                <Checkbox
+                  checked={availableNumericColumns.length > 0 && selectedValueColumns.length === availableNumericColumns.length}
+                  indeterminate={selectedValueColumns.length > 0 && selectedValueColumns.length < availableNumericColumns.length}
+                  size="small"
+                />
+                Select All
+              </MenuItem>
+              <MenuItem value="__deselect-all__">
+                <Checkbox
+                  checked={selectedValueColumns.length === 0}
+                  size="small"
+                />
+                Deselect All
+              </MenuItem>
               {availableNumericColumns.map((col) => (
                 <MenuItem key={col} value={col}>
-                  <Checkbox checked={selectedValueColumns.indexOf(col) > -1} size="small" />
+                  <Checkbox checked={(selectedValueColumns || []).indexOf(col) > -1} size="small" />
                   {columnMapping[col] || col}
                 </MenuItem>
               ))}
@@ -922,27 +948,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Box>
 
         {/* Selected columns as chips */}
-        {selectedValueColumns.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-            {selectedValueColumns.map((col, index) => (
-              <Chip
-                key={col}
-                label={columnMapping[col] || col}
-                onDelete={() => handleRemoveColumn(col)}
-                size="small"
-                sx={{
-                  bgcolor: CHART_COLORS[index % CHART_COLORS.length] + '20',
-                  border: `1px solid ${CHART_COLORS[index % CHART_COLORS.length]}`,
-                  color: CHART_COLORS[index % CHART_COLORS.length],
-                  '& .MuiChip-deleteIcon': {
-                    color: CHART_COLORS[index % CHART_COLORS.length],
-                    '&:hover': {
-                      color: CHART_COLORS[index % CHART_COLORS.length],
+        {(selectedValueColumns || []).length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, alignItems: 'center' }}>
+            {(selectedValueColumns || []).map((col, index) => (
+              <Box key={col} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <input
+                  type="color"
+                  value={colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}
+                  onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
+                  style={{ width: 24, height: 24, border: 'none', background: 'none', cursor: 'pointer' }}
+                />
+                <Chip
+                  label={columnMapping[col] || col}
+                  onDelete={() => handleRemoveColumn(col)}
+                  size="small"
+                  sx={{
+                    bgcolor: (colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]) + '20',
+                    border: `1px solid ${colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}`,
+                    color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
+                    '& .MuiChip-deleteIcon': {
+                      color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
+                      '&:hover': {
+                        color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
+                      },
                     },
-                  },
-                }}
-                deleteIcon={<Close fontSize="small" />}
-              />
+                  }}
+                  deleteIcon={<Close fontSize="small" />}
+                />
+              </Box>
             ))}
           </Box>
         )}
@@ -1052,7 +1085,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             )}
           </Box>
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }} data-chart-id="trend-chart">
-            {hasTimeSeriesData && selectedValueColumns.length > 0 ? (
+            {hasTimeSeriesData && (selectedValueColumns || []).length > 0 ? (
               <Box sx={{ height: '100%', width: '100%', display: 'flex' }}>
                 <TrendChart
                   data={multiSeriesTimeData[periodType]}
@@ -1064,7 +1097,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             ) : (
               <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
-                  {selectedValueColumns.length === 0
+                  {(selectedValueColumns || []).length === 0
                     ? 'Select value columns above to see trend analysis.'
                     : !useFilenameDates && !selectedDateColumn
                     ? 'Enable "Use filename dates" or select a date column above.'
@@ -1148,7 +1181,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Distribution Histogram */}
-        {selectedValueColumns.length > 0 && (
+        {(selectedValueColumns || []).length > 0 && (
           <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
@@ -1244,7 +1277,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         {/* Box Plot removed */}
 
         {/* Pareto Chart */}
-        {selectedValueColumns.length > 0 && paretoData.length > 0 && (
+        {(selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
           <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
@@ -1291,7 +1324,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         )}
 
         {/* Range Distribution */}
-        {selectedValueColumns.length > 0 && rangeDistributionData.length > 0 && (
+        {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
           <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />

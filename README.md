@@ -120,11 +120,12 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
-### v1.5.0 (2026-02-13)
+### v1.5.0 (2026-02-14)
 *   Range Distribution: Converted from pie charts to horizontal bar charts for better readability
 *   Added value labels to the end of each bar in range distribution charts
 *   Added EUR suffix to all range labels (e.g., "0 EUR", "1-50 EUR")
 *   Increased chart margins to prevent label cutoff for longer bars
+*   Name merging: Toggle merge groups now automatically updates selected names without requiring manual reselection
 
 ### v1.4.0 (2026-02-13)
 *   Dashboard stability: added ErrorBoundary around the Dashboard dialog to avoid blank pages on errors.

@@ -229,6 +229,7 @@ export interface NameMergeGroup {
   displayName: string;
   originalNames: string[];
   createdAt: number;
+  active: boolean; // Whether the merge group is active (applied) or inactive (ignored)
 }
 
 export interface NameMergeState {

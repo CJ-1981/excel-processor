@@ -33,7 +33,7 @@ function App() {
   // State for the final data processing
   const [selectedNameColumn, setSelectedNameColumn] = useState<string | null>(null);
   const [headerRowIndex, setHeaderRowIndex] = useState<number>(1); // Track which row has the actual headers (1-indexed)
-  const [selectedUniqueNames, setSelectedUniqueNames] = useState<string[]>([]);
+  const [baseSelectedNames, setBaseSelectedNames] = useState<string[]>([]); // Original names selected by user
   const [isDetailedViewFullScreen, setIsDetailedViewFullScreen] = useState(false); // New state for full screen
 
   // State for DetailedDataView that needs to persist across full-screen toggle
@@ -52,7 +52,33 @@ function App() {
     return loadNameMergeState();
   });
 
+  // Derive the actual selected names including merged display names for active groups
+  const selectedUniqueNames = useMemo(() => {
+    const expandedNames = new Set<string>();
 
+    baseSelectedNames.forEach(name => {
+      expandedNames.add(name);
+
+      // Check if this name is part of an active merge group
+      const groupId = nameMergeState.nameToGroupId[name];
+      if (groupId) {
+        const group = nameMergeState.mergeGroups.find(g => g.id === groupId);
+        if (group && group.active) {
+          // This name is part of an active merge group
+          // Include both the original name and the merged display name
+          expandedNames.add(group.displayName);
+        }
+      }
+    });
+
+    return Array.from(expandedNames);
+  }, [baseSelectedNames, nameMergeState]);
+
+  // Create a new dataset with name merging applied. This is the source of truth for downstream components.
+  const dataWithMerging = useMemo(() => {
+    if (mergedData.length === 0) return [];
+    return applyNameMerging(mergedData, selectedNameColumn, nameMergeState);
+  }, [mergedData, selectedNameColumn, nameMergeState]);
 
   // Wrapper to save column visibility to localStorage whenever it changes
   const handleSetColumnVisibility = (newVisibility: React.SetStateAction<Record<string, boolean>>) => {
@@ -200,14 +226,16 @@ function App() {
   const handleColumnSelect = useCallback((columnName: string, rowIndex: number) => {
     setSelectedNameColumn(columnName);
     setHeaderRowIndex(rowIndex);
-    setSelectedUniqueNames([]);
+    setBaseSelectedNames([]);
     console.log('Selected Name Column:', columnName, 'from row', rowIndex);
   }, []);
 
 
   const handleUniqueNamesSelect = useCallback((names: string[]) => {
-    setSelectedUniqueNames(names);
-    console.log('Selected Unique Names:', names);
+    // Simply update baseSelectedNames - the derived selectedUniqueNames
+    // will automatically include merged display names for active groups
+    setBaseSelectedNames(names);
+    console.log('Selected Base Names:', names);
   }, []);
 
   const handleToggleDetailedViewFullScreen = useCallback(() => {
@@ -241,13 +269,10 @@ function App() {
 
   // Compute filtered data for details view
   const filteredData = useMemo(() => {
-    if (!selectedNameColumn || selectedUniqueNames.length === 0 || mergedData.length === 0) {
+    if (!selectedNameColumn || selectedUniqueNames.length === 0 || dataWithMerging.length === 0) {
       return [];
     }
     const headerRowIdx = headerRowIndex - 1;
-
-    // Apply name merging first
-    const dataWithMerging = applyNameMerging(mergedData, selectedNameColumn, nameMergeState);
 
     return dataWithMerging
       .filter((_, idx) => idx !== headerRowIdx) // Exclude header row
@@ -257,13 +282,26 @@ function App() {
         const originalName = row._originalName;
         const mergedDisplayName = row._mergedDisplayName;
 
+        // Check if this row belongs to a merge group that has selected names
+        const isInSelectedMergeGroup = mergedDisplayName && nameMergeState.mergeGroups.some(group => {
+          if (!group.active) return false;
+          if (group.displayName === mergedDisplayName) {
+            // If any name in this merge group is selected, include all entries
+            return group.originalNames.some(name => selectedUniqueNames.includes(name)) ||
+                   selectedUniqueNames.includes(group.displayName);
+          }
+          return false;
+        });
+
         // Match if: selected name matches current value (merged or not),
-        // or if selected name matches the original name before merging
+        // or if selected name matches the original name before merging,
+        // or if this row is in a merge group where one of the names is selected
         return selectedUniqueNames.includes(value) ||
                (originalName && selectedUniqueNames.includes(originalName)) ||
-               (mergedDisplayName && selectedUniqueNames.includes(mergedDisplayName));
+               (mergedDisplayName && selectedUniqueNames.includes(mergedDisplayName)) ||
+               isInSelectedMergeGroup;
       });
-  }, [mergedData, selectedNameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName, nameMergeState]);
+  }, [dataWithMerging, selectedNameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName, nameMergeState]);
 
   // Get available unique names for the name merging panel
   const availableUniqueNames = useMemo(() => {

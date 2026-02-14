@@ -65,7 +65,8 @@ export function applyNameMerging(
 
     if (groupId) {
       const group = mergeState.mergeGroups.find(g => g.id === groupId);
-      if (group) {
+      // Only merge if the group exists and is active
+      if (group && group.active) {
         // Replace original name with merged display name
         return {
           ...row,
@@ -133,6 +134,34 @@ export function getUniqueNamesWithMergeInfo(
     };
   });
 }
+/**
+ * Toggle the active state of a merge group
+ */
+export function toggleMergeGroupActive(
+    state: NameMergeState,
+    groupId: string
+): NameMergeState {
+  const groupIndex = state.mergeGroups.findIndex(g => g.id === groupId);
+  if (groupIndex === -1) {
+    console.warn(`Merge group ${groupId} not found`);
+    return state;
+  }
+
+  const newGroups = [...state.mergeGroups];
+  const currentGroup = newGroups[groupIndex];
+  newGroups[groupIndex] = {
+    ...currentGroup,
+    active: !currentGroup.active,
+  };
+
+  const newState: NameMergeState = {
+    ...state,
+    mergeGroups: newGroups,
+  };
+
+  saveNameMergeState(newState);
+  return newState;
+}
 
 /**
  * Create a new merge group
@@ -159,6 +188,7 @@ export function createMergeGroup(
     displayName,
     originalNames: names,
     createdAt: Date.now(),
+    active: true,
   };
 
   const newNameToGroupId = { ...state.nameToGroupId };
@@ -306,6 +336,27 @@ export function removeNameFromMergeGroup(
   const newState: NameMergeState = {
     mergeGroups: newGroups,
     nameToGroupId: newNameToGroupId,
+  };
+
+  saveNameMergeState(newState);
+  return newState;
+}
+
+/**
+ * Set the active state for all merge groups
+ */
+export function setAllMergeGroupsActive(
+  state: NameMergeState,
+  active: boolean
+): NameMergeState {
+  const newGroups = state.mergeGroups.map(group => ({
+    ...group,
+    active: active,
+  }));
+
+  const newState: NameMergeState = {
+    ...state,
+    mergeGroups: newGroups,
   };
 
   saveNameMergeState(newState);

@@ -21,6 +21,8 @@ import {
   Collapse,
   Divider,
   Tooltip,
+  Switch,
+  DialogContentText,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -37,6 +39,8 @@ import {
   splitMergeGroup,
   updateMergeGroupDisplayName,
   clearAllMergeGroups,
+  toggleMergeGroupActive,
+  setAllMergeGroupsActive,
 } from '../utils/nameMergeUtils';
 
 interface NameMergingPanelProps {
@@ -57,6 +61,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
   const [editingGroup, setEditingGroup] = useState<NameMergeGroup | null>(null);
   const [newDisplayName, setNewDisplayName] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   // Collapse the whole panel by default; persist user choice in localStorage
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -84,7 +89,10 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
     const groupId = mergeState.nameToGroupId[name];
     if (groupId) {
       const group = mergeState.mergeGroups.find(g => g.id === groupId);
-      return group;
+      // A name is only considered merged if its group is active
+      if (group && group.active) {
+        return group;
+      }
     }
     return null;
   }, [mergeState]);
@@ -162,6 +170,22 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
     setNewDisplayName('');
     setEditDialogOpen(false);
   };
+  
+  // Toggle merge group active state
+  const handleToggleActive = (groupId: string) => {
+    const newState = toggleMergeGroupActive(mergeState, groupId);
+    onMergeStateChange(newState);
+  };
+
+  // Toggle all merge groups active state
+  const handleToggleAllActive = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newState = setAllMergeGroupsActive(mergeState, event.target.checked);
+    onMergeStateChange(newState);
+  };
+
+  // Determine if all groups are active or none are active
+  const allGroupsActive = useMemo(() => mergeState.mergeGroups.every(group => group.active), [mergeState.mergeGroups]);
+
 
   // Toggle group expansion
   const handleToggleGroup = (groupId: string) => {
@@ -181,6 +205,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
     if (mergeState.mergeGroups.length === 0) return;
     const newState = clearAllMergeGroups();
     onMergeStateChange(newState);
+    setClearConfirmOpen(false);
   };
 
   // Count merged names
@@ -213,16 +238,6 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
             />
           )}
         </Box>
-        {!collapsed && mergeState.mergeGroups.length > 0 && (
-          <Button
-            size="small"
-            color="error"
-            startIcon={<ClearIcon />}
-            onClick={handleClearAll}
-          >
-            Clear All
-          </Button>
-        )}
       </Box>
 
       {!collapsed && (
@@ -337,15 +352,49 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
         {mergeState.mergeGroups.length > 0 && (
           <>
             <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Merge Groups
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Merge Groups
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {mergeState.mergeGroups.length > 0 && (
+                  <Tooltip title={allGroupsActive ? 'Deactivate All' : 'Activate All'}>
+                    <Switch
+                      edge="end"
+                      size="small"
+                      checked={allGroupsActive}
+                      onChange={handleToggleAllActive}
+                      inputProps={{ 'aria-label': 'toggle all merge groups' }}
+                    />
+                  </Tooltip>
+                )}
+                <Tooltip title="Clear all merge groups">
+                  <Button
+                    size="small"
+                    color="error"
+                    startIcon={<ClearIcon />}
+                    onClick={() => setClearConfirmOpen(true)}
+                  >
+                    Clear All
+                  </Button>
+                </Tooltip>
+              </Box>
+            </Box>
             <List dense>
               {mergeState.mergeGroups.map((group) => (
-                <Box key={group.id}>
+                <Box key={group.id} sx={{ opacity: group.active ? 1 : 0.5 }}>
                   <ListItem
                     secondaryAction={
-                      <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Tooltip title={group.active ? 'Deactivate' : 'Activate'}>
+                          <Switch
+                            edge="end"
+                            size="small"
+                            checked={group.active}
+                            onChange={() => handleToggleActive(group.id)}
+                            inputProps={{ 'aria-label': 'toggle merge group' }}
+                          />
+                        </Tooltip>
                         <Tooltip title="Edit display name">
                           <IconButton
                             edge="end"
@@ -457,6 +506,25 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
               disabled={!newDisplayName.trim()}
             >
               Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+        
+        {/* Clear All Confirmation Dialog */}
+        <Dialog
+            open={clearConfirmOpen}
+            onClose={() => setClearConfirmOpen(false)}
+        >
+          <DialogTitle>Confirm Clear All</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to permanently delete all merge groups? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setClearConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={handleClearAll} color="error" variant="contained">
+              Clear All
             </Button>
           </DialogActions>
         </Dialog>

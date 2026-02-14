@@ -221,12 +221,16 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       return [];
     }
     const headerRowIdx = headerRowIndex - 1;
+    // Use Set for O(1) lookup instead of Array.includes() which is O(n)
+    const selectedNamesSet = new Set(selectedUniqueNames);
 
     return data
       .filter((_, idx) => idx !== headerRowIdx) // Exclude header row
       .filter(row => {
         const value = getRowValue(row, nameColumn, getActualColumnName);
-        return selectedUniqueNames.includes(value);
+        // Check both the merged display name and the original name (if it exists due to merging)
+        // This handles the case where names were selected before merging was applied
+        return selectedNamesSet.has(value) || (row._originalName && selectedNamesSet.has(row._originalName));
       });
   }, [propsFilteredData, data, nameColumn, headerRowIndex, selectedUniqueNames, getActualColumnName]);
 
