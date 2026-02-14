@@ -41,7 +41,7 @@ const ParetoChart: React.FC<ParetoChartProps> = ({
 
   if (displayData.length === 0) {
     return (
-      <Box sx={{ py: 8, textAlign: 'center' }}>
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
           No data available for Pareto analysis
         </Typography>
