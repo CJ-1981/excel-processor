@@ -60,7 +60,7 @@ import {
 } from '../../utils/statisticsAnalyzer';
 import type { DashboardAnalysis } from '../../types';
 import { formatDateGerman, formatCurrencyGerman } from '../../utils/germanFormatter';
-import { debug, error, time, timeEnd, warn } from '../../utils/logger';
+import { error, time, timeEnd, warn } from '../../utils/logger';
 
 interface DashboardViewProps {
   data: any[];
@@ -550,31 +550,37 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
 
 
+  // Track if we've done initial auto-selection for date columns
+  const didAutoSelectDateColumn = React.useRef(false);
+  const didAutoEnableFilenameDates = React.useRef(false);
+
   // Set defaults when columns are detected (only on initial load)
   React.useEffect(() => {
     // Auto-select all numeric columns when none selected yet
     if (didAutoSelectValueColumns.current.length === 0 && availableNumericColumns.length > 0) {
       setSelectedValueColumns(availableNumericColumns);
       didAutoSelectValueColumns.current = availableNumericColumns;
-
     }
-  }, [availableNumericColumns, selectedValueColumns]);
+  }, [availableNumericColumns]);
 
   React.useEffect(() => {
-    if (availableDateColumns.length > 0 && !selectedDateColumn) {
+    if (availableDateColumns.length > 0 && !didAutoSelectDateColumn.current) {
       setSelectedDateColumn(availableDateColumns[0]);
-
+      didAutoSelectDateColumn.current = true;
     }
     // Auto-enable filename dates if no date columns but filename dates available
-    if (availableDateColumns.length === 0 && hasFilenameDates && !useFilenameDates && !userToggledFilenameDates) {
+    if (availableDateColumns.length === 0 && hasFilenameDates && !didAutoEnableFilenameDates.current && !userToggledFilenameDates) {
       setUseFilenameDates(true);
-
+      didAutoEnableFilenameDates.current = true;
     }
-  }, [availableDateColumns, hasFilenameDates, useFilenameDates, selectedDateColumn, userToggledFilenameDates]);
+  }, [availableDateColumns, hasFilenameDates, userToggledFilenameDates]);
 
   // If the underlying dataset changes identity (e.g. new file), clear manual toggle so auto behavior can apply for new data
   React.useEffect(() => {
     setUserToggledFilenameDates(false);
+    didAutoSelectValueColumns.current = [];
+    didAutoSelectDateColumn.current = false;
+    didAutoEnableFilenameDates.current = false;
   }, [data]);
 
   const handleToggleColumn = useCallback((column: string) => {

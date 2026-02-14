@@ -13,6 +13,7 @@ import {
   InputLabel,
   OutlinedInput,
   IconButton,
+  InputAdornment,
   useMediaQuery, // Import useMediaQuery
   useTheme, // Import useTheme
 } from '@mui/material';
@@ -60,42 +61,46 @@ const DraggableColumnSelector: React.FC<DraggableColumnSelectorProps> = ({
           label={label}
           id={`draggable-selector-${label}`}
           readOnly
-          onClick={handleOpen}
+          onClick={handleOpen} // Open dialog on click anywhere on the input
           sx={{ display: 'flex', alignItems: 'center', py: 0.5, overflowX: 'auto' }}
           notched
+          value="" // Set value to empty string
+          startAdornment={ // Chips as startAdornment
+            <InputAdornment position="start" sx={{ mr: 0, height: 'auto', p: 0 }}>
+              <Box sx={{
+                display: 'flex',
+                flexWrap: 'wrap', // Allow chips to wrap if they exceed available width in the adornment
+                gap: 0.5,
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                minHeight: '24px',
+                p: 0.5,
+              }}>
+                {selected.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Select {label.toLowerCase()}...
+                  </Typography>
+                ) : (
+                  selected.map((col) => (
+                    <Chip
+                      key={col}
+                      label={columnMapping[col] || col}
+                      onDelete={() => handleChipDelete(col)}
+                      size="small"
+                      deleteIcon={<CloseIcon fontSize="small" />}
+                      onClick={(e) => e.stopPropagation()} // Prevent button click from closing dialog
+                    />
+                  ))
+                )}
+              </Box>
+            </InputAdornment>
+          }
           endAdornment={
             <IconButton onClick={handleOpen} edge="end" aria-label={`edit ${label}`} size="small">
               <EditIcon fontSize="small" />
             </IconButton>
           }
-        >
-          <Box sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 0.5,
-            justifyContent: 'flex-start',
-            alignItems: 'center',
-            minHeight: '24px',
-            p: 0.5,
-          }}>
-            {selected.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                Select {label.toLowerCase()}...
-              </Typography>
-            ) : (
-              selected.map((col) => (
-                <Chip
-                  key={col}
-                  label={columnMapping[col] || col}
-                  onDelete={() => handleChipDelete(col)}
-                  size="small"
-                  deleteIcon={<CloseIcon fontSize="small" />}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ))
-            )}
-          </Box>
-        </OutlinedInput>
+        />
       </FormControl>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={fullScreen}> {/* Add fullScreen prop */}
