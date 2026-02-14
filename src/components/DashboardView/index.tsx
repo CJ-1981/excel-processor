@@ -1112,8 +1112,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Top Contributors Chart */}
-        {topContributorsData.length > 0 && (
-          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <BarChart color="primary" />
@@ -1162,7 +1161,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
             </Box>
           </Paper>
-        )}
+        }
 
         {/* Statistics Table */}
         <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1184,8 +1183,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Distribution Histogram */}
-        {(selectedValueColumns || []).length > 0 && (
-          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
                 Distribution Histogram
@@ -1278,10 +1276,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         )}
 
         {/* Box Plot removed */}
-
         {/* Pareto Chart */}
-        {(selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
-          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
                 Pareto Analysis (80/20 Rule)
@@ -1324,11 +1320,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
             </Box>
           </Paper>
-        )}
+        }
 
         {/* Range Distribution */}
-        {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
-          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
               <Typography variant="h6">Range Distribution</Typography>
@@ -1354,7 +1349,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
             </Box>
           </Paper>
-        )}
+        }
       </GridLayout>
     </Box>
   );
