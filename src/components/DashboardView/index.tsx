@@ -554,17 +554,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [userToggledFilenameDates, setUserToggledFilenameDates] = useState<boolean>(false);
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
   // Track if we've done initial auto-selection to avoid re-selecting after user deselects
-  const didAutoSelectValueColumns = React.useRef(false);
+  const didAutoSelectValueColumns = React.useRef<string[]>([]);
 
-  // Set defaults when columns are detected (only on initial mount)
+  // Set defaults when columns are detected (only on initial load)
   React.useEffect(() => {
-    // Auto-select all numeric columns only once on initial load
-    if (!didAutoSelectValueColumns.current && availableNumericColumns.length > 0) {
+    // Auto-select all numeric columns when none selected yet
+    if (didAutoSelectValueColumns.current.length === 0 && availableNumericColumns.length > 0) {
       setSelectedValueColumns(availableNumericColumns);
-      didAutoSelectValueColumns.current = true;
+      didAutoSelectValueColumns.current = availableNumericColumns;
       debug('[Dashboard]', 'auto-select all numeric columns', availableNumericColumns.length);
     }
-  }, [availableNumericColumns]);
+  }, [availableNumericColumns, selectedValueColumns]);
 
   React.useEffect(() => {
     if (availableDateColumns.length > 0 && !selectedDateColumn) {
@@ -1112,7 +1112,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Top Contributors Chart */}
-        <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {topContributorsData.length > 0 && (
+          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <BarChart color="primary" />
@@ -1161,7 +1162,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
             </Box>
           </Paper>
-        }
+        )}
 
         {/* Statistics Table */}
         <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1183,7 +1184,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Distribution Histogram */}
-        <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {(selectedValueColumns || []).length > 0 && (
+          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
                 Distribution Histogram
@@ -1276,8 +1278,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         )}
 
         {/* Box Plot removed */}
+
         {/* Pareto Chart */}
-        <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {(selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
+          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
                 Pareto Analysis (80/20 Rule)
@@ -1320,10 +1324,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
             </Box>
           </Paper>
-        }
+        )}
 
         {/* Range Distribution */}
-        <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
+          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
               <Typography variant="h6">Range Distribution</Typography>
@@ -1349,7 +1354,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
             </Box>
           </Paper>
-        }
+        )}
       </GridLayout>
     </Box>
   );
