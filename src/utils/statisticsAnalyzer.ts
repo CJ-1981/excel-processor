@@ -25,7 +25,7 @@ export function calculatePercentile(sortedValues: number[], percentile: number):
  * Calculate basic statistics for a numeric column
  */
 export function calculateColumnStatistics(
-  data: any[],
+  data: Record<string, unknown>[],
   columnKey: string,
   columnLabel: string
 ): ColumnStatistics {
@@ -106,7 +106,7 @@ export function calculateColumnStatistics(
  * Detect numeric columns in the dataset
  * Checks if values can be parsed as numbers (handles both number type and string numbers)
  */
-export function detectNumericColumns(data: any[]): string[] {
+export function detectNumericColumns(data: Record<string, unknown>[]): string[] {
   if (data.length === 0) return [];
 
   // Metadata columns to skip (internal use only)
@@ -158,7 +158,7 @@ export function detectNumericColumns(data: any[]): string[] {
  * Detect date columns in the dataset
  * Returns column keys that appear to contain dates
  */
-export function detectDateColumns(data: any[]): string[] {
+export function detectDateColumns(data: Record<string, unknown>[]): string[] {
   if (data.length === 0) return [];
 
   // Metadata columns to skip (internal use only)
@@ -256,7 +256,7 @@ export function detectDateColumns(data: any[]): string[] {
 /**
  * Parse a date value from various formats
  */
-export function parseDate(value: any): Date | null {
+export function parseDate(value: unknown): Date | null {
   if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
   if (typeof value === 'number') {
     // Excel serial range first
@@ -328,7 +328,7 @@ export function parseDate(value: any): Date | null {
  * Aggregate data by time period (monthly, quarterly, yearly)
  */
 export function aggregateByTime(
-  data: any[],
+  data: Record<string, unknown>[],
   dateColumn: string,
   valueColumn: string,
   period: 'monthly' | 'quarterly' | 'yearly'
@@ -339,7 +339,7 @@ export function aggregateByTime(
     const date = parseDate(row[dateColumn]);
     if (!date) return;
 
-    const value = parseFloat(row[valueColumn]) || 0;
+    const value = parseFloat(String(row[valueColumn] ?? '')) || 0;
 
     let periodKey: string;
     let periodDate: Date;
@@ -349,11 +349,12 @@ export function aggregateByTime(
         periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         periodDate = new Date(date.getFullYear(), date.getMonth(), 1);
         break;
-      case 'quarterly':
+      case 'quarterly': {
         const quarter = Math.floor(date.getMonth() / 3);
         periodKey = `${date.getFullYear()}-Q${quarter + 1}`;
         periodDate = new Date(date.getFullYear(), quarter * 3, 1);
         break;
+      }
       case 'yearly':
         periodKey = `${date.getFullYear()}`;
         periodDate = new Date(date.getFullYear(), 0, 1);
@@ -386,7 +387,7 @@ export function aggregateByTime(
  * Calculate category distribution for a column
  */
 export function calculateDistribution(
-  data: any[],
+  data: Record<string, unknown>[],
   categoryColumn: string,
   valueColumn?: string
 ): CategoryDistribution[] {
@@ -397,7 +398,7 @@ export function calculateDistribution(
     if (category === null || category === undefined || category === '') return;
 
     const categoryKey = String(category);
-    const value = valueColumn ? (parseFloat(row[valueColumn]) || 0) : 1;
+    const value = valueColumn ? (parseFloat(String(row[valueColumn] ?? '')) || 0) : 1;
 
     if (!distribution.has(categoryKey)) {
       distribution.set(categoryKey, { value: 0, count: 0 });
@@ -438,7 +439,7 @@ export function getTopItems(
  * Analyze data and generate dashboard statistics
  */
 export function analyzeDataForDashboard(
-  data: any[],
+  data: Record<string, unknown>[],
   columnMapping: Record<string, string>,
   nameColumn?: string | null
 ): DashboardAnalysis {
@@ -514,7 +515,7 @@ export function analyzeDataForDashboard(
 /**
  * Extract numeric values from a column
  */
-export function extractNumericValues(data: any[], columnKey: string): number[] {
+export function extractNumericValues(data: Record<string, unknown>[], columnKey: string): number[] {
   const values: number[] = [];
   data.forEach(row => {
     const value = row[columnKey];

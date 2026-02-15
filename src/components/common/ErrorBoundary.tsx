@@ -22,7 +22,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    // eslint-disable-next-line no-console
+     
     console.error('[Dashboard ErrorBoundary]', error, errorInfo);
   }
 

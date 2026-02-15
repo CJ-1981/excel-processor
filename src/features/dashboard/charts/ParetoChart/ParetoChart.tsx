@@ -1,0 +1,242 @@
+/**
+ * ParetoChart Component
+ * Pareto analysis chart showing cumulative contribution percentages
+ */
+
+import React from 'react';
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Cell,
+} from 'recharts';
+import { Box, Typography, useTheme } from '@mui/material';
+import type { ParetoDataPoint } from '../../types/chart';
+import { formatCurrencyGerman, formatPercentGerman } from '../../../utils/germanFormatter';
+
+export interface ParetoChartProps {
+  data: ParetoDataPoint[];
+  valueLabel?: string;
+  barColor?: string;
+  lineColor?: string;
+  showTop?: number;
+  anonymize?: boolean;
+  isLoading?: boolean;
+  error?: Error;
+  onExport?: (format: 'png' | 'jpg') => void;
+  className?: string;
+}
+
+const ParetoChart: React.FC<ParetoChartProps> = ({
+  data,
+  valueLabel = 'Value',
+  barColor,
+  lineColor,
+  showTop = 15,
+  anonymize = false,
+  isLoading = false,
+  error,
+}) => {
+  const theme = useTheme();
+  const primaryBarColor = barColor || theme.palette.primary.main;
+  const secondaryLineColor = lineColor || theme.palette.secondary.main;
+
+  const displayData = data.slice(0, showTop);
+
+  if (isLoading) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          Loading Pareto chart...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="error">
+          Error loading chart: {error.message}
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (displayData.length === 0) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          No data available for Pareto analysis
+        </Typography>
+      </Box>
+    );
+  }
+
+  const eightyPercentIndex = displayData.findIndex((d) => d.cumulativePercentage >= 80);
+  const totalValue = displayData.length > 0 ? displayData[displayData.length - 1].cumulativeValue : 0;
+
+  return (
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }} data-chart-id="pareto">
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
+          <ComposedChart data={displayData} margin={{ top: 20, right: 60, left: 20, bottom: 70 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+            <XAxis
+              dataKey="category"
+              tick={{ fontSize: 10 }}
+              stroke={theme.palette.text.secondary}
+              angle={-45}
+              textAnchor="end"
+              interval={0}
+              height={60}
+              tickFormatter={
+                anonymize
+                  ? ((_value: unknown, index: number) => {
+                      const n = displayData.length;
+                      const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
+                      return index % step === 0 ? String(index + 1) : '';
+                    })
+                  : undefined
+              }
+            />
+            <YAxis
+              yAxisId="left"
+              tick={{ fontSize: 11 }}
+              stroke={theme.palette.text.secondary}
+              domain={[0, totalValue]}
+              tickFormatter={(value) => {
+                if (value >= 1000) {
+                  return `${(value / 1000).toFixed(0)}k`;
+                }
+                return value;
+              }}
+              label={{
+                value: valueLabel,
+                angle: -90,
+                position: 'insideLeft',
+                style: { textAnchor: 'middle', fill: theme.palette.text.secondary },
+              }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              tick={{ fontSize: 11 }}
+              stroke={theme.palette.text.secondary}
+              domain={[0, 100]}
+              tickFormatter={(value) => `${value}%`}
+              label={{
+                value: 'Cumulative %',
+                angle: 90,
+                position: 'insideRight',
+                style: { textAnchor: 'middle', fill: theme.palette.text.secondary },
+              }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: theme.shape.borderRadius,
+              }}
+              formatter={(value: number | undefined, name: string | undefined) => {
+                if (name === 'cumulativePercentage') {
+                  return [formatPercentGerman(value ?? 0), 'Cumulative %'];
+                }
+                return [formatCurrencyGerman(value ?? 0), valueLabel];
+              }}
+            />
+
+            <Bar yAxisId="left" dataKey="value" name="value" radius={[4, 4, 0, 0]}>
+              {displayData.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={index <= eightyPercentIndex ? primaryBarColor : theme.palette.grey[400]}
+                  fillOpacity={index <= eightyPercentIndex ? 0.9 : 0.5}
+                />
+              ))}
+            </Bar>
+
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="cumulativePercentage"
+              stroke={secondaryLineColor}
+              strokeWidth={2}
+              dot={{ fill: secondaryLineColor, strokeWidth: 2, r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+
+            <ReferenceLine
+              yAxisId="right"
+              y={80}
+              stroke={theme.palette.error.main}
+              strokeDasharray="5 5"
+              strokeWidth={2}
+              label={{
+                value: '80%',
+                position: 'right',
+                fill: theme.palette.error.main,
+                fontSize: 12,
+              }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Box>
+
+      <Box sx={{ mt: 1, textAlign: 'center' }}>
+        <Typography variant="caption" color="text.secondary">
+          {eightyPercentIndex + 1} contributor{eightyPercentIndex + 1 > 1 ? 's' : ''} account for ~80% of total value
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, mt: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            sx={{
+              width: 16,
+              height: 12,
+              backgroundColor: primaryBarColor,
+              borderRadius: 0.5,
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {valueLabel}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            sx={{
+              width: 16,
+              height: 3,
+              backgroundColor: secondaryLineColor,
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            Cumulative %
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            sx={{
+              width: 16,
+              height: 3,
+              backgroundColor: theme.palette.error.main,
+              borderStyle: 'dashed',
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            80% threshold
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default ParetoChart;

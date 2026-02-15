@@ -22,8 +22,8 @@ import { debug } from '../utils/logger';
 import type { PDFGenerationContext } from '../types';
 
 interface DetailedDataViewProps {
-  data: any[];
-  filteredData?: any[]; // Optional pre-computed filtered data
+  data: Record<string, unknown>[];
+  filteredData?: Record<string, unknown>[]; // Optional pre-computed filtered data
   nameColumn: string | null;
   headerRowIndex: number; // Which row contains the actual headers (1-indexed)
   selectedUniqueNames: string[];
@@ -60,7 +60,7 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   return String(bValue).localeCompare(String(aValue));
 }
 
-function getComparator<Key extends keyof any>(
+function getComparator<Key extends string>(
   order: Order,
   orderBy: Key,
 ): (

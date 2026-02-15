@@ -1,8 +1,12 @@
 // This file contains shared type definitions for the application.
 
+// Type alias for Excel row data - each row is a record with string keys and unknown values
+export type ExcelRowData = Record<string, unknown>;
+export type ExcelDataArray = ExcelRowData[];
+
 export interface ParsedSheet {
   sheetName: string;
-  data: any[];
+  data: ExcelDataArray;
 }
 
 export interface ParsedFile {
