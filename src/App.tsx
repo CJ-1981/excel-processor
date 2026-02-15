@@ -10,7 +10,7 @@ import NameMergingPanel from './components/NameMergingPanel';
 import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { ParsedFile, ParseProgress, NameMergeState, ExcelDataArray } from './types';
+import type { ParsedFile, ParseProgress, NameMergeState, ExcelDataArray, ExcelRowData } from './types';
 import * as XLSX from 'xlsx';
 import { processInBatches } from './utils/batchProcessor';
 import { APP_VERSION } from './version';
@@ -180,14 +180,18 @@ function App() {
     console.log('Merging sheets:', selectedSheetIdentifiers);
     const fileSource = files || parsedFiles; // Use direct files if provided, else from state
 
-    const sheetsToMerge: any[][][] = []; // Changed to array of arrays of objects
+    const sheetsToMerge: ExcelRowData[][] = []; // Array of arrays of row objects
     selectedSheetIdentifiers.forEach(identifier => {
       const [fileName, sheetName] = identifier.split('::');
       const file = fileSource.find(f => f.fileName === fileName);
       const sheet = file?.sheets.find(s => s.sheetName === sheetName);
       if (sheet?.data) {
         // Augment each row with source file and sheet name
-        const dataWithSource = sheet.data.map(row => Object.values(row) as any[]);
+        const dataWithSource = sheet.data.map(row => ({
+          ...row,
+          _sourceFileName: fileName,
+          _sourceSheetName: sheetName,
+        }));
         sheetsToMerge.push(dataWithSource);
       }
     });
