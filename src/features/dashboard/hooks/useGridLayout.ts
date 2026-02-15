@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Layouts } from 'react-grid-layout';
+import type { ResponsiveLayouts, Breakpoint } from 'react-grid-layout';
 
 const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
 const LAYOUT_VERSION = 10;
@@ -33,10 +33,10 @@ export interface UseGridLayoutParams {
 }
 
 export interface UseGridLayoutResult {
-  layouts: Layouts;
+  layouts: ResponsiveLayouts<Breakpoint>;
   currentBreakpoint: keyof BreakpointConfigs;
   setCurrentBreakpoint: (breakpoint: keyof BreakpointConfigs) => void;
-  handleLayoutChange: (currentLayout: GridLayoutItem[], allLayouts: Layouts) => void;
+  handleLayoutChange: (currentLayout: GridLayoutItem[], allLayouts: ResponsiveLayouts<Breakpoint>) => void;
   resetLayout: () => void;
   adjustWidgetHeight: (itemId: string, delta: number) => void;
 }
@@ -53,22 +53,52 @@ export function useGridLayout({
 }: UseGridLayoutParams): UseGridLayoutResult {
   const [currentBreakpoint, setCurrentBreakpoint] = useState<keyof BreakpointConfigs>('lg');
 
-  const [layouts, setLayouts] = useState<Layouts>(() => {
-    try {
-      const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed._version !== LAYOUT_VERSION) {
-          localStorage.removeItem(LAYOUT_STORAGE_KEY);
-          return defaultLayouts;
-        }
-        return sanitizeLayouts(parsed, itemIds);
-      }
-    } catch (error) {
-      console.warn('Could not load dashboard layout:', error);
-    }
-    return defaultLayouts;
+  const [layouts, setLayouts] = useState<ResponsiveLayouts<Breakpoint>>(() => {
+    // Convert defaultLayouts to Layout[] format expected by react-grid-layout
+    const layoutsMap: ResponsiveLayouts<Breakpoint> = {};
+    Object.keys(defaultLayouts).forEach(breakpoint => {
+      layoutsMap[breakpoint] = defaultLayouts[breakpoint as keyof BreakpointConfigs].map(item => ({
+        i: item.i,
+        x: item.x,
+        y: item.y,
+        w: item.w,
+        h: item.h,
+        minW: item.minW,
+        minH: item.minH,
+      }));
+    });
+    return layoutsMap;
   });
+
+  // Load saved layouts from localStorage
+  useEffect(() => {
+    const loadSavedLayouts = () => {
+      try {
+        const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as ResponsiveLayouts<Breakpoint> & { _version?: number } | null;
+          if (parsed && parsed._version !== LAYOUT_VERSION) {
+            localStorage.removeItem(LAYOUT_STORAGE_KEY);
+            return;
+          }
+          if (parsed) {
+            setLayouts(sanitizeLayouts(parsed, itemIds));
+          }
+        }
+      } catch (error) {
+        console.warn('Could not load dashboard layout:', error);
+      }
+    };
+
+    // Only load if not already loaded from initial state
+    const hasInitialLayout = Object.keys(layouts).some(bp => {
+      const layout = layouts[bp as Breakpoint];
+      return layout !== undefined && layout.length > 0;
+    });
+    if (!hasInitialLayout) {
+      loadSavedLayouts();
+    }
+  }, []); // Run once on mount
 
   // Persist layout changes
   useEffect(() => {
@@ -81,20 +111,25 @@ export function useGridLayout({
   }, [layouts]);
 
   const handleLayoutChange = useCallback(
-    (_currentLayout: GridLayoutItem[], newLayouts: Layouts) => {
+    (_currentLayout: GridLayoutItem[], newLayouts: ResponsiveLayouts<Breakpoint>) => {
       setLayouts(newLayouts);
     },
     []
   );
 
   const resetLayout = useCallback(() => {
-    setLayouts(defaultLayouts);
+    // Convert defaultLayouts to ResponsiveLayouts format
+    const defaultResponsiveLayouts: ResponsiveLayouts<Breakpoint> = {};
+    Object.keys(defaultLayouts).forEach(breakpoint => {
+      defaultResponsiveLayouts[breakpoint] = defaultLayouts[breakpoint as keyof BreakpointConfigs];
+    });
+    setLayouts(defaultResponsiveLayouts);
     localStorage.removeItem(LAYOUT_STORAGE_KEY);
   }, [defaultLayouts]);
 
   const adjustWidgetHeight = useCallback(
     (itemId: string, delta: number) => {
-      setLayouts(prev => {
+      setLayouts((prev: ResponsiveLayouts<Breakpoint>) => {
         const newLayouts = { ...prev };
         const arr = newLayouts[currentBreakpoint] || [];
         newLayouts[currentBreakpoint] = arr.map((item: GridLayoutItem) =>
@@ -131,10 +166,10 @@ export function useGridLayout({
  * Sanitize layouts to ensure valid configuration
  */
 function sanitizeLayouts(
-  layoutsObj: Layouts,
+  layoutsObj: ResponsiveLayouts<Breakpoint> | null | undefined,
   itemIds: string[]
-): Layouts {
-  const result: Layouts = {};
+): ResponsiveLayouts<Breakpoint> {
+  const result: ResponsiveLayouts<Breakpoint> = {};
 
   for (const bp of Object.keys(BREAKPOINTS)) {
     const cols = COLS_BREAKPOINTS[bp as keyof typeof COLS_BREAKPOINTS] || 12;

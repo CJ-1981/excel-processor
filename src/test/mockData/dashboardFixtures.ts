@@ -75,21 +75,21 @@ export const mockColumnMapping = {
 
 // Expected analysis result
 export const expectedDashboardAnalysis: DashboardAnalysis = {
-  numericColumns: expect.any(Array),
+  numericColumns: [],
   timeSeries: {
-    monthly: expect.any(Array),
-    quarterly: expect.any(Array),
-    yearly: expect.any(Array),
+    monthly: [],
+    quarterly: [],
+    yearly: [],
   },
   distributions: {
-    byName: expect.any(Array),
-    bySource: expect.any(Array),
+    byName: [],
+    bySource: [],
   },
-  topDonors: expect.any(Array),
+  topDonors: [],
   metadata: {
     totalRows: 5,
     filteredRows: 5,
-    dateRange: expect.any(Object),
+    dateRange: undefined,
   },
 }
 

@@ -2,7 +2,8 @@
  * Chart-specific types module
  */
 
-import type { CategoryDistribution, HistogramData, ParetoDataPoint, RangeDistributionData } from '../../../types';
+// Re-export types from main types file
+export type { CategoryDistribution, ColumnStatistics, HistogramData, HistogramBin, ParetoDataPoint, RangeDistributionData, ValueRange } from '../../../types';
 
 // Chart type definitions
 export type ChartType = 'line' | 'area' | 'stacked';
@@ -33,7 +34,7 @@ export interface TrendChartData {
 
 // Top donors data structure
 export interface TopDonorsData {
-  donors: CategoryDistribution[];
+  donors: Array<{ category: string; value: number; count: number; percentage: number }>;
   totalCount: number;
 }
 
@@ -47,15 +48,6 @@ export interface StatisticsData {
   stdDev: number;
   count: number;
 }
-
-// Histogram data structure (reusing HistogramData from main types)
-export type { HistogramData, HistogramBin } from '../../../types';
-
-// Pareto data structure (reusing ParetoDataPoint from main types)
-export type { ParetoDataPoint } from '../../../types';
-
-// Range distribution data structure (reusing RangeDistributionData from main types)
-export type { RangeDistributionData, ValueRange } from '../../../types';
 
 // Chart configuration interface
 export interface ChartConfig {

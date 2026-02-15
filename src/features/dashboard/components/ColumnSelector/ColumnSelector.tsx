@@ -5,5 +5,8 @@
  * For now, it re-exports the existing component from its original location
  */
 
-export { default as DraggableColumnSelector } from '../../../../components/DashboardView/DraggableColumnSelector';
-export type { DraggableColumnSelectorProps } from '../../../../components/DashboardView/DraggableColumnSelector';
+// Keep the DraggableColumnSelector import for now, unused due to type issues
+// import DraggableColumnSelector from '../../../../components/DashboardView/DraggableColumnSelector';
+
+// Re-export just the default export
+export { default } from '../../../../components/DashboardView/DraggableColumnSelector';

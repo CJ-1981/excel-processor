@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { MultiSeriesDataPoint, SeriesConfig, ChartType, PeriodType } from '../../types/chart';
+import { formatTooltipValue } from '../../utils/chartCalculations';
 
 interface TooltipPayload {
   color: string;
@@ -287,7 +288,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
             tick={{ fill: theme.palette.text.primary, fontSize: 12 }}
             tickFormatter={(value: unknown) => formatTooltipValue(value as number)}
           />
-          <Tooltip content={CustomTooltip} />
+          <Tooltip content={(props: any) => CustomTooltip(props)} />
           <Customized component={renderInlineLegend} />
           {renderSeries()}
         </ChartComponent>

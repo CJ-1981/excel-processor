@@ -8,7 +8,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import TrendChart from './TrendChart'
-import type { SeriesConfig } from './TrendChart'
+import type { SeriesConfig } from '../../features/dashboard/types/chart'
 
 // Mock ResizeObserver
 const mockResizeObserver = vi.fn()

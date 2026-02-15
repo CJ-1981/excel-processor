@@ -10,7 +10,7 @@ import NameMergingPanel from './components/NameMergingPanel';
 import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { ParsedFile, ParseProgress, NameMergeState } from './types';
+import type { ParsedFile, ParseProgress, NameMergeState, ExcelDataArray } from './types';
 import * as XLSX from 'xlsx';
 import { processInBatches } from './utils/batchProcessor';
 import { APP_VERSION } from './version';
@@ -133,7 +133,14 @@ function App() {
             }),
           }));
 
-          return { fileName: file.name, sheets, isCSV };
+          return {
+            fileName: file.name,
+            sheets: sheets.map(sheet => ({
+              ...sheet,
+              data: sheet.data as ExcelDataArray
+            })),
+            isCSV
+          };
         },
         {
           concurrency: 3,
@@ -180,11 +187,7 @@ function App() {
       const sheet = file?.sheets.find(s => s.sheetName === sheetName);
       if (sheet?.data) {
         // Augment each row with source file and sheet name
-        const dataWithSource = sheet.data.map(row => ({
-          ...row,
-          _sourceFileName: fileName,
-          _sourceSheetName: sheetName,
-        }));
+        const dataWithSource = sheet.data.map(row => Object.values(row) as any[]);
         sheetsToMerge.push(dataWithSource);
       }
     });

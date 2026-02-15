@@ -17,8 +17,8 @@ import {
   LabelList,
 } from 'recharts';
 import { Box, Typography, useTheme, Paper } from '@mui/material';
-import type { RangeDistributionData } from '../../../types';
-import { formatCurrencyGerman, formatPercentGerman } from '../../../utils/germanFormatter';
+import type { RangeDistributionData } from '../../types/chart';
+import { formatCurrencyGerman, formatPercentGerman } from '../../../../utils/germanFormatter';
 
 export interface RangeDistributionChartsProps {
   data: RangeDistributionData[];
@@ -142,7 +142,7 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                 <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
-                <Tooltip content={CustomTooltip} />
+                <Tooltip content={(props: any) => CustomTooltip(props)} />
                 <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
                 <Bar dataKey="value" name="Count">
                   {countData.map((_, index) => (
@@ -168,7 +168,7 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                 <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} tickFormatter={(v) => formatCurrencyGerman(v as number)} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
-                <Tooltip content={CustomTooltip} />
+                <Tooltip content={(props: any) => CustomTooltip(props)} />
                 <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
                 <Bar dataKey="value" name={valueLabel}>
                   {amountData.map((_, index) => (

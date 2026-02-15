@@ -3,7 +3,9 @@
  * Common calculations used across different chart types
  */
 
-import type { MultiSeriesDataPoint, SeriesConfig } from '../types/chart';
+import type { MultiSeriesDataPoint } from '../types/chart';
+
+// SeriesConfig is kept for compatibility but not currently used
 
 /**
  * Format number for chart display

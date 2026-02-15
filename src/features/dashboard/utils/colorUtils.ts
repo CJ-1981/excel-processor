@@ -3,7 +3,7 @@
  * Color management for charts and visualizations
  */
 
-import { CHART_COLORS } from '../types/chart';
+import { CHART_COLORS, type SeriesConfig } from '../types/chart';
 
 export type { CHART_COLORS, ChartColor } from '../types/chart';
 
@@ -45,11 +45,7 @@ export function generateColorOverrides(
 /**
  * Create series configuration from columns
  */
-export interface SeriesConfig {
-  key: string;
-  label: string;
-  color: string;
-}
+// SeriesConfig imported from chart.ts to avoid duplication
 
 export function createSeriesConfig(
   columns: string[],

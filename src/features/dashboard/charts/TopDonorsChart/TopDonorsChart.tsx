@@ -17,7 +17,8 @@ import {
 } from 'recharts';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { CategoryDistribution } from '../../types/chart';
-import { getChartColors, formatCompactNumber, formatTooltipValue } from '../../utils/chartCalculations';
+import { formatCompactNumber, formatTooltipValue } from '../../utils/chartCalculations';
+import { getChartColors } from '../../utils/colorUtils';
 
 export interface TopDonorsChartProps {
   data: CategoryDistribution[];
@@ -265,7 +266,7 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
             }
           />
           <YAxis stroke={theme.palette.text.primary} tick={{ fill: theme.palette.text.primary }} tickFormatter={(value) => formatCompactNumber(value)} />
-          <Tooltip content={CustomTooltip} />
+          <Tooltip content={(props: any) => CustomTooltip(props)} />
           <Customized component={renderInlineLegend} />
           <Bar dataKey="value" name={valueLabel}>
             {chartData.map((_, index) => (

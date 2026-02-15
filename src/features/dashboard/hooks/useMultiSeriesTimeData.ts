@@ -83,7 +83,6 @@ function aggregateByFilenameDate(
 
     const yearNum = date.getFullYear();
     const monthNum = date.getMonth();
-    const dayNum = date.getDate();
 
     // Get all values for this row
     const rowValues: Record<string, number> = {};

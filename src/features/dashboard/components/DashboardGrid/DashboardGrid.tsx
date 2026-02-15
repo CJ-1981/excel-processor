@@ -1,19 +1,17 @@
 /**
  * DashboardGrid Component
- * Wrapper for react-grid-layout Responsive component
+ * Wrapper for react-grid-layout v2 ResponsiveGridLayout
  */
 
-import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
-import type { Layouts, Layout } from 'react-grid-layout';
+import { useContainerWidth, ResponsiveGridLayout, getCompactor } from 'react-grid-layout';
+import type { Layout, ResponsiveLayouts, Breakpoint } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-const GridLayout = WidthProvider(Responsive);
-
 export interface DashboardGridProps {
-  layouts: Layouts;
-  onLayoutChange: (currentLayout: Layout[], newLayouts: Layouts) => void;
-  onBreakpointChange?: (breakpoint: string) => void;
+  layouts: ResponsiveLayouts<Breakpoint>;
+  onLayoutChange: (currentLayout: Layout, layouts: ResponsiveLayouts<Breakpoint>) => void;
+  onBreakpointChange?: (breakpoint: Breakpoint, cols: number) => void;
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -48,25 +46,46 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({
   isDraggable = true,
   isResizable = true,
 }) => {
+  // Use useContainerWidth to track container width
+  const { width, containerRef, mounted } = useContainerWidth({
+    measureBeforeMount,
+  });
+
+  // Create compactor based on compactType and preventCollision
+  const compactor = getCompactor(compactType, false, preventCollision);
+
+  // Don't render until width is measured if measureBeforeMount is true
+  if (measureBeforeMount && !mounted) {
+    return null;
+  }
+
   return (
-    <GridLayout
+    <div
+      ref={containerRef}
       className={className}
-      layouts={layouts}
-      breakpoints={breakpoints}
-      cols={cols}
-      rowHeight={rowHeight}
-      onLayoutChange={onLayoutChange}
-      onBreakpointChange={onBreakpointChange}
-      margin={margin}
-      compactType={compactType}
-      preventCollision={preventCollision}
-      measureBeforeMount={measureBeforeMount}
-      isDraggable={isDraggable}
-      isResizable={isResizable}
-      style={style}
+      style={{
+        ...style,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
     >
-      {children}
-    </GridLayout>
+      <ResponsiveGridLayout
+        width={width}
+        layouts={layouts}
+        breakpoints={breakpoints}
+        cols={cols}
+        rowHeight={rowHeight}
+        margin={margin}
+        compactor={compactor}
+        dragConfig={{ enabled: isDraggable }}
+        resizeConfig={{ enabled: isResizable }}
+        onLayoutChange={onLayoutChange}
+        onBreakpointChange={onBreakpointChange}
+      >
+        {children}
+      </ResponsiveGridLayout>
+    </div>
   );
 };
 

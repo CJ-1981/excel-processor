@@ -21,9 +21,12 @@ import ErrorBoundary from './common/ErrorBoundary';
 import { debug } from '../utils/logger';
 import type { PDFGenerationContext } from '../types';
 
+// Define a type with index signature for row data access
+type DataRow = Record<string, unknown> & { _stableIndex?: number; _originalName?: string; _sourceFileName?: string; _sourceSheetName?: string; [key: string]: unknown };
+
 interface DetailedDataViewProps {
-  data: Record<string, unknown>[];
-  filteredData?: Record<string, unknown>[]; // Optional pre-computed filtered data
+  data: DataRow[];
+  filteredData?: DataRow[]; // Optional pre-computed filtered data
   nameColumn: string | null;
   headerRowIndex: number; // Which row contains the actual headers (1-indexed)
   selectedUniqueNames: string[];
@@ -567,9 +570,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         // Always include metadata columns for downstream features (e.g., filename date extraction)
         if (row._sourceFileName !== undefined) filteredRow._sourceFileName = row._sourceFileName;
         if (row._sourceSheetName !== undefined) filteredRow._sourceSheetName = row._sourceSheetName;
-        visibleColumnIds.forEach(colId => {
+        visibleColumnIds.forEach((colId: string) => {
           if (colId === '_stableIndex') return;
-          filteredRow[colId] = row[colId];
+          (filteredRow as Record<string, unknown>)[colId] = (row as Record<string, unknown>)[colId];
         });
         return filteredRow;
       });
@@ -634,8 +637,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       Object.entries(columnTotals).filter(([_, value]) => typeof value === 'number')
     ) as Record<string, number>,
     selectedNames: selectedUniqueNames,
-    sourceFiles: Array.from(new Set(filteredAndSortedData.map(row => row._sourceFileName).filter(Boolean))),
-    sourceSheets: Array.from(new Set(filteredAndSortedData.map(row => row._sourceSheetName).filter(Boolean))),
+    sourceFiles: Array.from(new Set(filteredAndSortedData.map(row => row._sourceFileName as string).filter((v): v is string => Boolean(v)))),
+    sourceSheets: Array.from(new Set(filteredAndSortedData.map(row => row._sourceSheetName as string).filter((v): v is string => Boolean(v)))),
   });
 
   const handleToggleRowInclude = (stableIndex: number) => {

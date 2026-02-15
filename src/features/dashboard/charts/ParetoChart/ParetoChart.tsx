@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { ParetoDataPoint } from '../../types/chart';
-import { formatCurrencyGerman, formatPercentGerman } from '../../../utils/germanFormatter';
+import { formatCurrencyGerman, formatPercentGerman } from '../../../../utils/germanFormatter';
 
 export interface ParetoChartProps {
   data: ParetoDataPoint[];

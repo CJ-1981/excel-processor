@@ -81,7 +81,7 @@ export function useColumnSelection({
     setSelectedColumns(prev => {
       const reorderedColumns = Array.from(prev);
       const [removed] = reorderedColumns.splice(result.source.index, 1);
-      reorderedColumns.splice(result.destination.index, 0, removed);
+      reorderedColumns.splice(result.destination!.index, 0, removed);
       return reorderedColumns;
     });
   }, []);
