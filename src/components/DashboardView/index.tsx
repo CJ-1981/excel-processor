@@ -681,6 +681,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     return result;
   }, [data, selectedValueColumns, nameColumn]);
 
+  // Calculate unique contributor count for conditional chart visibility
+  // Statistical analysis charts (Top Contributors, Histogram, Pareto, Range Distribution)
+  // are not meaningful when there's only one unique contributor
+  const uniqueContributorCount = useMemo(() => {
+    if (!nameColumn || data.length === 0) return 0;
+
+    // Extract unique names from the data
+    const uniqueNames = new Set<string>();
+    data.forEach(row => {
+      const name = row[nameColumn];
+      if (name) {
+        uniqueNames.add(String(name));
+      }
+    });
+
+    return uniqueNames.size;
+  }, [data, nameColumn]);
+
   // Build series configuration for TrendChart
   const seriesConfig = useMemo(() => {
     return (selectedValueColumns || []).map((col, index) => ({
@@ -1106,8 +1124,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           </Box>
         </Paper>
 
-        {/* Top Contributors Chart */}
-        {topContributorsData.length > 0 && (
+        {/* Top Contributors Chart - Hidden when only 1 unique contributor (can't analyze "top" with single item) */}
+        {uniqueContributorCount > 1 && topContributorsData.length > 0 && (
           <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
@@ -1178,8 +1196,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           </Box>
         </Paper>
 
-        {/* Distribution Histogram */}
-        {(selectedValueColumns || []).length > 0 && (
+        {/* Distribution Histogram - Hidden when only 1 unique contributor (not meaningful for single data point) */}
+        {uniqueContributorCount > 1 && (selectedValueColumns || []).length > 0 && (
           <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
@@ -1274,8 +1292,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Box Plot removed */}
 
-        {/* Pareto Chart */}
-        {(selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
+        {/* Pareto Chart - Hidden when only 1 unique contributor (can't show 80/20 rule with one contributor) */}
+        {uniqueContributorCount > 1 && (selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
           <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
@@ -1322,8 +1340,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           </Paper>
         )}
 
-        {/* Range Distribution */}
-        {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
+        {/* Range Distribution - Hidden when only 1 unique contributor (no range variation with single item) */}
+        {uniqueContributorCount > 1 && (selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
           <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
