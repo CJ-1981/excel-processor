@@ -32,7 +32,7 @@ interface DraggableColumnSelectorProps {
   label: string;
 }
 
-const DraggableColumnSelector: React.FC<DraggableColumnSelectorProps> = ({
+const DraggableColumnSelectorInner: React.FC<DraggableColumnSelectorProps> = ({
   options,
   selected,
   columnMapping,
@@ -46,8 +46,15 @@ const DraggableColumnSelector: React.FC<DraggableColumnSelectorProps> = ({
   const theme = useTheme(); // Initialize useTheme
   const fullScreen = useMediaQuery(theme.breakpoints.down('md')); // Full screen on 'md' breakpoint and below
 
-  const handleOpen = useCallback(() => setOpen(true), []);
-  const handleClose = useCallback(() => setOpen(false), []);
+  // Removed debug logging to prevent infinite loop
+
+  const handleOpen = useCallback(() => {
+    setOpen(true);
+  }, [label]);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+  }, [label]);
 
   const handleChipDelete = useCallback((column: string) => {
     onToggle(column);
@@ -103,7 +110,29 @@ const DraggableColumnSelector: React.FC<DraggableColumnSelectorProps> = ({
         />
       </FormControl>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={fullScreen}> {/* Add fullScreen prop */}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={fullScreen}
+        // keepMounted removed - causing layout issues with large datasets
+        disableEnforceFocus={true} // Prevent focus management thrashing
+        disableScrollLock={true} // Prevent scroll position calculations that may cause layout thrashing
+        transitionDuration={0} // Instant transition - no fade/slide animation
+        sx={{
+          // Ensure dialog doesn't cause parent layout recalculation
+          '& .MuiDialog-container': {
+            alignItems: 'flex-start', // Prevent vertical centering layout thrash
+          },
+          zIndex: 9999, // Ensure proper z-index layering
+        }}
+        TransitionProps={{
+          onEntered: () => {
+            // Dialog content is now visible
+          },
+        }}
+      > {/* Add fullScreen prop */}
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             {`Select and Reorder ${label}`}
@@ -134,5 +163,10 @@ const DraggableColumnSelector: React.FC<DraggableColumnSelectorProps> = ({
     </>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+const DraggableColumnSelector = React.memo(DraggableColumnSelectorInner);
+
+DraggableColumnSelector.displayName = 'DraggableColumnSelector';
 
 export default DraggableColumnSelector;

@@ -60,7 +60,7 @@ import {
 } from '../../utils/statisticsAnalyzer';
 import type { DashboardAnalysis } from '../../types';
 import { formatDateGerman, formatCurrencyGerman } from '../../utils/germanFormatter';
-import { error, time, timeEnd, warn } from '../../utils/logger';
+import { error, warn } from '../../utils/logger';
 
 interface DashboardViewProps {
   data: any[];
@@ -76,6 +76,12 @@ type ChartType = 'line' | 'area' | 'stacked';
 const FILENAME_DATE_PATTERN = /(\d{8})/;
 
 const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn }) => {
+  // Track component renders to identify unnecessary re-renders
+  const renderCount = React.useRef(0);
+  renderCount.current += 1;
+  // Commented out to prevent infinite loop
+  // console.log('[DashboardView] Render count:', renderCount.current, 'Data length:', data?.length);
+
   useEffect(() => {
 
   }, []);
@@ -452,9 +458,40 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   }, []);
 
   const handleResetLayout = useCallback(() => {
-    setLayouts(defaultLayout);
+    // Calculate unique contributor count inline for reset decision
+    const count = !nameColumn || data.length === 0 ? 0 : (() => {
+      const uniqueNames = new Set<string>();
+      for (let i = 0; i < data.length; i++) {
+        const name = data[i][nameColumn];
+        if (name) uniqueNames.add(String(name));
+      }
+      return uniqueNames.size;
+    })();
+
+    // When only 1 unique contributor, filter the default layout to exclude hidden charts
+    if (count <= 1) {
+      const HIDDEN_WHEN_SINGLE = ['top-contributors', 'histogram', 'pareto', 'range-distribution'];
+      const filteredLayout: any = {};
+      for (const bp of Object.keys(BREAKPOINTS)) {
+        const items = (defaultLayout as any)[bp] || [];
+        const filteredItems = items.filter((item: any) => !HIDDEN_WHEN_SINGLE.includes(item.i));
+
+        // Compact vertically
+        let currentY = 0;
+        const visibleItems = filteredItems.map((item: any) => {
+          const newItem = { ...item, y: currentY };
+          currentY += item.h || 10;
+          return newItem;
+        });
+
+        filteredLayout[bp] = visibleItems;
+      }
+      setLayouts(filteredLayout);
+    } else {
+      setLayouts(defaultLayout);
+    }
     localStorage.removeItem(LAYOUT_STORAGE_KEY);
-  }, [defaultLayout]);
+  }, [defaultLayout, data, nameColumn]);
 
   // Row height for grid (user adjustable)
   const [rowHeight, setRowHeight] = useState<number>(() => {
@@ -499,15 +536,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Detect available columns
   const availableNumericColumns = useMemo(() => {
-    time('detectNumericColumns');
     let cols: string[] = [];
     try {
       cols = detectNumericColumns(data);
     } catch (e: any) {
       error('[Dashboard]', 'detectNumericColumns failed', e);
       cols = [];
-    } finally {
-      timeEnd('detectNumericColumns');
     }
 
     return cols;
@@ -516,15 +550,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Note: all column keys for selection are derived on-demand by each control
 
   const availableDateColumns = useMemo(() => {
-    time('detectDateColumns');
     let cols: string[] = [];
     try {
       cols = detectDateColumns(data);
     } catch (e: any) {
       error('[Dashboard]', 'detectDateColumns failed', e);
       cols = [];
-    } finally {
-      timeEnd('detectDateColumns');
     }
 
     return cols;
@@ -547,6 +578,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
   // Track if we've done initial auto-selection to avoid re-selecting after user deselects
   const didAutoSelectValueColumns = React.useRef<string[]>([]);
+
+  // Debug logging removed to prevent infinite loop
 
 
 
@@ -589,15 +622,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       let newSelected: string[];
       if (isCurrentlySelected) {
         newSelected = prev.filter(c => c !== column);
+        console.log('[DashboardView] Column deselected, new count:', newSelected.length);
       } else {
         newSelected = [...prev, column];
+        console.log('[DashboardView] Column selected, new count:', newSelected.length);
       }
       // Preserve order of currently selected columns, but add new ones at the end in their original available order
       const orderedSelected = availableNumericColumns.filter(c => newSelected.includes(c));
       const remainingSelected = newSelected.filter(c => !orderedSelected.includes(c));
-      return [...orderedSelected, ...remainingSelected];
+      const result = [...orderedSelected, ...remainingSelected];
+
+      return result;
     });
-  }, [availableNumericColumns]);
+  }, [availableNumericColumns, columnMapping]);
 
   const handleReorderColumns = useCallback((result: any) => {
     if (!result.destination) {
@@ -621,10 +658,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Analyze data for dashboard
   const analysis: DashboardAnalysis = useMemo(() => {
-    time('analyzeDataForDashboard');
     try {
       const result = analyzeDataForDashboard(data, columnMapping, nameColumn);
-
       return result;
     } catch (e: any) {
       error('[Dashboard]', 'analyzeDataForDashboard failed', e);
@@ -635,8 +670,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         topDonors: [],
         metadata: { totalRows: data.length, filteredRows: data.length },
       } as DashboardAnalysis;
-    } finally {
-      timeEnd('analyzeDataForDashboard');
     }
   }, [data, columnMapping, nameColumn]);
 
@@ -648,7 +681,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
     // If using filename dates, extract from _sourceFileName
     if (useFilenameDates) {
-
       return aggregateByFilenameDateMultiple(data, selectedValueColumns);
     }
 
@@ -657,47 +689,51 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       return { weekly: [], monthly: [], quarterly: [], yearly: [] } as any;
     }
 
-
-    const result = aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
-
-    return result;
-  }, [data, selectedDateColumn, selectedValueColumns, useFilenameDates]);
+    return aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
+  }, [data, selectedDateColumn, selectedValueColumns, useFilenameDates, columnMapping]);
 
   // Get top contributors for first selected value column (aggregated by name)
   const topContributorsData = useMemo(() => {
-    if ((selectedValueColumns || []).length === 0 || !nameColumn) return [];
+    if ((selectedValueColumns || []).length === 0 || !nameColumn) {
+      return [];
+    }
 
     const distribution = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
-    const result = getTopItems(distribution, topDonorsCount);
-
-    return result;
+    return getTopItems(distribution, topDonorsCount);
   }, [data, selectedValueColumns, nameColumn, topDonorsCount]);
 
-  // Get ALL contributors aggregated by name (for donor-level statistics)
-  const allContributorsData = useMemo(() => {
-    if ((selectedValueColumns || []).length === 0 || !nameColumn) return [];
-    const result = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
-
-    return result;
-  }, [data, selectedValueColumns, nameColumn]);
-
   // Calculate unique contributor count for conditional chart visibility
-  // Statistical analysis charts (Top Contributors, Histogram, Pareto, Range Distribution)
-  // are not meaningful when there's only one unique contributor
+  // Only depends on data and nameColumn, NOT on selectedValueColumns
+  // This prevents recalculation when value columns selection changes
   const uniqueContributorCount = useMemo(() => {
     if (!nameColumn || data.length === 0) return 0;
 
-    // Extract unique names from the data
+    // Use Set for O(1) lookups and deduplication
     const uniqueNames = new Set<string>();
-    data.forEach(row => {
-      const name = row[nameColumn];
+    for (let i = 0; i < data.length; i++) {
+      const name = data[i][nameColumn];
       if (name) {
         uniqueNames.add(String(name));
       }
-    });
+    }
 
     return uniqueNames.size;
-  }, [data, nameColumn]);
+  }, [data.length, nameColumn]);  // Depend on data.length instead of data reference for stability
+
+  // Memoize the unique contributor count value to prevent prop drilling issues
+  const uniqueContributorValue = React.useMemo(() => uniqueContributorCount, [uniqueContributorCount]);
+
+  // REMOVED: All layout filtering attempts caused infinite loops
+  // Charts use CSS display: none for hiding, which keeps them mounted
+  // react-grid-layout will skip rendering items without corresponding DOM elements
+
+  // Get ALL contributors aggregated by name (for donor-level statistics)
+  const allContributorsData = useMemo(() => {
+    if ((selectedValueColumns || []).length === 0 || !nameColumn) {
+      return [];
+    }
+    return calculateDistribution(data, nameColumn, selectedValueColumns[0]);
+  }, [data, selectedValueColumns, nameColumn]);
 
   // Build series configuration for TrendChart
   const seriesConfig = useMemo(() => {
@@ -712,13 +748,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // IMPORTANT: For donor analysis, we aggregate by unique name first
   // This means we analyze donor totals, not individual transactions
   const distributionValues = useMemo(() => {
-    if ((selectedValueColumns || []).length === 0) return [];
+    if ((selectedValueColumns || []).length === 0) {
+      return [];
+    }
 
-    const result = nameColumn
+    return nameColumn
       ? allContributorsData.map(d => d.value)
       : extractNumericValues(data, selectedValueColumns[0]);
-
-    return result;
   }, [data, selectedValueColumns, nameColumn, allContributorsData]);
 
   // Calculate histogram data with zoom support
@@ -737,14 +773,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       });
     }
 
-    const result = calculateHistogram(filteredValues, histogramBins);
-
-    return result;
+    return calculateHistogram(filteredValues, histogramBins);
   }, [distributionValues, histogramBins, histogramZoomMin, histogramZoomMax]);
 
   // Get overall min/max for zoom reset
   const distributionMinMax = useMemo(() => {
-    if (distributionValues.length === 0) return { min: 0, max: 0 };
+    if (distributionValues.length === 0) {
+      return { min: 0, max: 0 };
+    }
     const sorted = [...distributionValues].sort((a, b) => a - b);
     return { min: sorted[0], max: sorted[sorted.length - 1] };
   }, [distributionValues]);
@@ -822,18 +858,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Calculate Pareto data (use configurable number of contributors)
   const paretoData = useMemo(() => {
-    if (!allContributorsData || allContributorsData.length === 0) return [];
-    const result = calculatePareto(allContributorsData.slice(0, paretoDonorsCount));
-
-    return result;
+    if (!allContributorsData || allContributorsData.length === 0) {
+      return [];
+    }
+    return calculatePareto(allContributorsData.slice(0, paretoDonorsCount));
   }, [allContributorsData, paretoDonorsCount]);
 
   // Calculate range distribution
   const rangeDistributionData = useMemo(() => {
-    if (distributionValues.length === 0) return [];
-    const result = calculateRangeDistribution(distributionValues);
-
-    return result;
+    if (distributionValues.length === 0) {
+      return [];
+    }
+    return calculateRangeDistribution(distributionValues);
   }, [distributionValues]);
 
 
@@ -1034,12 +1070,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         cols={COLS_BREAKPOINTS}
         rowHeight={rowHeight}
         onLayoutChange={handleLayoutChange}
-        onBreakpointChange={(bp) => setCurrentBreakpoint(bp as any)}
+        onBreakpointChange={(bp) => {
+          console.log('[DashboardView] Breakpoint changed to:', bp);
+          setCurrentBreakpoint(bp as any);
+        }}
         draggableHandle=".drag-handle"
         margin={[16, 16]}
         compactType="vertical"
         preventCollision={false}
-        measureBeforeMount
+        measureBeforeMount={false} // IMPORTANT: Disable to prevent layout recalc when dialog opens
         isDraggable={true}
         isResizable={true}
       >
@@ -1125,8 +1164,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Top Contributors Chart - Hidden when only 1 unique contributor (can't analyze "top" with single item) */}
-        {uniqueContributorCount > 1 && topContributorsData.length > 0 && (
-          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {topContributorsData.length > 0 && (
+          <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <BarChart color="primary" />
@@ -1197,8 +1236,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         </Paper>
 
         {/* Distribution Histogram - Hidden when only 1 unique contributor (not meaningful for single data point) */}
-        {uniqueContributorCount > 1 && (selectedValueColumns || []).length > 0 && (
-          <Paper key="histogram" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {(selectedValueColumns || []).length > 0 && (
+          <Paper key="histogram" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
                 Distribution Histogram
@@ -1293,8 +1332,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         {/* Box Plot removed */}
 
         {/* Pareto Chart - Hidden when only 1 unique contributor (can't show 80/20 rule with one contributor) */}
-        {uniqueContributorCount > 1 && (selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
-          <Paper key="pareto" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {(selectedValueColumns || []).length > 0 && paretoData.length > 0 && (
+          <Paper key="pareto" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
                 Pareto Analysis (80/20 Rule)
@@ -1341,8 +1380,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         )}
 
         {/* Range Distribution - Hidden when only 1 unique contributor (no range variation with single item) */}
-        {uniqueContributorCount > 1 && (selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
-          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
+          <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
               <Typography variant="h6">Range Distribution</Typography>

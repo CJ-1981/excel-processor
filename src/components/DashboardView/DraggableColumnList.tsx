@@ -1,5 +1,5 @@
 // src/components/DashboardView/DraggableColumnList.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
   List,
@@ -22,7 +22,8 @@ interface DraggableColumnListProps {
   onDeselectAll: () => void;
 }
 
-const DraggableColumnList: React.FC<DraggableColumnListProps> = ({
+// Component definition (will be memoized on export)
+const DraggableColumnListInner = ({
   options,
   selected,
   columnMapping,
@@ -30,10 +31,19 @@ const DraggableColumnList: React.FC<DraggableColumnListProps> = ({
   onReorder,
   onSelectAll,
   onDeselectAll,
-}) => {
+}: DraggableColumnListProps) => {
+  // Track component mount
+  useEffect(() => {
+    console.time('[DraggableColumnList] Component mount');
+    return () => {
+      console.timeEnd('[DraggableColumnList] Component mount');
+    };
+  }, []);
 
   const isAllSelected = selected.length === options.length && options.length > 0;
   const isIndeterminate = selected.length > 0 && selected.length < options.length;
+
+  // No render tracking - remove to prevent infinite loops
 
   // Items that are selected and should be draggable
   const draggableItems = selected.map((column) => ({ column })); // No need for originalIndex here
@@ -43,6 +53,7 @@ const DraggableColumnList: React.FC<DraggableColumnListProps> = ({
 
   return (
     <DragDropContext onDragEnd={onReorder}>
+
       <List dense sx={{ width: '100%' }}>
         {/* Select All / Deselect All */}
         <ListItem disablePadding>
@@ -141,5 +152,8 @@ const DraggableColumnList: React.FC<DraggableColumnListProps> = ({
     </DragDropContext>
   );
 };
+
+// Export memoized component (uses default reference equality)
+const DraggableColumnList = React.memo(DraggableColumnListInner);
 
 export default DraggableColumnList;
