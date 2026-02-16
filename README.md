@@ -134,6 +134,13 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.6.1 (2026-02-16)
+*   **UI Redesign**: Simplified "Value Columns" selector to show a summary count instead of redundant chips.
+*   **Enhanced Series Management**: Added a dedicated, styled area for selected data series with color pickers and better visual grouping.
+*   **Column Selector Polish**: Fixed margin and alignment issues in the column selector dialog; improved visual hierarchy with better section labels.
+*   **Bug Fix**: Restored drag-and-drop reordering functionality in the column selector.
+*   **Version Bump**: Updated package version to 1.6.1.
+
 ### v1.6.0 (2026-02-15)
 *   Dashboard Architecture: Completed modular refactoring using Domain-Driven Design (DDD) principles
 *   Added comprehensive test infrastructure with Vitest and React Testing Library

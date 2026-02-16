@@ -9,6 +9,7 @@ import {
   Checkbox,
   IconButton,
   Typography,
+  Box,
 } from '@mui/material';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 
@@ -56,21 +57,27 @@ const DraggableColumnListInner = ({
 
       <List dense sx={{ width: '100%' }}>
         {/* Select All / Deselect All */}
-        <ListItem disablePadding>
-          <ListItemIcon sx={{ minWidth: 40 }}>
+        <ListItem
+          sx={{
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'action.hover',
+            px: 2
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>
             <Checkbox
               edge="start"
               checked={isAllSelected}
               indeterminate={isIndeterminate}
               onChange={isAllSelected ? onDeselectAll : onSelectAll}
-              tabIndex={-1}
-              disableRipple
               size="small"
+              sx={{ p: 0.5 }}
             />
           </ListItemIcon>
           <ListItemText
             primary={isAllSelected ? 'Deselect All' : 'Select All'}
-            primaryTypographyProps={{ variant: 'body2' }}
+            primaryTypographyProps={{ variant: 'subtitle2', fontWeight: 600 }}
             onClick={isAllSelected ? onDeselectAll : onSelectAll}
             sx={{ cursor: 'pointer' }}
           />
@@ -78,8 +85,10 @@ const DraggableColumnListInner = ({
 
         <Droppable droppableId="selected-columns">
           {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef}>
-              <Typography variant="caption" sx={{ ml: 2, mt: 1, display: 'block' }}>Selected & Reorderable</Typography>
+            <Box {...provided.droppableProps} ref={provided.innerRef} sx={{ px: 2, pt: 1, pb: 0.5 }}>
+              <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                Selected & Reorderable
+              </Typography>
               {draggableItems.map((item, index) => (
                 <Draggable key={item.column} draggableId={item.column} index={index}>
                   {(provided) => (
@@ -96,16 +105,22 @@ const DraggableColumnListInner = ({
                           <DragHandleIcon fontSize="small" />
                         </IconButton>
                       }
-                      disablePadding
+                      sx={{
+                        borderRadius: 1,
+                        mb: 0.5,
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '&:hover': { bgcolor: 'action.hover' }
+                      }}
                     >
-                      <ListItemIcon sx={{ minWidth: 40 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
                         <Checkbox
                           edge="start"
-                          checked={true} // Always checked as these are "selected" items
+                          checked={true}
                           onChange={() => onToggle(item.column)}
-                          tabIndex={-1}
-                          disableRipple
                           size="small"
+                          sx={{ p: 0.5 }}
                         />
                       </ListItemIcon>
                       <ListItemText
@@ -119,34 +134,37 @@ const DraggableColumnListInner = ({
                 </Draggable>
               ))}
               {provided.placeholder}
-            </div>
+            </Box>
           )}
         </Droppable>
 
         {unselectedOptions.length > 0 && (
-          <List dense sx={{ width: '100%', mt: 2 }}>
-            <Typography variant="caption" sx={{ ml: 2, mt: 1, display: 'block' }}>Available (Click to Select)</Typography>
-            {unselectedOptions.map((column) => (
-              <ListItem disablePadding key={column}>
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Checkbox
-                    edge="start"
-                    checked={false} // Always unchecked as these are "unselected" items
-                    onChange={() => onToggle(column)}
-                    tabIndex={-1}
-                    disableRipple
-                    size="small"
+          <Box sx={{ px: 2, pt: 2 }}>
+            <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
+              Available (Click to Select)
+            </Typography>
+            <List dense sx={{ width: '100%', p: 0 }}>
+              {unselectedOptions.map((column) => (
+                <ListItem key={column} sx={{ borderRadius: 1, mb: 0.5, '&:hover': { bgcolor: 'action.hover' } }}>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <Checkbox
+                      edge="start"
+                      checked={false}
+                      onChange={() => onToggle(column)}
+                      size="small"
+                      sx={{ p: 0.5 }}
+                    />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={columnMapping[column] || column}
+                    primaryTypographyProps={{ variant: 'body2' }}
+                    onClick={() => onToggle(column)}
+                    sx={{ cursor: 'pointer' }}
                   />
-                </ListItemIcon>
-                <ListItemText
-                  primary={columnMapping[column] || column}
-                  primaryTypographyProps={{ variant: 'body2' }}
-                  onClick={() => onToggle(column)}
-                  sx={{ cursor: 'pointer' }}
-                />
-              </ListItem>
-            ))}
-          </List>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
         )}
       </List>
     </DragDropContext>

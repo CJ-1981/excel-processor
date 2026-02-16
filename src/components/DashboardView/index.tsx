@@ -104,7 +104,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
   });
   useEffect(() => {
-    try { localStorage.setItem('excel-processor-anonymize-names', String(anonymizeNames)); } catch {}
+    try { localStorage.setItem('excel-processor-anonymize-names', String(anonymizeNames)); } catch { }
   }, [anonymizeNames]);
 
   // Grid layout state for draggable/resizable charts
@@ -143,7 +143,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
           }, mime, 0.92);
-        } catch {}
+        } catch { }
       })();
       return;
     }
@@ -152,14 +152,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     const svgCandidates = svgAll;
     const svgEl = svgCandidates.length > 0
       ? svgCandidates.reduce((best, el) => {
-          const r = el.getBoundingClientRect();
-          const area = (r.width || 0) * (r.height || 0);
-          const br = best.getBoundingClientRect();
-          const bArea = (br.width || 0) * (br.height || 0);
-          return area > bArea ? el : best;
-        }, svgCandidates[0])
+        const r = el.getBoundingClientRect();
+        const area = (r.width || 0) * (r.height || 0);
+        const br = best.getBoundingClientRect();
+        const bArea = (br.width || 0) * (br.height || 0);
+        return area > bArea ? el : best;
+      }, svgCandidates[0])
       : null;
-    
+
     // If no SVG exists (or selection failed), fallback to html2canvas of wrapper
     if (!svgEl) {
       (async () => {
@@ -181,7 +181,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
           }, mime, 0.92);
-        } catch {}
+        } catch { }
       })();
       return;
     }
@@ -206,7 +206,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             displayWidth = bbox.width;
             displayHeight = bbox.height;
           }
-        } catch {}
+        } catch { }
       }
       if (!displayWidth || !displayHeight) {
         displayWidth = wrapper.offsetWidth || 800;
@@ -292,7 +292,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
         }, mime, 0.92);
-      } catch {}
+      } catch { }
     };
     img.src = svgUrl;
   }, []);
@@ -438,7 +438,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         localStorage.setItem(RESET_MARK_KEY, 'true');
         setLayouts(defaultLayout);
         // Nudge layout recalculation
-        setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 50);
+        setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch { } }, 50);
       }
     } catch (e) {
       console.warn('Auto-reset check failed:', e);
@@ -503,7 +503,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
   });
   useEffect(() => {
-    try { localStorage.setItem(ROW_HEIGHT_KEY, String(rowHeight)); } catch {}
+    try { localStorage.setItem(ROW_HEIGHT_KEY, String(rowHeight)); } catch { }
   }, [rowHeight]);
 
   const handleAdjustWidgetHeight = useCallback((id: string, delta: number) => {
@@ -1001,27 +1001,44 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {/* Selected columns as chips */}
         {(selectedValueColumns || []).length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, alignItems: 'center' }}>
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mt: 2,
+            p: 1.5,
+            borderRadius: 1,
+            bgcolor: 'action.hover',
+            border: '1px dashed',
+            borderColor: 'divider',
+            alignItems: 'center'
+          }}>
+            <Typography variant="caption" sx={{ width: '100%', mb: 0.5, color: 'text.secondary', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Selected Data Series & Colors
+            </Typography>
             {(selectedValueColumns || []).map((col, index) => (
               <Box key={col} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <input
                   type="color"
                   value={colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}
                   onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
-                  style={{ width: 24, height: 24, border: 'none', background: 'none', cursor: 'pointer' }}
+                  style={{ width: 24, height: 24, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
                 />
                 <Chip
                   label={columnMapping[col] || col}
                   onDelete={() => handleRemoveColumn(col)}
                   size="small"
                   sx={{
-                    bgcolor: (colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]) + '20',
-                    border: `1px solid ${colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}`,
+                    bgcolor: (colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]) + '15',
+                    border: `1px solid ${colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}40`,
                     color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
+                    fontWeight: 500,
                     '& .MuiChip-deleteIcon': {
                       color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
+                      opacity: 0.7,
                       '&:hover': {
                         color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
+                        opacity: 1,
                       },
                     },
                   }}
@@ -1155,8 +1172,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   {(selectedValueColumns || []).length === 0
                     ? 'Select value columns above to see trend analysis.'
                     : !useFilenameDates && !selectedDateColumn
-                    ? 'Enable "Use filename dates" or select a date column above.'
-                    : 'No trend data available for the selected columns.'}
+                      ? 'Enable "Use filename dates" or select a date column above.'
+                      : 'No trend data available for the selected columns.'}
                 </Typography>
               </Box>
             )}

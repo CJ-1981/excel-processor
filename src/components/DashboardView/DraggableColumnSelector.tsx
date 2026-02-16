@@ -7,13 +7,10 @@ import {
   DialogContent,
   DialogActions,
   Box,
-  Chip,
-  Typography,
   FormControl,
   InputLabel,
   OutlinedInput,
   IconButton,
-  InputAdornment,
   useMediaQuery, // Import useMediaQuery
   useTheme, // Import useTheme
 } from '@mui/material';
@@ -56,9 +53,6 @@ const DraggableColumnSelectorInner: React.FC<DraggableColumnSelectorProps> = ({
     setOpen(false);
   }, [label]);
 
-  const handleChipDelete = useCallback((column: string) => {
-    onToggle(column);
-  }, [onToggle]);
 
   return (
     <>
@@ -69,39 +63,9 @@ const DraggableColumnSelectorInner: React.FC<DraggableColumnSelectorProps> = ({
           id={`draggable-selector-${label}`}
           readOnly
           onClick={handleOpen} // Open dialog on click anywhere on the input
-          sx={{ display: 'flex', alignItems: 'center', py: 0.5, overflowX: 'auto' }}
-          notched
-          value="" // Set value to empty string
-          startAdornment={ // Chips as startAdornment
-            <InputAdornment position="start" sx={{ mr: 0, height: 'auto', p: 0 }}>
-              <Box sx={{
-                display: 'flex',
-                flexWrap: 'wrap', // Allow chips to wrap if they exceed available width in the adornment
-                gap: 0.5,
-                justifyContent: 'flex-start',
-                alignItems: 'center',
-                minHeight: '24px',
-                p: 0.5,
-              }}>
-                {selected.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Select {label.toLowerCase()}...
-                  </Typography>
-                ) : (
-                  selected.map((col) => (
-                    <Chip
-                      key={col}
-                      label={columnMapping[col] || col}
-                      onDelete={() => handleChipDelete(col)}
-                      size="small"
-                      deleteIcon={<CloseIcon fontSize="small" />}
-                      onClick={(e) => e.stopPropagation()} // Prevent button click from closing dialog
-                    />
-                  ))
-                )}
-              </Box>
-            </InputAdornment>
-          }
+          value={selected.length > 0 ? `${selected.length} column${selected.length > 1 ? 's' : ''} selected` : ''}
+          placeholder={`Select ${label.toLowerCase()}...`}
+          sx={{ cursor: 'pointer' }}
           endAdornment={
             <IconButton onClick={handleOpen} edge="end" aria-label={`edit ${label}`} size="small">
               <EditIcon fontSize="small" />
@@ -143,7 +107,7 @@ const DraggableColumnSelectorInner: React.FC<DraggableColumnSelectorProps> = ({
             )}
           </Box>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
+        <DialogContent sx={{ p: 0, borderTop: 'none' }}>
           <DraggableColumnList
             options={options}
             selected={selected}
