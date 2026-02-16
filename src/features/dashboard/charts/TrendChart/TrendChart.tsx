@@ -3,7 +3,7 @@
  * Multi-series time series chart with line, area, and stacked visualization options
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -86,25 +86,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
   const isStacked = type === 'stacked';
   const chartType = isStacked ? 'area' : type;
 
-  // All hooks must be called before any early returns
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const cr = entry.contentRect as DOMRectReadOnly;
-        setContainerSize({ width: Math.round(cr.width || 0), height: Math.round(cr.height || 0) });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  // No manual ResizeObserver needed, ResponsiveContainer + Customized props are sufficient
 
   const formatTooltipValue = (value: number): string => {
     if (value === 0) return '0.00';
@@ -117,9 +99,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
     return value.toFixed(2);
   };
 
-  const chartData = data.map((point) => ({
-    ...point,
-  }));
+  const chartData = data;
 
   const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
 
@@ -209,7 +189,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
     });
   };
 
-  const renderInlineLegend = ({ width, margin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
+  const renderInlineLegend = useCallback(({ width: chartWidth, margin: chartMargin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
     const itemHeight = 16;
     const padding = 6;
     const gap = 6;
@@ -231,11 +211,11 @@ const TrendChart: React.FC<TrendChartProps> = ({
     const maxLabelPx = Math.max(0, ...series.map((s) => measure(s.label)));
     const legendWidth = Math.min(280, 12 + 6 + maxLabelPx + padding * 2);
     const legendHeight = padding * 2 + series.length * itemHeight + (series.length - 1) * gap;
-    const m = margin || { top: 0, right: 0, bottom: 0, left: 0 };
-    const effectiveWidth = typeof width === 'number' && width > 0 ? width : containerSize.width || 400;
+    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
+    const effectiveWidth = typeof chartWidth === 'number' && chartWidth > 0 ? chartWidth : 400;
     const innerRight = effectiveWidth - (m.right || 0);
     const inset = 8;
-    const startX = Math.max(m.left || 0 + inset, innerRight - legendWidth - inset);
+    const startX = Math.max((m.left || 0) + inset, innerRight - legendWidth - inset);
     const startY = (m.top || 0) + inset;
 
     return (
@@ -270,10 +250,10 @@ const TrendChart: React.FC<TrendChartProps> = ({
         })}
       </g>
     );
-  };
+  }, [series, theme.palette.divider, theme.palette.text.primary]);
 
   return (
-    <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} data-chart-id="trend-chart">
+    <Box sx={{ width: '100%', height: '100%' }} data-chart-id="trend-chart">
       <ResponsiveContainer width="100%" height="100%" debounce={1}>
         <ChartComponent data={chartData} margin={{ top: 16, right: 30, left: 40, bottom: 16 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />

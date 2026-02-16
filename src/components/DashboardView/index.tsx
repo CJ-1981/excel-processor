@@ -609,12 +609,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   }, [availableDateColumns, hasFilenameDates, userToggledFilenameDates]);
 
   // If the underlying dataset changes identity (e.g. new file), clear manual toggle so auto behavior can apply for new data
+  // We use a fingerprint of the source data rather than the data object itself to avoid resetting
+  // when the user is just interactively filtering/sorting/selecting rows.
+  const dataFingerprint = useMemo(() => {
+    if (!data || data.length === 0) return 'empty';
+    // We look at the first few items and total length to identify the dataset
+    // Sorting doesn't change the dataset identity, so we avoid using sorted order if possible
+    // But since 'data' here is already filtered/sorted, we'll use length and source info.
+    const firstRow = data[0];
+    return `${firstRow._sourceFileName || ''}-${firstRow._sourceSheetName || ''}-${data.length}`;
+  }, [data.length, data[0]?._sourceFileName, data[0]?._sourceSheetName]);
+
   React.useEffect(() => {
     setUserToggledFilenameDates(false);
     didAutoSelectValueColumns.current = [];
     didAutoSelectDateColumn.current = false;
     didAutoEnableFilenameDates.current = false;
-  }, [data]);
+  }, [dataFingerprint]);
 
   const handleToggleColumn = useCallback((column: string) => {
     setSelectedValueColumns(prev => {
@@ -718,7 +729,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
 
     return uniqueNames.size;
-  }, [data.length, nameColumn]);  // Depend on data.length instead of data reference for stability
+  }, [data.length, nameColumn, dataFingerprint]);  // Depend on fingerprint for stability
 
   // Memoize the unique contributor count value to prevent prop drilling issues
   const uniqueContributorValue = React.useMemo(() => uniqueContributorCount, [uniqueContributorCount]);

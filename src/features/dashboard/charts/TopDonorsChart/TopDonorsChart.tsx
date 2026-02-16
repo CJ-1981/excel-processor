@@ -89,24 +89,6 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
 }) => {
   const theme = useTheme();
   const COLORS = getChartColors();
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const cr = entry.contentRect as DOMRectReadOnly;
-        setContainerSize({ width: Math.round(cr.width || 0), height: Math.round(cr.height || 0) });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const chartData = data.slice(0, limit).map((item) => ({
     name: item.category,
@@ -174,7 +156,7 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
 
   const gridColor = theme.palette.divider;
 
-  const renderInlineLegend = ({ width, margin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
+  const renderInlineLegend = React.useCallback(({ width: chartWidth, margin: chartMargin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
     const padding = 6;
     const boxSize = 12;
     const gap = 6;
@@ -197,10 +179,10 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
     const labelPx = measure(label);
     const legendWidth = Math.min(280, padding * 2 + boxSize + gap + labelPx);
     const legendHeight = padding * 2 + boxSize;
-    const m = margin || { top: 0, right: 0, bottom: 0, left: 0 };
+    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
     const innerLeft = m.left || 0;
     const innerTop = m.top || 0;
-    const effectiveWidth = typeof width === 'number' && width > 0 ? width : containerSize.width || 400;
+    const effectiveWidth = typeof chartWidth === 'number' && chartWidth > 0 ? chartWidth : 400;
     const innerRight = effectiveWidth - (m.right || 0);
     const inset = 8;
     const startX = Math.max(innerLeft + inset, innerRight - legendWidth - inset);
@@ -232,11 +214,10 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
         </text>
       </g>
     );
-  };
+  }, [valueLabel, COLORS, theme.palette.text.primary, gridColor]);
 
   return (
     <Box
-      ref={containerRef}
       sx={{ width: '100%', height: '100%', display: 'flex' }}
       data-chart-id="top-contributors"
     >
@@ -258,10 +239,10 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
             tickFormatter={
               anonymize
                 ? ((_value: unknown, index: number) => {
-                    const n = chartData.length;
-                    const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
-                    return index % step === 0 ? String(index + 1) : '';
-                  })
+                  const n = chartData.length;
+                  const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
+                  return index % step === 0 ? String(index + 1) : '';
+                })
                 : undefined
             }
           />

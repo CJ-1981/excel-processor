@@ -28,21 +28,6 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
 }) => {
   const theme = useTheme();
   const chartColor = color || theme.palette.primary.main;
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width: 0, height: 0 });
-
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new (window as any).ResizeObserver((entries: any[]) => {
-      for (const entry of entries) {
-        const cr = (entry as any).contentRect as DOMRectReadOnly;
-        setContainerSize({ width: Math.round(cr.width || 0), height: Math.round(cr.height || 0) });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   if (data.bins.length === 0) {
     return (
@@ -59,7 +44,7 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
   const yAxisMax = Math.ceil(maxCount * 1.1); // Add 10% padding
 
   // Inline legend drawn inside plot area so exports include it
-  const renderInlineLegend = ({ width, margin }: any) => {
+  const renderInlineLegend = React.useCallback(({ width: chartWidth, margin: chartMargin }: any) => {
     const padding = 6;
     const swatchSize = 12;
     const gap = 6;
@@ -78,7 +63,7 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
           ctx.font = '12px sans-serif';
           return Math.ceil(ctx.measureText(text).width);
         }
-      } catch {}
+      } catch { }
       return text.length * 8;
     };
 
@@ -89,8 +74,8 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
     );
     const legendHeight = padding * 2 + items.length * rowHeight + (items.length - 1) * 4;
 
-    const m = margin || { top: 0, right: 0, bottom: 0, left: 0 };
-    const effectiveWidth = (typeof width === 'number' && width > 0) ? width : containerSize.width || 400;
+    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
+    const effectiveWidth = (typeof chartWidth === 'number' && chartWidth > 0) ? chartWidth : 400;
     const innerRight = effectiveWidth - (m.right || 0);
     const inset = 8;
     const startX = Math.max((m.left || 0) + inset, innerRight - legendWidth - inset);
@@ -99,27 +84,27 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
     return (
       <g>
         <rect x={startX} y={startY} width={legendWidth} height={legendHeight} rx={6} ry={6}
-              fill="#fff" fillOpacity={0.85} stroke={theme.palette.divider} />
+          fill="#fff" fillOpacity={0.85} stroke={theme.palette.divider} />
         {items.map((it, idx) => {
           const y = startY + padding + idx * (rowHeight + 4);
           return (
             <g key={it.label}>
               {it.type === 'box' ? (
                 <rect x={startX + padding} y={y + 2} width={swatchSize} height={swatchSize}
-                      fill={it.color} stroke={it.color} />
+                  fill={it.color} stroke={it.color} />
               ) : (
                 <g>
                   <line x1={startX + padding} x2={startX + padding + swatchSize}
-                        y1={y + 8} y2={y + 8}
-                        stroke={it.color} strokeWidth={2}
-                        strokeDasharray={it.dashed ? '5 5' : undefined} />
+                    y1={y + 8} y2={y + 8}
+                    stroke={it.color} strokeWidth={2}
+                    strokeDasharray={it.dashed ? '5 5' : undefined} />
                 </g>
               )}
               <text x={startX + padding + swatchSize + gap}
-                    y={y + 12}
-                    fill={theme.palette.text.primary}
-                    fontSize={12}
-                    alignmentBaseline="baseline">
+                y={y + 12}
+                fill={theme.palette.text.primary}
+                fontSize={12}
+                alignmentBaseline="baseline">
                 {it.label}
               </text>
             </g>
@@ -127,10 +112,10 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
         })}
       </g>
     );
-  };
+  }, [chartColor, theme.palette.divider, theme.palette.text.primary, theme.palette.error.main, theme.palette.warning.main]);
 
   return (
-    <Box ref={containerRef} sx={{ width: '100%', height: '100%', display: 'flex' }} data-chart-id="histogram">
+    <Box sx={{ width: '100%', height: '100%', display: 'flex' }} data-chart-id="histogram">
       <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
         <BarChart data={data.bins} margin={{ top: 24, right: 30, left: 28, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />

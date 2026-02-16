@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -155,30 +155,11 @@ const TrendChart: React.FC<TrendChartProps> = ({
     });
   };
 
-  const chartData = data.map((point) => ({
-    ...point,
-  }));
-
   const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
 
-  // Measure container as fallback for Customized width when missing
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width: 0, height: 0 });
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const cr = (entry as any).contentRect as DOMRectReadOnly;
-        setContainerSize({ width: Math.round(cr.width || 0), height: Math.round(cr.height || 0) });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   // Inline SVG legend so exports include it
-  const renderInlineLegend = ({ width, margin }: any) => {
+  // Optimized: Use width/height/margin from Customized props instead of manual ResizeObserver
+  const renderInlineLegend = useCallback(({ width: chartWidth, margin: chartMargin }: any) => {
     const itemHeight = 16;
     const padding = 6;
     const gap = 6;
@@ -191,14 +172,14 @@ const TrendChart: React.FC<TrendChartProps> = ({
           ctx.font = '12px sans-serif';
           return Math.ceil(ctx.measureText(text).width);
         }
-      } catch {}
+      } catch { }
       return text.length * 8; // fallback estimate
     };
     const maxLabelPx = Math.max(0, ...series.map(s => measure(s.label)));
     const legendWidth = Math.min(280, 12 /*box*/ + 6 /*gap*/ + maxLabelPx + padding * 2);
     const legendHeight = padding * 2 + series.length * itemHeight + (series.length - 1) * gap;
-    const m = margin || { top: 0, right: 0, bottom: 0, left: 0 };
-    const effectiveWidth = (typeof width === 'number' && width > 0) ? width : containerSize.width || 400;
+    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
+    const effectiveWidth = (typeof chartWidth === 'number' && chartWidth > 0) ? chartWidth : 400;
     const innerRight = effectiveWidth - (m.right || 0);
     const inset = 8;
     const startX = Math.max((m.left || 0) + inset, innerRight - legendWidth - inset);
@@ -207,7 +188,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
     return (
       <g>
         <rect x={startX} y={startY} width={legendWidth} height={legendHeight} rx={6} ry={6}
-              fill="#fff" fillOpacity={0.85} stroke={theme.palette.divider} />
+          fill="#fff" fillOpacity={0.85} stroke={theme.palette.divider} />
         {series.map((s, idx) => {
           const y = startY + padding + idx * (itemHeight + gap);
           const color = s.color || CHART_COLORS[idx % CHART_COLORS.length];
@@ -215,10 +196,10 @@ const TrendChart: React.FC<TrendChartProps> = ({
             <g key={s.key}>
               <rect x={startX + padding} y={y + 2} width={12} height={12} fill={color} stroke={color} />
               <text x={startX + padding + 12 + 6}
-                    y={y + 12}
-                    fill={theme.palette.text.primary}
-                    fontSize={12}
-                    alignmentBaseline="baseline">
+                y={y + 12}
+                fill={theme.palette.text.primary}
+                fontSize={12}
+                alignmentBaseline="baseline">
                 {s.label}
               </text>
             </g>
@@ -226,12 +207,12 @@ const TrendChart: React.FC<TrendChartProps> = ({
         })}
       </g>
     );
-  };
+  }, [series, theme.palette.divider, theme.palette.text.primary]);
 
   return (
-    <Box ref={containerRef} sx={{ width: '100%', height: '100%' }}>
+    <Box sx={{ width: '100%', height: '100%' }}>
       <ResponsiveContainer width="100%" height="100%" debounce={1}>
-        <ChartComponent data={chartData} margin={{ top: 16, right: 30, left: 40, bottom: 16 }}>
+        <ChartComponent data={data} margin={{ top: 16, right: 30, left: 40, bottom: 16 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="period"
