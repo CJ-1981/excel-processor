@@ -953,10 +953,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // The computation is simple enough that memoization isn't critical
   const hasTimeSeriesData = multiSeriesTimeData[periodType] && multiSeriesTimeData[periodType].length > 0;
 
-  const handleChartTypeChange = (_: unknown, value: ChartType) => {
-    if (value) setChartType(value);
-  };
-
   return (
     <Box sx={{ width: '100%', p: 2 }}>
       {/* Header */}
@@ -1222,14 +1218,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
             </Box>
             {hasTimeSeriesData && (
-              <Box className="chart-controls" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Box sx={{ minWidth: 120 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onMouseDown={(e) => e.stopPropagation()}>
+                <Box sx={{ minWidth: 120 }} onClick={(e) => e.stopPropagation()}>
                   <Typography variant="caption" sx={{ mb: 0.5, ml: 1.5, color: 'text.secondary' }}>
                     Period
                   </Typography>
                   <select
                     value={periodType}
-                    onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setPeriodType(e.target.value as PeriodType);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
                     style={{
                       minWidth: 120,
                       height: 44,
@@ -1251,7 +1251,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <ToggleButtonGroup
                   value={chartType}
                   exclusive
-                  onChange={handleChartTypeChange}
+                  onChange={(e, value) => {
+                    e?.stopPropagation();
+                    if (value) setChartType(value);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                   sx={{
                     '& .MuiToggleButton-root': {
                       minWidth: 44,
