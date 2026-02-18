@@ -11,3 +11,25 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* iOS Touch Interaction Optimization */
+button,
+select,
+input {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure adequate touch targets for iOS (minimum 44x44pt per HIG) */
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiToggleButton-root {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Prevent text selection during touch interactions */
+.noselect {
+  -webkit-user-select: none;
+  user-select: none;
+}

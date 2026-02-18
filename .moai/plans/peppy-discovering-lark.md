@@ -1,164 +1,335 @@
-# Plan: Multi-line X-Axis Tick Labels with Padding for Trend Chart
+# Plan: Fix iOS Mobile Button Interactions
 
 ## Context
 
-The trend chart in the dashboard displays weekly period labels like `2025-W06 (Feb 09)` on the x-axis. There are two issues:
+Users report that buttons are not working on iOS mobile web, specifically:
+1. **Download buttons** (PNG/JPG) for chart exports - don't respond to taps
+   - Affects ALL charts: TrendChart, DistributionHistogram, ParetoChart, RangeDistributionCharts, TopDonorsChart
+   - Uses shared `ChartExport` component (src/features/dashboard/components/ChartExport/ChartExport.tsx)
+   - Also has inline download buttons in DashboardView (lines 1199-1212)
 
-1. **Single-line display**: Labels are currently on one line, causing crowding
-2. **Tight spacing**: Tick labels are too close together horizontally
+2. **Period selection dropdown** (Weekly/Monthly/Quarterly/Yearly) - doesn't open or respond
+   - Located in DashboardView (lines 1226-1256)
 
-The user wants:
-- Two-line display: `2025-W06` on line 1, `(Feb 09)` on line 2
-- Increased horizontal padding between tick labels
+3. **Chart type toggle buttons** (Line/Filled Below/Stacked) - don't respond to taps
+   - Located in DashboardView (lines 1257-1272)
 
-## Root Cause Analysis
+### Root Cause Analysis
 
-### Current Implementation
+From code exploration, the issues are:
 
-1. **Data Source** (`src/features/dashboard/utils/chartCalculations.ts:199-201`):
-   ```typescript
-   weekly: convertToArray(weeklyAggregated, (key, entry) =>
-     `${key} (${fmtMonthDay((entry as AggregatedEntry & { latest: Date }).latest || entry.date)})`
-   ),
-   ```
-   This creates a single-line string: `"2025-W06 (Feb 09)"`
+1. **Download buttons use `onClick`** (ChartExport.tsx line 40, 47)
+   - iOS Safari sometimes has issues with `onClick` on touch devices
+   - No `onTouchEnd` handlers for iOS-specific touch events
 
-2. **Chart Component** (`src/features/dashboard/charts/TrendChart/TrendChart.tsx:45-70`):
-   The `CustomAxisTick` component already has logic to split on `\n`:
-   ```typescript
-   const newlineIndex = label.indexOf('\n');
-   if (newlineIndex !== -1) {
-     const week = label.substring(0, newlineIndex);
-     const date = label.substring(newlineIndex + 1);
-     // Renders two lines with different styling
-   }
-   ```
+2. **Download buttons in DashboardView use `onMouseDown`** (lines 1199-1212)
+   - Mouse events don't map reliably to touch on iOS
+   - Need proper touch event handlers
 
-### Problem
+3. **Period dropdown is a custom styled `<select>`** (lines 1226-1256)
+   - Custom styling with Box component may interfere with native dropdown
+   - `onMouseDown` stopPropagation may prevent touch interaction
+   - `component="select"` with MUI sx styling can have iOS compatibility issues
 
-The data formatting logic creates a single-line string without a newline character, so the `CustomAxisTick` component's multi-line logic never executes.
-
-## Solution
-
-Modify the weekly period label formatting in `chartCalculations.ts` to insert a newline character (`\n`) between the week identifier and the date.
+4. **ToggleButtonGroup for chart type** (line 1257+)
+   - Uses MUI ToggleButtonGroup
+   - May have touch interaction issues similar to download buttons
 
 ## Files to Modify
 
-1. **`src/features/dashboard/utils/chartCalculations.ts`** (Line 199-201)
-   - Change the label formatter for weekly data to use `\n` instead of ` `
+1. **`src/features/dashboard/components/ChartExport/ChartExport.tsx`** (lines 40-47)
+   - **Primary fix for ALL chart download buttons** - this shared component is used by all charts
+   - Add touch event handlers for iOS compatibility
 
-2. **`src/features/dashboard/charts/TrendChart/TrendChart.tsx`** (Line 285-292)
-   - Adjust XAxis `interval` prop to increase spacing between ticks
+2. **`src/components/DashboardView/index.tsx`** (lines 1199-1273)
+   - Fix inline download buttons for trend chart (redundant with ChartExport but still needs fix)
+   - Fix period dropdown styling for iOS
+   - Fix chart type toggle buttons (Line/Filled Below/Stacked)
+
+3. **`src/index.css`** (optional)
+   - Add global iOS touch optimization CSS
 
 ## Implementation
 
-### Change 1: Add Newline in `chartCalculations.ts`
+### Fix 1: Add Touch Handlers to ChartExport Component (Primary Fix - Fixes ALL Charts)
 
-**Current code (lines 199-201):**
+**Current code (lines 40-47):**
 ```typescript
-weekly: convertToArray(weeklyAggregated, (key, entry) =>
-  `${key} (${fmtMonthDay((entry as AggregatedEntry & { latest: Date }).latest || entry.date)})`
-),
+<IconButton size="small" onClick={handleExportPNG} disabled={disabled} className={className}>
+  {icon}
+</IconButton>
+<IconButton size="small" onClick={handleExportJPG} disabled={disabled} className={className}>
+  <Download fontSize="small" />
+</IconButton>
 ```
 
 **Updated code:**
 ```typescript
-weekly: convertToArray(weeklyAggregated, (key, entry) =>
-  `${key}\n(${fmtMonthDay((entry as AggregatedEntry & { latest: Date }).latest || entry.date)})`
-),
+<IconButton
+  size="small"
+  onClick={handleExportPNG}
+  onTouchEnd={handleExportPNG}
+  disabled={disabled}
+  className={className}
+  sx={{ minWidth: 44, minHeight: 44 }} // Ensure iOS touch target size
+>
+  {icon}
+</IconButton>
+<IconButton
+  size="small"
+  onClick={handleExportJPG}
+  onTouchEnd={handleExportJPG}
+  disabled={disabled}
+  className={className}
+  sx={{ minWidth: 44, minHeight: 44 }} // Ensure iOS touch target size
+>
+  <Download fontSize="small" />
+</IconButton>
 ```
 
-The only change is replacing the space before `(` with a newline character `\n`.
+**Why this fixes ALL charts:**
+- `ChartExport.tsx` is a shared component used by: TrendChart, DistributionHistogram, ParetoChart, RangeDistributionCharts, TopDonorsChart
+- Changes here will fix download buttons for ALL charts
 
-### Change 2: Increase Tick Padding in `TrendChart.tsx`
+**Changes:**
+- Add `onTouchEnd` handler to complement `onClick` for iOS touch compatibility
+- Add `sx` prop with minimum 44x44px touch target size per iOS HIG guidelines
 
-**Current code (lines 285-292):**
+### Fix 2: Update DashboardView Inline Download Buttons (Redundant but Necessary)
+
+**Current code (lines 1199-1212):**
 ```typescript
-<XAxis
-  dataKey="period"
-  stroke={theme.palette.text.primary}
-  tick={<CustomAxisTick />}
-  tickLine={{ stroke: theme.palette.text.secondary }}
-  height={50}
-  interval="preserveStartEnd"
-/>
+<IconButton
+  size="small"
+  onMouseDown={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
+  title="Download as PNG"
+>
+  <Download fontSize="small" />
+</IconButton>
+<IconButton
+  size="small"
+  onMouseDown={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
+  title="Download as JPG"
+>
+  <Download fontSize="small" />
+</IconButton>
 ```
 
 **Updated code:**
 ```typescript
-<XAxis
-  dataKey="period"
-  stroke={theme.palette.text.primary}
-  tick={<CustomAxisTick />}
-  tickLine={{ stroke: theme.palette.text.secondary }}
-  height={50}
-  interval={0}  // Show every nth tick (0 = auto, 1 = skip every other, 2 = show every 3rd, etc.)
-/>
+<IconButton
+  size="small"
+  onClick={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
+  onTouchEnd={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
+  title="Download as PNG"
+  sx={{ minWidth: 44, minHeight: 44 }}
+>
+  <Download fontSize="small" />
+</IconButton>
+<IconButton
+  size="small"
+  onClick={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
+  onTouchEnd={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
+  title="Download as JPG"
+  sx={{ minWidth: 44, minHeight: 44 }}
+>
+  <Download fontSize="small" />
+</IconButton>
 ```
 
-**Alternative approach (more control):**
+**Note:** These inline buttons in DashboardView are redundant with the ChartExport component (Fix 1), but they still exist and need to be fixed for consistency.
+
+**Changes:**
+- Change `onMouseDown` to `onClick`
+- Add `onTouchEnd` for iOS compatibility
+- Add `sx` prop with minimum 44x44px touch target size
+
+### Fix 3: Fix Period Dropdown for iOS
+
+**Current code (lines 1226-1256):**
 ```typescript
-<XAxis
-  dataKey="period"
-  stroke={theme.palette.text.primary}
-  tick={<CustomAxisTick />}
-  tickLine={{ stroke: theme.palette.text.secondary }}
-  height={50}
-  interval="preserveStartEnd"
-  minTickGap={30}  // Add minimum gap between ticks in pixels
-/>
+<Box
+  component="select"
+  value={periodType}
+  onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+  onMouseDown={(e) => e.stopPropagation()}
+  sx={{...}}
+>
 ```
 
-### Result
+**Issues:**
+1. `onMouseDown` with `stopPropagation` prevents touch interaction
+2. Custom Box wrapper with MUI sx styling may interfere
 
-This will produce period labels like:
+**Updated code:**
+```typescript
+<select
+  value={periodType}
+  onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+  style={{
+    minWidth: 120,
+    height: 32,
+    padding: '4px 8px',
+    borderRadius: '4px',
+    border: '1px solid rgba(0, 0, 0, 0.23)',
+    backgroundColor: theme.palette.background.paper,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+  }}
+>
+  <option value="weekly">Weekly</option>
+  <option value="monthly">Monthly</option>
+  <option value="quarterly">Quarterly</option>
+  <option value="yearly">Yearly</option>
+</select>
 ```
-2025-W06
-(Feb 09)
+
+**Changes:**
+- Remove `Box` wrapper - use native `<select>` with inline style
+- Remove `onMouseDown` stopPropagation
+- Convert `sx` prop to inline `style` prop for better iOS compatibility
+- Keep period options unchanged
+
+### Fix 4: Update ToggleButtonGroup for Chart Type
+
+**Current code (lines 1257-1272):**
+```typescript
+<ToggleButtonGroup
+  value={chartType}
+  exclusive
+  onChange={handleChartTypeChange}
+  size="small"
+>
+  <ToggleButton value="line" title="Line Chart">
+    <ShowChart fontSize="small" />
+  </ToggleButton>
+  <ToggleButton value="area" title="Area Chart">
+    <AreaChartIcon fontSize="small" />
+  </ToggleButton>
+  <ToggleButton value="stacked" title="Stacked Area">
+    <StackedLineChart fontSize="small" />
+  </ToggleButton>
+</ToggleButtonGroup>
 ```
 
-The existing `CustomAxisTick` component will automatically:
-- Split on the `\n` character
-- Render `2025-W06` on line 1 with 11px font
-- Render `(Feb 09)` on line 2 with 9px font and 70% opacity
-- Apply proper vertical spacing with `dy="14"`
+**Issues:**
+1. `size="small"` creates touch targets too small for iOS (below 44x44px)
+2. MUI ToggleButton internal onClick handling may not work reliably on iOS Safari
+3. No explicit touch event handlers
 
-For padding, either:
-- Use `interval={n}` to skip ticks (shows every nth tick)
-- Use `minTickGap={30}` to enforce minimum pixel spacing between ticks
-- Recharts will automatically skip overlapping ticks based on the gap
+**Updated code:**
+```typescript
+<ToggleButtonGroup
+  value={chartType}
+  exclusive
+  onChange={handleChartTypeChange}
+  // Remove size="small" to allow larger touch targets
+  sx={{
+    '& .MuiToggleButton-root': {
+      // Ensure proper touch target size (min 44x44px for iOS HIG)
+      minWidth: 44,
+      minHeight: 44,
+      padding: '8px 12px',
+      // Ensure tap highlight is visible on iOS
+      WebkitTapHighlightColor: 'rgba(0, 0, 0, 0.1)',
+    },
+  }}
+>
+  <ToggleButton value="line" title="Line Chart">
+    <ShowChart />
+  </ToggleButton>
+  <ToggleButton value="area" title="Area Chart">
+    <AreaChartIcon />
+  </ToggleButton>
+  <ToggleButton value="stacked" title="Stacked Area">
+    <StackedLineChart />
+  </ToggleButton>
+</ToggleButtonGroup>
+```
+
+**Changes:**
+- Remove `size="small"` prop to allow larger default touch targets
+- Add `sx` prop with minimum 44x44px touch target size per iOS HIG
+- Increase padding for better touch response
+- Add WebkitTapHighlightColor for visual feedback on iOS
+- Remove `fontSize="small"` from icons to improve visibility
+
+### Fix 5: Add CSS Touch Optimization (Optional)
+
+Add to `src/index.css` or create mobile-specific styles:
+
+```css
+/* Improve iOS touch interactions */
+button, select, input {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure adequate touch targets */
+.MuiButton-root, .MuiIconButton-root {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Prevent text selection during touch */
+.noselect {
+  -webkit-user-select: none;
+  user-select: none;
+}
+```
 
 ## Verification
 
-1. **Visual Testing:**
-   - Run the application and navigate to the dashboard
-   - Switch period type to "Weekly"
-   - Verify x-axis labels display on two lines
-   - Check that labels have proper horizontal spacing and don't overlap
-   - Test with different data ranges (few weeks vs many weeks)
+1. **Testing on iOS Safari:**
+   - Open https://cj-1981.github.io/excel-processor/ on iOS device
+   - Test download buttons (PNG/JPG): Tap should trigger download
+   - Test period dropdown: Tap should open dropdown, selection should work
+   - Test chart type toggles: Tapping Line/Area/Stacked should switch chart type
+   - Test visual feedback: Buttons should show tap highlight on iOS
 
-2. **Padding Tuning:**
-   - If labels still overlap, try `interval={1}` (skip every other tick)
-   - If too sparse, try `interval={0}` (auto) or `interval="preserveStartEnd"`
-   - Adjust `minTickGap` value as needed (default is 5, try 20-40)
+2. **Testing on iOS Chrome (if available):**
+   - Verify similar behavior
 
-3. **Edge Cases:**
-   - Ensure monthly, quarterly, and yearly period types are unaffected
-   - Verify the chart height (50px) is sufficient for two-line labels
-   - Check that padding adjustment doesn't break other period types
+3. **Desktop regression testing:**
+   - Ensure buttons still work on desktop browsers
+   - Verify no breaking changes to functionality
 
-4. **No Breaking Changes:**
-   - Changes only affect weekly period labels formatting
-   - Other period types (monthly, quarterly, yearly) use the default formatter
-   - The `CustomAxisTick` component logic remains unchanged
+4. **Edge Cases:**
+   - Test with different screen sizes (iPhone SE, iPhone 14 Pro, iPad)
+   - Test with landscape/portrait orientations
+   - Verify keyboard doesn't interfere with dropdown
 
-## Testing Notes
+## Technical Notes
 
-- The `CustomAxisTick` component already supports multi-line via `\n` splitting
-- Only the data source formatting and XAxis config need modification
-- No TypeScript changes needed (string template literals work with `\n`)
-- Recharts `interval` prop accepts:
-  - `0` or `'auto'`: Automatically skip overlapping ticks
-  - `'preserveStartEnd'`: Always show first and last ticks
-  - `'preserveStart'`: Always show first tick
-  - Number `n`: Show every nth tick (1 = skip every other)
+### Why `onTouchEnd` instead of `onTouchStart`?
+- `onTouchStart` fires immediately on touch, can cause accidental triggers
+- `onTouchEnd` fires when user lifts finger, more intentional interaction
+- Combining both `onClick` and `onTouchEnd` provides cross-platform support
+
+### Why change `onMouseDown` to `onClick`?
+- `onMouseDown` doesn't work on iOS touch devices
+- `onClick` maps to tap gestures on mobile
+- `onTouchEnd` provides backup for older iOS versions
+
+### Why use native `<select>` instead of MUI Select?
+- Native dropdown has better iOS support
+- MUI Select with custom styling has known iOS issues
+- Native `<select>` with inline styling is more reliable
+
+### Fix Scope Note
+**Fix 1 (ChartExport.tsx)** is the PRIMARY fix that will resolve download button issues for ALL charts:
+- TrendChart
+- DistributionHistogram
+- ParetoChart
+- RangeDistributionCharts
+- TopDonorsChart
+
+Fixes 2-4 are specific to the DashboardView trend chart controls and can be done as follow-up improvements.
+
+### Touch Target Size
+- iOS Human Interface Guidelines recommend minimum 44×44pt touch targets
+- Current IconButtons use `size="small"` which creates targets below 44px
+- ToggleButtonGroup with `size="small"` also has insufficient touch target size
+- Solution: Remove `size="small"` and add explicit `minWidth: 44, minHeight: 44` in sx prop
+- Larger touch targets improve usability and prevent "fat finger" errors

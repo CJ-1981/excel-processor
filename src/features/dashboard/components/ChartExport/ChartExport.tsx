@@ -37,14 +37,28 @@ const ChartExport: React.FC<ChartExportProps> = ({
     <React.Fragment>
       <Tooltip title={label}>
         <span>
-          <IconButton size="small" onClick={handleExportPNG} disabled={disabled} className={className}>
+          <IconButton
+            size="small"
+            onClick={handleExportPNG}
+            onTouchEnd={handleExportPNG}
+            disabled={disabled}
+            className={className}
+            sx={{ minWidth: 44, minHeight: 44 }}
+          >
             {icon}
           </IconButton>
         </span>
       </Tooltip>
       <Tooltip title="Download as JPG">
         <span>
-          <IconButton size="small" onClick={handleExportJPG} disabled={disabled} className={className}>
+          <IconButton
+            size="small"
+            onClick={handleExportJPG}
+            onTouchEnd={handleExportJPG}
+            disabled={disabled}
+            className={className}
+            sx={{ minWidth: 44, minHeight: 44 }}
+          >
             <Download fontSize="small" />
           </IconButton>
         </span>

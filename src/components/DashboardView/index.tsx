@@ -1198,15 +1198,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
               <IconButton
                 size="small"
-                onMouseDown={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
+                onClick={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
+                onTouchEnd={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
                 title="Download as PNG"
+                sx={{ minWidth: 44, minHeight: 44 }}
               >
                 <Download fontSize="small" />
               </IconButton>
               <IconButton
                 size="small"
-                onMouseDown={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
+                onClick={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
+                onTouchEnd={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
                 title="Download as JPG"
+                sx={{ minWidth: 44, minHeight: 44 }}
               >
                 <Download fontSize="small" />
               </IconButton>
@@ -1223,51 +1227,47 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   <Typography variant="caption" sx={{ mb: 0.5, ml: 1.5, color: 'text.secondary' }}>
                     Period
                   </Typography>
-                  <Box
-                    component="select"
+                  <select
                     value={periodType}
                     onChange={(e) => setPeriodType(e.target.value as PeriodType)}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    sx={{
+                    style={{
                       minWidth: 120,
                       height: 32,
-                      px: 1,
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: 'rgba(0, 0, 0, 0.23)',
-                      bgcolor: 'background.paper',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(0, 0, 0, 0.23)',
+                      backgroundColor: 'var(--mui-palette-background-paper, #fff)',
                       fontSize: '0.875rem',
                       cursor: 'pointer',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                      },
-                      '&:focus': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      },
                     }}
                   >
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
                     <option value="quarterly">Quarterly</option>
                     <option value="yearly">Yearly</option>
-                  </Box>
+                  </select>
                 </Box>
                 <ToggleButtonGroup
                   value={chartType}
                   exclusive
                   onChange={handleChartTypeChange}
-                  size="small"
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      minWidth: 44,
+                      minHeight: 44,
+                      padding: '8px 12px',
+                      WebkitTapHighlightColor: 'rgba(0, 0, 0, 0.1)',
+                    },
+                  }}
                 >
                   <ToggleButton value="line" title="Line Chart">
-                    <ShowChart fontSize="small" />
+                    <ShowChart />
                   </ToggleButton>
                   <ToggleButton value="area" title="Area Chart">
-                    <AreaChartIcon fontSize="small" />
+                    <AreaChartIcon />
                   </ToggleButton>
                   <ToggleButton value="stacked" title="Stacked Area">
-                    <StackedLineChart fontSize="small" />
+                    <StackedLineChart />
                   </ToggleButton>
                 </ToggleButtonGroup>
               </Box>
