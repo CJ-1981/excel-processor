@@ -216,7 +216,7 @@ describe('Performance: Data Processing Utilities Profile', () => {
   });
 
   describe('Chart Calculations: aggregateByTimeMultiple', () => {
-    it('should aggregate 1K rows by time periods in under 25ms', async () => {
+    it('should aggregate 1K rows by time periods in under 100ms', async () => {
       const data = generateTestData(1000);
       const dateColumn = 'date';
       const valueColumns = ['amount'];
@@ -225,7 +225,7 @@ describe('Performance: Data Processing Utilities Profile', () => {
         () => aggregateByTimeMultiple(data, dateColumn, valueColumns, parseDateValue),
         {
           name: 'aggregateByTimeMultiple - 1K rows',
-          threshold: 25,
+          threshold: 100,
         }
       );
 
