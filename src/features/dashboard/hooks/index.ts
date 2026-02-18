@@ -9,3 +9,4 @@ export * from './useAnonymize';
 export * from './useGridLayout';
 export * from './useHistogramZoom';
 export * from './useMultiSeriesTimeData';
+export * from './useDataCache';

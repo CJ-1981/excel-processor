@@ -1,9 +1,10 @@
 /**
  * RangeDistributionCharts Component
  * Pie charts showing distribution across value ranges
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
-import React from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import {
   BarChart,
   Bar,
@@ -29,6 +30,7 @@ export interface RangeDistributionChartsProps {
   className?: string;
 }
 
+// Move constants outside component
 const PIE_COLORS = [
   '#1976d2',
   '#388e3c',
@@ -38,9 +40,53 @@ const PIE_COLORS = [
   '#00838f',
   '#5d4037',
   '#455a64',
-];
+] as const;
 
-const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
+interface TooltipPayload {
+  payload: {
+    name: string;
+    value: number;
+    percentage: number;
+    chartType: 'count' | 'amount';
+  };
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+}
+
+// Memoized CustomTooltip component (outside main component)
+const CustomTooltip = memo(({ active, payload }: CustomTooltipProps) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0].payload;
+  const isCount = d.chartType === 'count';
+  return (
+    <Box
+      sx={{
+        backgroundColor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        p: 1.5,
+        boxShadow: 3,
+      }}
+    >
+      <Typography variant="subtitle2" gutterBottom>
+        {d.name}
+      </Typography>
+      <Typography variant="body2">
+        {isCount
+          ? `Donors: ${d.value} (${formatPercentGerman(d.percentage)})`
+          : `Amount: ${formatCurrencyGerman(d.value)} (${formatPercentGerman(d.percentage)})`}
+      </Typography>
+    </Box>
+  );
+});
+
+CustomTooltip.displayName = 'CustomTooltip';
+
+const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
   data,
   valueLabel = 'Value',
   isLoading = false,
@@ -48,6 +94,37 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
 }) => {
   const theme = useTheme();
 
+  // Memoize computed data transformations (descending order)
+  const { totalCount, countData, amountData, totalAmount } = useMemo(() => {
+    const total = data.reduce((sum, d) => sum + d.count, 0);
+    const count = data.map((d) => ({
+      name: d.label,
+      value: d.count,
+      percentage: total > 0 ? (d.count / total) * 100 : 0,
+      chartType: ('count' as const),
+    })).reverse(); // Descending order
+    const amount = data.map((d) => ({
+      name: d.label,
+      value: d.amount,
+      percentage: d.percentage,
+      chartType: ('amount' as const),
+    })).reverse(); // Descending order
+    const totalAmt = data.reduce((sum, d) => sum + d.amount, 0);
+    return { totalCount: total, countData: count, amountData: amount, totalAmount: totalAmt };
+  }, [data]);
+
+  // Memoize should render check
+  const shouldRender = useMemo(() => {
+    return !isLoading && !error && data.length > 0;
+  }, [isLoading, error, data.length]);
+
+  // Memoize tooltip formatter
+  const formatTooltipValue = useCallback((value: number) => formatCurrencyGerman(value), []);
+
+  // Memoize legend formatter
+  const formatLegend = useCallback((v: string) => <span style={{ fontSize: 11 }}>{v}</span>, []);
+
+  // Loading state
   if (isLoading) {
     return (
       <Box sx={{ py: 8, textAlign: 'center' }}>
@@ -58,6 +135,7 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Box sx={{ py: 8, textAlign: 'center' }}>
@@ -68,7 +146,8 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
     );
   }
 
-  if (data.length === 0) {
+  // Empty state
+  if (!shouldRender) {
     return (
       <Box sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
@@ -77,57 +156,6 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
       </Box>
     );
   }
-
-  const totalCount = data.reduce((sum, d) => sum + d.count, 0);
-
-  const countData = data.map((d) => ({
-    name: d.label,
-    value: d.count,
-    percentage: totalCount > 0 ? (d.count / totalCount) * 100 : 0,
-    chartType: ('count' as const),
-  }));
-
-  const amountData = data.map((d) => ({
-    name: d.label,
-    value: d.amount,
-    percentage: d.percentage,
-    chartType: ('amount' as const),
-  }));
-
-  interface TooltipPayload {
-    payload: {
-      name: string;
-      value: number;
-      percentage: number;
-      chartType: 'count' | 'amount';
-    };
-  }
-
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
-    if (!active || !payload || payload.length === 0) return null;
-    const d = payload[0].payload;
-    const isCount = d.chartType === 'count';
-    return (
-      <Box
-        sx={{
-          backgroundColor: theme.palette.background.paper,
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 1,
-          p: 1.5,
-          boxShadow: theme.shadows[2],
-        }}
-      >
-        <Typography variant="subtitle2" gutterBottom>
-          {d.name}
-        </Typography>
-        <Typography variant="body2">
-          {isCount
-            ? `Donors: ${d.value} (${formatPercentGerman(d.percentage)})`
-            : `Amount: ${formatCurrencyGerman(d.value)} (${formatPercentGerman(d.percentage)})`}
-        </Typography>
-      </Box>
-    );
-  };
 
   return (
     <Box sx={{ width: '100%' }} data-chart-id="range-distribution">
@@ -142,8 +170,8 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                 <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
-                <Tooltip content={(props: any) => CustomTooltip(props)} />
-                <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                <Tooltip content={(props: any) => <CustomTooltip {...props} />} />
+                <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={formatLegend} />
                 <Bar dataKey="value" name="Count">
                   {countData.map((_, index) => (
                     <Cell key={`cell-count-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -166,10 +194,10 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
             <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={220}>
               <BarChart data={amountData} layout="vertical" margin={{ top: 10, right: 120, left: 24, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} tickFormatter={(v) => formatCurrencyGerman(v as number)} />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} tickFormatter={(v) => formatTooltipValue(v as number)} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} stroke={theme.palette.text.secondary} />
-                <Tooltip content={(props: any) => CustomTooltip(props)} />
-                <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                <Tooltip content={(props: any) => <CustomTooltip {...props} />} />
+                <Legend verticalAlign="bottom" height={24} wrapperStyle={{ paddingTop: 10 }} formatter={formatLegend} />
                 <Bar dataKey="value" name={valueLabel}>
                   {amountData.map((_, index) => (
                     <Cell key={`cell-amount-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -180,7 +208,7 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
             </ResponsiveContainer>
           </Box>
           <Typography variant="caption" color="text.secondary" align="center" display="block">
-            Total: {formatCurrencyGerman(data.reduce((sum, d) => sum + d.amount, 0))}
+            Total: {formatCurrencyGerman(totalAmount)}
           </Typography>
         </Paper>
       </Box>
@@ -200,7 +228,7 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
             p: 1,
           }}
         >
-          {data.map((d, index) => (
+          {[...data].reverse().map((d, index) => (
             <Box
               key={d.label}
               sx={{
@@ -215,7 +243,7 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
                   sx={{
                     width: 12,
                     height: 12,
-                    backgroundColor: PIE_COLORS[index % PIE_COLORS.length],
+                    backgroundColor: PIE_COLORS[(data.length - 1 - index) % PIE_COLORS.length],
                     borderRadius: 0.5,
                   }}
                 />
@@ -237,4 +265,17 @@ const RangeDistributionCharts: React.FC<RangeDistributionChartsProps> = ({
   );
 };
 
+// Memoize the main component with custom comparison
+const RangeDistributionCharts = memo(RangeDistributionChartsInner, (prevProps, nextProps) => {
+  return (
+    prevProps.data === nextProps.data &&
+    prevProps.valueLabel === nextProps.valueLabel &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});
+
+RangeDistributionCharts.displayName = 'RangeDistributionCharts';
+
 export default RangeDistributionCharts;
+export { RangeDistributionCharts };

@@ -1,9 +1,11 @@
 /**
  * TrendChart Component
  * Multi-series time series chart with line, area, and stacked visualization options
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, memo } from 'react';
+
 import {
   LineChart,
   Line,
@@ -18,7 +20,6 @@ import {
 } from 'recharts';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { MultiSeriesDataPoint, SeriesConfig, ChartType, PeriodType } from '../../types/chart';
-import { formatTooltipValue } from '../../utils/chartCalculations';
 
 interface TooltipPayload {
   color: string;
@@ -32,18 +33,56 @@ interface CustomTooltipProps {
   label: string;
 }
 
-export interface TrendChartProps {
-  data: MultiSeriesDataPoint[];
-  series: SeriesConfig[];
-  periodType: PeriodType;
-  type?: ChartType;
-  isLoading?: boolean;
-  error?: Error;
-  onExport?: (format: 'png' | 'jpg') => void;
-  className?: string;
+// Custom XAxis tick component for rendering multi-line labels (week + date)
+interface CustomAxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: {
+    value: string;
+  };
 }
 
-const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+const CustomAxisTick: React.FC<CustomAxisTickProps> = ({ x, y, payload }) => {
+  if (!payload || !x || !y) return null;
+
+  const label = payload.value;
+  const newlineIndex = label.indexOf('\n');
+
+  if (newlineIndex !== -1) {
+    const week = label.substring(0, newlineIndex);
+    const date = label.substring(newlineIndex + 1);
+    // Use dy offset for second line
+    return (
+      <text x={x} y={y} textAnchor="middle" fontSize={11} fill="currentColor">
+        {week}
+        <tspan textAnchor="middle" dy="14" fontSize={9} fill="currentColor" opacity={0.7}>
+          {date}
+        </tspan>
+      </text>
+    );
+  }
+
+  return (
+    <text x={x} y={y} dy="0.4em" textAnchor="middle" fontSize={11} fill="currentColor">
+      {label}
+    </text>
+  );
+};
+
+// Local formatter function (outside component to avoid recreation)
+const formatValue = (value: number): string => {
+  if (value === 0) return '0.00';
+  if (Math.abs(value) >= 1000000) {
+    return (value / 1000000).toFixed(2) + 'M';
+  }
+  if (Math.abs(value) >= 1000) {
+    return (value / 1000).toFixed(2) + 'K';
+  }
+  return value.toFixed(2);
+};
+
+// Memoized CustomTooltip component
+const CustomTooltip = memo(({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <Box
@@ -65,16 +104,29 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
             variant="body2"
             sx={{ color: entry.color, fontSize: '0.875rem' }}
           >
-            {entry.name}: {formatTooltipValue(entry.value)}
+            {entry.name}: {formatValue(entry.value)}
           </Typography>
         ))}
       </Box>
     );
   }
   return null;
-};
+});
 
-const TrendChart: React.FC<TrendChartProps> = ({
+CustomTooltip.displayName = 'CustomTooltip';
+
+export interface TrendChartProps {
+  data: MultiSeriesDataPoint[];
+  series: SeriesConfig[];
+  periodType: PeriodType;
+  type?: ChartType;
+  isLoading?: boolean;
+  error?: Error;
+  onExport?: (format: 'png' | 'jpg') => void;
+  className?: string;
+}
+
+const TrendChartInner: React.FC<TrendChartProps> = ({
   data,
   series,
   type = 'area',
@@ -86,75 +138,15 @@ const TrendChart: React.FC<TrendChartProps> = ({
   const isStacked = type === 'stacked';
   const chartType = isStacked ? 'area' : type;
 
-  // No manual ResizeObserver needed, ResponsiveContainer + Customized props are sufficient
-
-  const formatTooltipValue = (value: number): string => {
-    if (value === 0) return '0.00';
-    if (Math.abs(value) >= 1000000) {
-      return (value / 1000000).toFixed(2) + 'M';
-    }
-    if (Math.abs(value) >= 1000) {
-      return (value / 1000).toFixed(2) + 'K';
-    }
-    return value.toFixed(2);
-  };
-
-  const chartData = data;
-
   const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
 
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          height: 300,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          Loading chart data...
-        </Typography>
-      </Box>
-    );
-  }
+  // Memoize computed values
+  const shouldRender = useMemo(() => {
+    return !isLoading && !error && data.length > 0 && series.length > 0;
+  }, [isLoading, error, data.length, series.length]);
 
-  if (error) {
-    return (
-      <Box
-        sx={{
-          height: 300,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Typography variant="body2" color="error">
-          Error loading chart: {error.message}
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (data.length === 0 || series.length === 0) {
-    return (
-      <Box
-        sx={{
-          height: 300,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          No data available for the selected period
-        </Typography>
-      </Box>
-    );
-  }
-
-  const renderSeries = () => {
+  // Memoize series rendering
+  const renderSeries = useMemo(() => {
     return series.map((s) => {
       const color = s.color;
 
@@ -187,58 +179,37 @@ const TrendChart: React.FC<TrendChartProps> = ({
         />
       );
     });
-  };
+  }, [series, chartType, isStacked]);
 
-  const renderInlineLegend = useCallback(({ width: chartWidth, margin: chartMargin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
+  // Memoize inline legend rendering - position in right-top corner
+  const renderInlineLegend = useCallback(() => {
     const itemHeight = 16;
     const padding = 6;
     const gap = 6;
 
-    const measure = (text: string) => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.font = '12px sans-serif';
-          return Math.ceil(ctx.measureText(text).width);
-        }
-      } catch {
-        // Ignore
-      }
-      return text.length * 8;
-    };
-
-    const maxLabelPx = Math.max(0, ...series.map((s) => measure(s.label)));
-    const legendWidth = Math.min(280, 12 + 6 + maxLabelPx + padding * 2);
-    const legendHeight = padding * 2 + series.length * itemHeight + (series.length - 1) * gap;
-    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
-    const effectiveWidth = typeof chartWidth === 'number' && chartWidth > 0 ? chartWidth : 400;
-    const innerRight = effectiveWidth - (m.right || 0);
-    const inset = 8;
-    const startX = Math.max((m.left || 0) + inset, innerRight - legendWidth - inset);
-    const startY = (m.top || 0) + inset;
+    // Position legend content at 85% from left
+    const legendXPercent = 85;
+    const startY = 16;
 
     return (
       <g>
-        <rect
-          x={startX}
-          y={startY}
-          width={legendWidth}
-          height={legendHeight}
-          rx={6}
-          ry={6}
-          fill="#fff"
-          fillOpacity={0.85}
-          stroke={theme.palette.divider}
-        />
         {series.map((s, idx) => {
           const y = startY + padding + idx * (itemHeight + gap);
           return (
             <g key={s.key}>
-              <rect x={startX + padding} y={y + 2} width={12} height={12} fill={s.color} stroke={s.color} />
+              <rect
+                x={`${legendXPercent}%`}
+                y={y + 2}
+                width={12}
+                height={12}
+                fill={s.color}
+                stroke={s.color}
+                dx={padding}
+              />
               <text
-                x={startX + padding + 12 + 6}
+                x={`${legendXPercent}%`}
                 y={y + 12}
+                dx={padding + 12 + gap}
                 fill={theme.palette.text.primary}
                 fontSize={12}
                 alignmentBaseline="baseline"
@@ -250,31 +221,102 @@ const TrendChart: React.FC<TrendChartProps> = ({
         })}
       </g>
     );
-  }, [series, theme.palette.divider, theme.palette.text.primary]);
+  }, [series, theme.palette.text.primary]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          height: 300,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Loading chart data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Box
+        sx={{
+          height: 300,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography variant="body2" color="error">
+          Error loading chart: {error.message}
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Empty state
+  if (!shouldRender) {
+    return (
+      <Box
+        sx={{
+          height: 300,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          No data available for the selected period
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: '100%', height: '100%' }} data-chart-id="trend-chart">
       <ResponsiveContainer width="100%" height="100%" debounce={1}>
-        <ChartComponent data={chartData} margin={{ top: 16, right: 30, left: 40, bottom: 16 }}>
+        <ChartComponent data={data} margin={{ top: 16, right: 120, left: 40, bottom: 50 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="period"
             stroke={theme.palette.text.primary}
-            tick={{ fill: theme.palette.text.primary, fontSize: 12 }}
+            tick={<CustomAxisTick />}
             tickLine={{ stroke: theme.palette.text.secondary }}
+            height={50}
+            interval="preserveStartEnd"
           />
           <YAxis
             stroke={theme.palette.text.primary}
             tick={{ fill: theme.palette.text.primary, fontSize: 12 }}
-            tickFormatter={(value: unknown) => formatTooltipValue(value as number)}
+            tickFormatter={(value: unknown) => formatValue(value as number)}
           />
-          <Tooltip content={(props: any) => CustomTooltip(props)} />
+          <Tooltip content={(props: any) => <CustomTooltip {...props} />} />
           <Customized component={renderInlineLegend} />
-          {renderSeries()}
+          {renderSeries}
         </ChartComponent>
       </ResponsiveContainer>
     </Box>
   );
 };
 
+// Memoize the main component with custom comparison
+const TrendChart = memo(TrendChartInner, (prevProps, nextProps) => {
+  return (
+    prevProps.data === nextProps.data &&
+    prevProps.series === nextProps.series &&
+    prevProps.periodType === nextProps.periodType &&
+    prevProps.type === nextProps.type &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});
+
+TrendChart.displayName = 'TrendChart';
+
 export default TrendChart;
+export { TrendChart };

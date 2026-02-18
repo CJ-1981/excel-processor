@@ -6,3 +6,4 @@ export * from './dataAnalysis';
 export * from './chartCalculations';
 export * from './dateExtraction';
 export * from './colorUtils';
+export * from './chunkLoadHandler';

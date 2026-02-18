@@ -18,6 +18,8 @@ import {
   Button,
   Switch,
 } from '@mui/material';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -40,13 +42,13 @@ import {
   Remove as RemoveIcon,
   Download,
 } from '@mui/icons-material';
-import TrendChart, { CHART_COLORS } from './TrendChart';
-import TopDonorsChart from './TopDonorsChart';
-import StatisticsTable from './StatisticsTable';
-import DistributionHistogram from './DistributionHistogram';
-import ParetoChart from './ParetoChart';
-import RangeDistributionCharts from './RangeDistributionCharts';
-import DraggableColumnSelector from './DraggableColumnSelector';
+// Import modular chart components from features/dashboard
+import { TrendChart, CHART_COLORS } from '../../features/dashboard/charts';
+import { TopDonorsChart } from '../../features/dashboard/charts';
+import { StatisticsTable } from '../../features/dashboard/charts';
+import { DistributionHistogram } from '../../features/dashboard/charts';
+import { ParetoChart } from '../../features/dashboard/charts';
+import { RangeDistributionCharts } from '../../features/dashboard/charts';
 import {
   analyzeDataForDashboard,
   detectNumericColumns,
@@ -66,6 +68,7 @@ interface DashboardViewProps {
   data: any[];
   columnMapping: Record<string, string>;
   nameColumn: string | null;
+  deferRendering?: boolean; // Defer heavy rendering until Dialog is fully open
 }
 
 type PeriodType = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
@@ -75,37 +78,38 @@ type ChartType = 'line' | 'area' | 'stacked';
 // Updated to be more specific - looks for 8 digits in a row
 const FILENAME_DATE_PATTERN = /(\d{8})/;
 
-const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn, deferRendering = false }) => {
   // Track component renders to identify unnecessary re-renders
   const renderCount = React.useRef(0);
   renderCount.current += 1;
-  // Commented out to prevent infinite loop
-  // console.log('[DashboardView] Render count:', renderCount.current, 'Data length:', data?.length);
+
+  // State to defer heavy rendering when Dialog first opens
+  const [readyToRender, setReadyToRender] = React.useState(!deferRendering);
 
   useEffect(() => {
-
-  }, []);
-  const [periodType, setPeriodType] = useState<PeriodType>('monthly');
+    if (deferRendering && !readyToRender) {
+      // Small delay to allow Dialog to render smoothly first
+      const timer = setTimeout(() => {
+        setReadyToRender(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [deferRendering, readyToRender]);
+  const [periodType, setPeriodType] = useState<PeriodType>('weekly');
   const [chartType, setChartType] = useState<ChartType>('area');
-  const [topDonorsCount, setTopDonorsCount] = useState<number>(10);
-  const [paretoDonorsCount, setParetoDonorsCount] = useState<number>(15);
-  const [histogramBins, setHistogramBins] = useState<number>(100);
+  const [topDonorsCount, setTopDonorsCount] = useState<number>(20);
+  // Pareto donors count - will be set to unique count after data loads
+  const [paretoDonorsCount, setParetoDonorsCount] = useState<number>(0);
+  const [histogramBins, setHistogramBins] = useState<number>(70);
+  // Initial zoom state - will be set to zoom level 1 after data loads
   const [histogramZoomMin, setHistogramZoomMin] = useState<number | null>(null);
   const [histogramZoomMax, setHistogramZoomMax] = useState<number | null>(null);
+  // Track if initial zoom has been applied
+  const initialZoomApplied = React.useRef(false);
   // Box plot zoom (min/max range)
   // Box plot removed
-  // Anonymize unique names on X-axis ticks
-  const [anonymizeNames, setAnonymizeNames] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('excel-processor-anonymize-names');
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try { localStorage.setItem('excel-processor-anonymize-names', String(anonymizeNames)); } catch { }
-  }, [anonymizeNames]);
+  // Anonymize unique names on X-axis ticks - default true, no persistence
+  const [anonymizeNames, setAnonymizeNames] = useState<boolean>(true);
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
@@ -116,7 +120,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   const [currentBreakpoint, setCurrentBreakpoint] = useState<keyof typeof BREAKPOINTS>('lg');
 
   // Helper function to download any chart as PNG/JPG
-  const downloadChartAsImage = useCallback((chartId: string, format: 'png' | 'jpg' = 'png') => {
+  // Stop event propagation to prevent drag handle interference on mobile
+  const downloadChartAsImage = useCallback((chartId: string, format: 'png' | 'jpg' = 'png', event?: React.MouseEvent | React.TouchEvent) => {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     const wrapper = document.querySelector(`[data-chart-id="${chartId}"]`) as HTMLElement | null;
     if (!wrapper) return;
 
@@ -576,6 +585,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Track if user explicitly toggled the filename-dates switch to avoid auto-re-enabling
   const [userToggledFilenameDates, setUserToggledFilenameDates] = useState<boolean>(false);
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
+  // Track hidden columns (chips stay visible but greyed out, data not shown in charts)
+  const [hiddenValueColumns, setHiddenValueColumns] = useState<Set<string>>(new Set());
   // Track if we've done initial auto-selection to avoid re-selecting after user deselects
   const didAutoSelectValueColumns = React.useRef<string[]>([]);
 
@@ -627,47 +638,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     didAutoEnableFilenameDates.current = false;
   }, [dataFingerprint]);
 
-  const handleToggleColumn = useCallback((column: string) => {
-    setSelectedValueColumns(prev => {
-      const isCurrentlySelected = prev.includes(column);
-      let newSelected: string[];
-      if (isCurrentlySelected) {
-        newSelected = prev.filter(c => c !== column);
-        console.log('[DashboardView] Column deselected, new count:', newSelected.length);
-      } else {
-        newSelected = [...prev, column];
-        console.log('[DashboardView] Column selected, new count:', newSelected.length);
-      }
-      // Preserve order of currently selected columns, but add new ones at the end in their original available order
-      const orderedSelected = availableNumericColumns.filter(c => newSelected.includes(c));
-      const remainingSelected = newSelected.filter(c => !orderedSelected.includes(c));
-      const result = [...orderedSelected, ...remainingSelected];
+  // Create a stable data fingerprint to detect when data content actually changes
+  // This prevents expensive re-analysis when the data reference changes but content is the same
+  const dataContentFingerprint = useMemo(() => {
+    if (!data || data.length === 0) return 'empty';
+    // Sample: data length + first row structure
+    const firstRow = data[0];
+    const firstRowKeys = firstRow ? Object.keys(firstRow).sort().join(',') : '';
+    const sampleValues = firstRow ? Object.values(firstRow).slice(0, 3).map(String).join('|') : '';
+    return `${data.length}|${firstRowKeys}|${sampleValues}`;
+  }, [data]);
 
-      return result;
-    });
-  }, [availableNumericColumns, columnMapping]);
-
-  const handleReorderColumns = useCallback((result: any) => {
-    if (!result.destination) {
-      return;
-    }
-
-    const reorderedColumns = Array.from(selectedValueColumns);
-    const [removed] = reorderedColumns.splice(result.source.index, 1);
-    reorderedColumns.splice(result.destination.index, 0, removed);
-
-    setSelectedValueColumns(reorderedColumns);
-  }, [selectedValueColumns]);
-
-  const handleSelectAllColumns = useCallback(() => {
-    setSelectedValueColumns(availableNumericColumns);
-  }, [availableNumericColumns]);
-
-  const handleDeselectAllColumns = useCallback(() => {
-    setSelectedValueColumns([]);
-  }, []);
-
-  // Analyze data for dashboard
+  // Analyze data for dashboard - only re-analyze when data content actually changes
   const analysis: DashboardAnalysis = useMemo(() => {
     try {
       const result = analyzeDataForDashboard(data, columnMapping, nameColumn);
@@ -682,9 +664,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         metadata: { totalRows: data.length, filteredRows: data.length },
       } as DashboardAnalysis;
     }
-  }, [data, columnMapping, nameColumn]);
+  }, [dataContentFingerprint, columnMapping, nameColumn]);
 
   // Get time series for selected columns (multi-series)
+  // Use data fingerprint to avoid recalculation when data reference changes but content is the same
   const multiSeriesTimeData = useMemo(() => {
     if ((selectedValueColumns || []).length === 0) {
       return { weekly: [], monthly: [], quarterly: [], yearly: [] } as any;
@@ -701,7 +684,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
 
     return aggregateByTimeMultiple(data, selectedDateColumn, selectedValueColumns);
-  }, [data, selectedDateColumn, selectedValueColumns, useFilenameDates, columnMapping]);
+  }, [dataContentFingerprint, selectedDateColumn, selectedValueColumns, useFilenameDates, columnMapping]);
 
   // Get top contributors for first selected value column (aggregated by name)
   const topContributorsData = useMemo(() => {
@@ -711,7 +694,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
     const distribution = calculateDistribution(data, nameColumn, selectedValueColumns[0]);
     return getTopItems(distribution, topDonorsCount);
-  }, [data, selectedValueColumns, nameColumn, topDonorsCount]);
+  }, [dataContentFingerprint, selectedValueColumns, nameColumn, topDonorsCount]);
 
   // Calculate unique contributor count for conditional chart visibility
   // Only depends on data and nameColumn, NOT on selectedValueColumns
@@ -744,16 +727,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       return [];
     }
     return calculateDistribution(data, nameColumn, selectedValueColumns[0]);
-  }, [data, selectedValueColumns, nameColumn]);
+  }, [dataContentFingerprint, selectedValueColumns, nameColumn]);
 
-  // Build series configuration for TrendChart
+  // Build series configuration for TrendChart (only visible columns)
+  const visibleValueColumns = useMemo(() => {
+    return (selectedValueColumns || []).filter(col => !hiddenValueColumns.has(col));
+  }, [selectedValueColumns, hiddenValueColumns]);
+
   const seriesConfig = useMemo(() => {
-    return (selectedValueColumns || []).map((col, index) => ({
-      key: col,
-      label: columnMapping[col] || col,
-      color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
-    }));
-  }, [selectedValueColumns, columnMapping, colorOverrides]);
+    return visibleValueColumns.map((col) => {
+      // Use the original column's index in selectedValueColumns for consistent colors
+      // This ensures colors don't change when columns are hidden/shown
+      const originalIndex = (selectedValueColumns || []).indexOf(col);
+      return {
+        key: col,
+        label: columnMapping[col] || col,
+        color: colorOverrides[col] || CHART_COLORS[originalIndex % CHART_COLORS.length],
+      };
+    });
+  }, [visibleValueColumns, selectedValueColumns, columnMapping, colorOverrides]);
 
   // Get values for the first selected column for distribution charts
   // IMPORTANT: For donor analysis, we aggregate by unique name first
@@ -766,7 +758,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     return nameColumn
       ? allContributorsData.map(d => d.value)
       : extractNumericValues(data, selectedValueColumns[0]);
-  }, [data, selectedValueColumns, nameColumn, allContributorsData]);
+  }, [dataContentFingerprint, selectedValueColumns, nameColumn, allContributorsData]);
 
   // Calculate histogram data with zoom support
   const histogramData = useMemo(() => {
@@ -795,6 +787,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     const sorted = [...distributionValues].sort((a, b) => a - b);
     return { min: sorted[0], max: sorted[sorted.length - 1] };
   }, [distributionValues]);
+
+  // Set initial zoom level 1 (clicked once) when data first loads
+  useEffect(() => {
+    if (distributionValues.length > 0 && !initialZoomApplied.current) {
+      const { min, max } = distributionMinMax;
+      if (max > min) {
+        // Zoom level 1: keep 75% of range, starting from left (0)
+        const range = max - min;
+        const newRange = range * 0.75;
+        setHistogramZoomMin(min);
+        setHistogramZoomMax(min + newRange);
+        initialZoomApplied.current = true;
+      }
+    }
+  }, [distributionValues.length, distributionMinMax]);
+
+  // Set Pareto donors count to unique count when data loads
+  useEffect(() => {
+    if (allContributorsData.length > 0 && paretoDonorsCount === 0) {
+      setParetoDonorsCount(uniqueContributorCount);
+    }
+  }, [allContributorsData.length, uniqueContributorCount, paretoDonorsCount]);
 
   // Zoom in (reduce range by 25%)
   const handleHistogramZoomIn = () => {
@@ -885,10 +899,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
 
 
-  // Handle removing a single column
+  // Handle removing a single column (now hides instead of removing)
   const handleRemoveColumn = (colToRemove: string) => {
-    setSelectedValueColumns(prev => (prev || []).filter(col => col !== colToRemove));
+    setHiddenValueColumns(prev => new Set(prev).add(colToRemove));
   };
+
+  // Toggle column visibility (click on chip)
+  const handleToggleColumnVisibility = useCallback((col: string) => {
+    setHiddenValueColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(col)) {
+        newSet.delete(col);
+      } else {
+        newSet.add(col);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Handle drag-end for reordering columns
+  const handleDragEnd = useCallback((result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(selectedValueColumns || []);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSelectedValueColumns(items);
+  }, [selectedValueColumns]);
 
   if (!data || data.length === 0) {
     return (
@@ -900,7 +938,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     );
   }
 
+  // Show loading state while deferring rendering (allows Dialog to render smoothly first)
+  if (!readyToRender) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center', minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          Loading dashboard...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Note: NOT using useMemo here to avoid changing the hook order
+  // The computation is simple enough that memoization isn't critical
   const hasTimeSeriesData = multiSeriesTimeData[periodType] && multiSeriesTimeData[periodType].length > 0;
+
+  const handleChartTypeChange = (_: unknown, value: ChartType) => {
+    if (value) setChartType(value);
+  };
 
   return (
     <Box sx={{ width: '100%', p: 2 }}>
@@ -917,16 +972,51 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             )}
           </Typography>
         </Box>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={anonymizeNames}
-              onChange={(e) => setAnonymizeNames(e.target.checked)}
-              size="small"
-            />
-          }
-          label={<Typography variant="body2">Anonymize names (hide X-axis)</Typography>}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Date column selector */}
+          {!useFilenameDates && (
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel>Date Column</InputLabel>
+              <Select
+                value={selectedDateColumn || ''}
+                label="Date Column"
+                onChange={(e) => setSelectedDateColumn(e.target.value || null)}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {availableDateColumns.map((col) => (
+                  <MenuItem key={col} value={col}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography sx={{ flex: 1 }}>
+                        {columnMapping[col] || col}
+                      </Typography>
+                      {availableDateColumns.length > 0 && !availableDateColumns.includes(col) && (
+                        <Chip
+                          label="Not date"
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          sx={{ fontSize: '0.7rem', height: 20, '& .MuiChip-label': { fontSize: '0.65rem' } }}
+                        />
+                      )}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={anonymizeNames}
+                onChange={(e) => setAnonymizeNames(e.target.checked)}
+                size="small"
+              />
+            }
+            label={<Typography variant="body2">Anonymize names</Typography>}
+          />
+        </Box>
       </Box>
 
       {/* Column Selectors */}
@@ -935,17 +1025,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           Configure Dashboard Charts
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <DraggableColumnSelector
-            label="Value Columns (multiple)"
-            options={availableNumericColumns}
-            selected={selectedValueColumns}
-            columnMapping={columnMapping}
-            onToggle={handleToggleColumn}
-            onReorder={handleReorderColumns}
-            onSelectAll={handleSelectAllColumns}
-            onDeselectAll={handleDeselectAllColumns}
-          />
-
           {hasFilenameDates && (
             <FormControlLabel
               control={
@@ -961,102 +1040,99 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               label="Use filename dates (YYYYMMDD)"
             />
           )}
-
-          {!useFilenameDates && (
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>Date Column (for trends)</InputLabel>
-              <Select
-                value={selectedDateColumn || ''}
-                label="Date Column (for trends)"
-                onChange={(e) => setSelectedDateColumn(e.target.value || null)}
-              >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                {(() => {
-                  const options = availableDateColumns.length > 0
-                    ? availableDateColumns
-                    : (hasFilenameDates ? ['_sourceFileName'] : []);
-                  return options;
-                })().map((col) => (
-                  <MenuItem key={col} value={col}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ flex: 1 }}>
-                        {columnMapping[col] || col}
-                      </Typography>
-                      {col === '_sourceFileName' && (
-                        <Chip
-                          label="From filename"
-                          size="small"
-                          variant="outlined"
-                          color="info"
-                          sx={{ fontSize: '0.7rem', height: 20, '& .MuiChip-label': { fontSize: '0.65rem' } }}
-                        />
-                      )}
-                      {col !== '_sourceFileName' && availableDateColumns.length > 0 && !availableDateColumns.includes(col) && (
-                        <Chip
-                          label="Not date"
-                          size="small"
-                          variant="outlined"
-                          color="warning"
-                          sx={{ fontSize: '0.7rem', height: 20, '& .MuiChip-label': { fontSize: '0.65rem' } }}
-                        />
-                      )}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
         </Box>
 
-        {/* Selected columns as chips */}
+        {/* Selected columns as chips with drag-drop and toggle */}
         {(selectedValueColumns || []).length > 0 && (
           <Box sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 1.5,
             mt: 2,
             p: 1.5,
             borderRadius: 1,
             bgcolor: 'action.hover',
             border: '1px dashed',
             borderColor: 'divider',
-            alignItems: 'center'
           }}>
-            <Typography variant="caption" sx={{ width: '100%', mb: 0.5, color: 'text.secondary', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Selected Data Series & Colors
+            <Typography variant="caption" sx={{ width: '100%', mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Data Series (drag to reorder • click to toggle • X to hide)
             </Typography>
-            {(selectedValueColumns || []).map((col, index) => (
-              <Box key={col} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <input
-                  type="color"
-                  value={colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}
-                  onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
-                  style={{ width: 24, height: 24, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
-                />
-                <Chip
-                  label={columnMapping[col] || col}
-                  onDelete={() => handleRemoveColumn(col)}
-                  size="small"
-                  sx={{
-                    bgcolor: (colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]) + '15',
-                    border: `1px solid ${colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length]}40`,
-                    color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
-                    fontWeight: 500,
-                    '& .MuiChip-deleteIcon': {
-                      color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
-                      opacity: 0.7,
-                      '&:hover': {
-                        color: colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length],
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                  deleteIcon={<Close fontSize="small" />}
-                />
-              </Box>
-            ))}
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="columns" direction="horizontal">
+                {(provided) => (
+                  <Box
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 1.5,
+                      alignItems: 'center',
+                    }}
+                  >
+                    {(selectedValueColumns || []).map((col, index) => {
+                      const isHidden = hiddenValueColumns.has(col);
+                      const color = colorOverrides[col] || CHART_COLORS[index % CHART_COLORS.length];
+                      return (
+                        <Draggable key={col} draggableId={col} index={index}>
+                          {(provided) => (
+                            <Box
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                opacity: isHidden ? 0.4 : 1,
+                                transition: 'opacity 0.2s',
+                              }}
+                            >
+                              <Box
+                                {...provided.dragHandleProps}
+                                sx={{ display: 'flex', alignItems: 'center', cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
+                              >
+                                <DragHandleIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                              </Box>
+                              <input
+                                type="color"
+                                value={color}
+                                onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
+                                style={{ width: 20, height: 20, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                              />
+                              <Chip
+                                label={columnMapping[col] || col}
+                                onClick={() => handleToggleColumnVisibility(col)}
+                                onDelete={() => handleRemoveColumn(col)}
+                                size="small"
+                                sx={{
+                                  bgcolor: isHidden ? 'grey.200' : color + '15',
+                                  border: `1px solid ${isHidden ? 'grey.400' : color + '40'}`,
+                                  color: isHidden ? 'text.secondary' : color,
+                                  fontWeight: 500,
+                                  cursor: 'pointer',
+                                  userSelect: 'none',
+                                  '&:hover': {
+                                    bgcolor: isHidden ? 'grey.300' : color + '25',
+                                  },
+                                  '& .MuiChip-deleteIcon': {
+                                    color: isHidden ? 'text.secondary' : color,
+                                    opacity: 0.7,
+                                    '&:hover': {
+                                      color: isHidden ? 'text.primary' : color,
+                                      opacity: 1,
+                                    },
+                                  },
+                                }}
+                                deleteIcon={<Close fontSize="small" />}
+                              />
+                            </Box>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                    {provided.placeholder}
+                  </Box>
+                )}
+              </Droppable>
+            </DragDropContext>
           </Box>
         )}
 
@@ -1119,11 +1195,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 {hasTimeSeriesData ? 'Trend Over Time' : 'Trend Analysis'}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => downloadChartAsImage('trend-chart', 'png')} title="Download as PNG">
+            <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
+              <IconButton
+                size="small"
+                onMouseDown={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
+                title="Download as PNG"
+              >
                 <Download fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => downloadChartAsImage('trend-chart', 'jpg')} title="Download as JPG">
+              <IconButton
+                size="small"
+                onMouseDown={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
+                title="Download as JPG"
+              >
                 <Download fontSize="small" />
               </IconButton>
               <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', 2)} title="Taller (increase height)">
@@ -1134,24 +1218,46 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
             </Box>
             {hasTimeSeriesData && (
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Period</InputLabel>
-                  <Select
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onMouseDown={(e) => e.stopPropagation()}>
+                <Box sx={{ minWidth: 120 }}>
+                  <Typography variant="caption" sx={{ mb: 0.5, ml: 1.5, color: 'text.secondary' }}>
+                    Period
+                  </Typography>
+                  <Box
+                    component="select"
                     value={periodType}
-                    label="Period"
                     onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    sx={{
+                      minWidth: 120,
+                      height: 32,
+                      px: 1,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'rgba(0, 0, 0, 0.23)',
+                      bgcolor: 'background.paper',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                      },
+                      '&:focus': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      },
+                    }}
                   >
-                    <MenuItem value="weekly">Weekly</MenuItem>
-                    <MenuItem value="monthly">Monthly</MenuItem>
-                    <MenuItem value="quarterly">Quarterly</MenuItem>
-                    <MenuItem value="yearly">Yearly</MenuItem>
-                  </Select>
-                </FormControl>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="yearly">Yearly</option>
+                  </Box>
+                </Box>
                 <ToggleButtonGroup
                   value={chartType}
                   exclusive
-                  onChange={(_, value) => value && setChartType(value)}
+                  onChange={handleChartTypeChange}
                   size="small"
                 >
                   <ToggleButton value="line" title="Line Chart">
@@ -1167,7 +1273,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </Box>
             )}
           </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }} data-chart-id="trend-chart">
+          <Box sx={{ flex: 1, minHeight: 200, overflow: 'hidden' }} data-chart-id="trend-chart">
             {hasTimeSeriesData && (selectedValueColumns || []).length > 0 ? (
               <Box sx={{ height: '100%', width: '100%', display: 'flex' }}>
                 <TrendChart
@@ -1199,11 +1305,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <BarChart color="primary" />
                 <Typography variant="h6">Top Contributors</Typography>
               </Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'png')} title="Download as PNG">
+              <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('top-contributors', 'png', e as any)}
+                  title="Download as PNG"
+                >
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => downloadChartAsImage('top-contributors', 'jpg')} title="Download as JPG">
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('top-contributors', 'jpg', e as any)}
+                  title="Download as JPG"
+                >
                   <Download fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller (increase height)">
@@ -1233,7 +1347,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </IconButton>
               </Box>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, minHeight: 200, overflow: 'hidden' }}>
               <TopDonorsChart
                 data={topContributorsData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -1258,7 +1372,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
             </Box>
           </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
+          <Box sx={{ flex: 1, minHeight: 200, overflow: 'auto', width: '100%' }}>
             <StatisticsTable statistics={analysis.numericColumns} />
           </Box>
         </Paper>
@@ -1270,11 +1384,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <Typography variant="subtitle1">
                 Distribution Histogram
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'png')} title="Download as PNG">
+              <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('histogram', 'png', e as any)}
+                  title="Download as PNG"
+                >
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => downloadChartAsImage('histogram', 'jpg')} title="Download as JPG">
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('histogram', 'jpg', e as any)}
+                  title="Download as JPG"
+                >
                   <Download fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title="Fewer bins">
@@ -1343,7 +1465,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 )}
               </Box>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
+            <Box sx={{ flex: 1, minHeight: 200, overflow: 'auto', width: '100%' }}>
               <DistributionHistogram
                 data={histogramData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -1366,11 +1488,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <Typography variant="subtitle1">
                 Pareto Analysis (80/20 Rule)
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'png')} title="Download as PNG">
+              <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('pareto', 'png', e as any)}
+                  title="Download as PNG"
+                >
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => downloadChartAsImage('pareto', 'jpg')} title="Download as JPG">
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('pareto', 'jpg', e as any)}
+                  title="Download as JPG"
+                >
                   <Download fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller (increase height)">
@@ -1383,8 +1513,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 >
                   <RemoveIcon fontSize="small" />
                 </IconButton>
-                <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
-                  {paretoDonorsCount} donors
+                <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'center' }}>
+                  {paretoDonorsCount >= allContributorsData.length ? `All ${allContributorsData.length}` : `${paretoDonorsCount} donors`}
                 </Typography>
                 <IconButton
                   size="small"
@@ -1396,7 +1526,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </IconButton>
               </Box>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
+            <Box sx={{ flex: 1, minHeight: 200, overflow: 'auto', width: '100%' }}>
               <ParetoChart
                 data={paretoData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -1414,11 +1544,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <PieChartIcon color="primary" />
               <Typography variant="h6">Range Distribution</Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'png')} title="Download as PNG">
+            <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
+              <IconButton
+                size="small"
+                onMouseDown={(e) => downloadChartAsImage('range-distribution', 'png', e as any)}
+                title="Download as PNG"
+              >
                 <Download fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => downloadChartAsImage('range-distribution', 'jpg')} title="Download as JPG">
+              <IconButton
+                size="small"
+                onMouseDown={(e) => downloadChartAsImage('range-distribution', 'jpg', e as any)}
+                title="Download as JPG"
+              >
                 <Download fontSize="small" />
               </IconButton>
               <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', 2)} title="Taller (increase height)">
@@ -1428,7 +1566,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}>
+            <Box sx={{ flex: 1, minHeight: 200, overflow: 'auto', width: '100%' }}>
               <RangeDistributionCharts
                 data={rangeDistributionData}
                 valueLabel={seriesConfig[0]?.label || 'Value'}
@@ -1781,4 +1919,15 @@ function aggregateByFilenameDateMultiple(
   };
 }
 
-export default DashboardView;
+// Memoize DashboardView to prevent unnecessary re-renders when parent components update
+const MemoizedDashboardView = React.memo(DashboardView, (prevProps, nextProps) => {
+  return (
+    prevProps.data === nextProps.data &&
+    prevProps.columnMapping === nextProps.columnMapping &&
+    prevProps.nameColumn === nextProps.nameColumn
+  );
+});
+
+MemoizedDashboardView.displayName = 'DashboardView';
+
+export default MemoizedDashboardView;

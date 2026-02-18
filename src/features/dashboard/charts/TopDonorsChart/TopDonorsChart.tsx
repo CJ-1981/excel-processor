@@ -1,9 +1,10 @@
 /**
  * TopDonorsChart Component
  * Bar chart showing top N donors by contribution amount
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
-import React from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import {
   BarChart,
   Bar,
@@ -45,41 +46,57 @@ interface CustomTooltipProps {
   active?: boolean;
   payload?: TooltipPayload[];
   label: string;
+  anonymize?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <Box
-        sx={{
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 1,
-          p: 1.5,
-          boxShadow: 3,
-        }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-          {label}
-        </Typography>
-        <Typography variant="body2" sx={{ color: payload[0].color }}>
-          Value: {formatTooltipValue(data.value)}
-        </Typography>
-        <Typography variant="body2" sx={{ color: payload[0].color }}>
-          Count: {data.count}
-        </Typography>
-        <Typography variant="body2" sx={{ color: payload[0].color }}>
-          Percentage: {data.percentage.toFixed(1)}%
-        </Typography>
-      </Box>
-    );
-  }
-  return null;
+// CustomTooltip factory function - creates tooltip with access to chartData for index lookup
+const createCustomTooltip = (chartData: Array<{ name: string; value: number; count: number; percentage: number }>) => {
+  const CustomTooltipComponent = memo(({ active, payload, label, anonymize = false }: CustomTooltipProps) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+
+      // Find the index for anonymized tooltip label
+      let anonymizedLabel = '(Anonymized)';
+      if (anonymize) {
+        const index = chartData.findIndex(d => d.name === data.name);
+        if (index !== -1) {
+          anonymizedLabel = `(Anonymized #${index + 1})`;
+        }
+      }
+
+      return (
+        <Box
+          sx={{
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 1.5,
+            boxShadow: 3,
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            {anonymize ? anonymizedLabel : label}
+          </Typography>
+          <Typography variant="body2" sx={{ color: payload[0].color }}>
+            Value: {formatTooltipValue(data.value)}
+          </Typography>
+          <Typography variant="body2" sx={{ color: payload[0].color }}>
+            Count: {data.count}
+          </Typography>
+          <Typography variant="body2" sx={{ color: payload[0].color }}>
+            Percentage: {data.percentage.toFixed(1)}%
+          </Typography>
+        </Box>
+      );
+    }
+    return null;
+  });
+  CustomTooltipComponent.displayName = 'CustomTooltip';
+  return CustomTooltipComponent;
 };
 
-const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
+const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
   data,
   valueLabel,
   limit = 10,
@@ -89,14 +106,69 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
 }) => {
   const theme = useTheme();
   const COLORS = getChartColors();
+  const gridColor = theme.palette.divider;
 
-  const chartData = data.slice(0, limit).map((item) => ({
-    name: item.category,
-    value: item.value,
-    count: item.count,
-    percentage: item.percentage,
-  }));
+  // Memoize chart data transformation
+  const chartData = useMemo(() => {
+    return data.slice(0, limit).map((item) => ({
+      name: item.category,
+      value: item.value,
+      count: item.count,
+      percentage: item.percentage,
+    }));
+  }, [data, limit]);
 
+  // Memoize should render check
+  const shouldRender = useMemo(() => {
+    return !isLoading && !error && data.length > 0;
+  }, [isLoading, error, data.length]);
+
+  // Create CustomTooltip component with access to chartData for index lookup
+  const CustomTooltip = useMemo(() => createCustomTooltip(chartData), [chartData]);
+
+  // Memoize inline legend rendering - position in right-top corner using SVG percentage
+  const renderInlineLegend = useCallback(() => {
+    const padding = 6;
+    const boxSize = 12;
+    const gap = 6;
+    const label = valueLabel || 'Value';
+
+    const legendXPercent = 85;
+    const startY = 16;
+    const color = COLORS[0];
+
+    return (
+      <g>
+        <rect
+          x={`${legendXPercent}%`}
+          y={startY + padding}
+          width={boxSize}
+          height={boxSize}
+          fill={color}
+          stroke={color}
+        />
+        <text
+          x={`${legendXPercent}%`}
+          y={startY + padding + boxSize - 1}
+          dx={boxSize + gap}
+          fill={theme.palette.text.primary}
+          fontSize={12}
+          alignmentBaseline="baseline"
+        >
+          {label}
+        </text>
+      </g>
+    );
+  }, [valueLabel, COLORS, theme.palette.text.primary, gridColor]);
+
+  // Memoize X-axis tick formatter for anonymization
+  const formatXAxisTick = useCallback((value: unknown, index: number) => {
+    const n = chartData.length;
+    const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
+    return anonymize && index % step === 0 ? `#${index + 1}` : anonymize ? '' : String(value);
+  }, [anonymize, chartData.length]);
+
+  // Loading state
   if (isLoading) {
     return (
       <Box
@@ -116,6 +188,7 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Box
@@ -135,7 +208,8 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
     );
   }
 
-  if (data.length === 0) {
+  // Empty state
+  if (!shouldRender) {
     return (
       <Box
         sx={{
@@ -154,68 +228,6 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
     );
   }
 
-  const gridColor = theme.palette.divider;
-
-  const renderInlineLegend = React.useCallback(({ width: chartWidth, margin: chartMargin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
-    const padding = 6;
-    const boxSize = 12;
-    const gap = 6;
-    const label = valueLabel || 'Value';
-
-    const measure = (text: string) => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.font = '12px sans-serif';
-          return Math.ceil(ctx.measureText(text).width);
-        }
-      } catch {
-        // Ignore
-      }
-      return text.length * 8;
-    };
-
-    const labelPx = measure(label);
-    const legendWidth = Math.min(280, padding * 2 + boxSize + gap + labelPx);
-    const legendHeight = padding * 2 + boxSize;
-    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
-    const innerLeft = m.left || 0;
-    const innerTop = m.top || 0;
-    const effectiveWidth = typeof chartWidth === 'number' && chartWidth > 0 ? chartWidth : 400;
-    const innerRight = effectiveWidth - (m.right || 0);
-    const inset = 8;
-    const startX = Math.max(innerLeft + inset, innerRight - legendWidth - inset);
-    const startY = Math.max(innerTop + inset, innerTop + inset);
-    const color = COLORS[0];
-
-    return (
-      <g>
-        <rect
-          x={startX}
-          y={startY}
-          width={legendWidth}
-          height={legendHeight}
-          rx={6}
-          ry={6}
-          fill="#fff"
-          fillOpacity={0.85}
-          stroke={gridColor}
-        />
-        <rect x={startX + padding} y={startY + padding} width={boxSize} height={boxSize} fill={color} stroke={color} />
-        <text
-          x={startX + padding + boxSize + gap}
-          y={startY + padding + boxSize - 1}
-          fill={theme.palette.text.primary}
-          fontSize={12}
-          alignmentBaseline="baseline"
-        >
-          {label}
-        </text>
-      </g>
-    );
-  }, [valueLabel, COLORS, theme.palette.text.primary, gridColor]);
-
   return (
     <Box
       sx={{ width: '100%', height: '100%', display: 'flex' }}
@@ -225,7 +237,7 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
         <BarChart
           data={chartData}
           layout="horizontal"
-          margin={{ top: 16, right: 30, left: 40, bottom: 60 }}
+          margin={{ top: 16, right: 100, left: 40, bottom: 60 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
@@ -236,18 +248,10 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
             textAnchor="end"
             height={100}
             interval={anonymize ? 0 : undefined}
-            tickFormatter={
-              anonymize
-                ? ((_value: unknown, index: number) => {
-                  const n = chartData.length;
-                  const step = n > 40 ? 10 : n > 20 ? 5 : n > 10 ? 2 : 1;
-                  return index % step === 0 ? String(index + 1) : '';
-                })
-                : undefined
-            }
+            tickFormatter={formatXAxisTick}
           />
           <YAxis stroke={theme.palette.text.primary} tick={{ fill: theme.palette.text.primary }} tickFormatter={(value) => formatCompactNumber(value)} />
-          <Tooltip content={(props: any) => CustomTooltip(props)} />
+          <Tooltip content={(props: any) => <CustomTooltip {...props} anonymize={anonymize} />} />
           <Customized component={renderInlineLegend} />
           <Bar dataKey="value" name={valueLabel}>
             {chartData.map((_, index) => (
@@ -260,4 +264,19 @@ const TopDonorsChart: React.FC<TopDonorsChartProps> = ({
   );
 };
 
+// Memoize the main component with custom comparison
+const TopDonorsChart = memo(TopDonorsChartInner, (prevProps, nextProps) => {
+  return (
+    prevProps.data === nextProps.data &&
+    prevProps.valueLabel === nextProps.valueLabel &&
+    prevProps.limit === nextProps.limit &&
+    prevProps.anonymize === nextProps.anonymize &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});
+
+TopDonorsChart.displayName = 'TopDonorsChart';
+
 export default TopDonorsChart;
+export { TopDonorsChart };

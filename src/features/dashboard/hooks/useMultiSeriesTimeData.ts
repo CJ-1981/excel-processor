@@ -187,7 +187,7 @@ function aggregateByFilenameDate(
 
   return {
     weekly: convertToArray(weeklyAggregated, (key, entry) =>
-      `${key} (${fmtMonthDay(entry.latest || entry.date)})`
+      `${key}\n(${fmtMonthDay(entry.latest || entry.date)})`
     ),
     monthly: convertToArray(monthlyAggregated),
     quarterly: convertToArray(quarterlyAggregated),

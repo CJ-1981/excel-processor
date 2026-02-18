@@ -1,9 +1,10 @@
 /**
  * StatisticsTable Component
  * Descriptive statistics table showing mean, median, min, max, and standard deviation
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import {
   Table,
   TableBody,
@@ -28,9 +29,25 @@ export interface StatisticsTableProps {
   className?: string;
 }
 
-const StatisticsTable: React.FC<StatisticsTableProps> = ({ statistics, isLoading = false, error }) => {
+// Memoized number formatter (outside component to avoid recreation)
+const formatNumber = (value: number): string => {
+  return formatChartValue(value);
+};
+
+const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLoading = false, error }) => {
   const [showPercentiles, setShowPercentiles] = useState(false);
 
+  // Memoize toggle handler
+  const togglePercentiles = useCallback(() => {
+    setShowPercentiles(prev => !prev);
+  }, []);
+
+  // Memoize should render check
+  const shouldRender = useMemo(() => {
+    return !isLoading && !error && statistics.length > 0;
+  }, [isLoading, error, statistics.length]);
+
+  // Loading state
   if (isLoading) {
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
@@ -41,6 +58,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ statistics, isLoading
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
@@ -51,7 +69,8 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ statistics, isLoading
     );
   }
 
-  if (statistics.length === 0) {
+  // Empty state
+  if (!shouldRender) {
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
@@ -61,17 +80,13 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ statistics, isLoading
     );
   }
 
-  const formatNumber = (value: number): string => {
-    return formatChartValue(value);
-  };
-
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
         <Button
           size="small"
           endIcon={showPercentiles ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          onClick={() => setShowPercentiles(!showPercentiles)}
+          onClick={togglePercentiles}
         >
           {showPercentiles ? 'Hide Percentiles' : 'Show Percentiles'}
         </Button>
@@ -150,4 +165,16 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ statistics, isLoading
   );
 };
 
+// Memoize the main component with custom comparison
+const StatisticsTable = memo(StatisticsTableInner, (prevProps, nextProps) => {
+  return (
+    prevProps.statistics === nextProps.statistics &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});
+
+StatisticsTable.displayName = 'StatisticsTable';
+
 export default StatisticsTable;
+export { StatisticsTable };

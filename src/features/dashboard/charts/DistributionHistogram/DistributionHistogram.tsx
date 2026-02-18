@@ -1,9 +1,10 @@
 /**
  * DistributionHistogram Component
  * Frequency distribution histogram with configurable bins
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
-import React from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import {
   BarChart,
   Bar,
@@ -30,7 +31,7 @@ export interface DistributionHistogramProps {
   className?: string;
 }
 
-const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
+const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
   data,
   color,
   isLoading = false,
@@ -39,40 +40,22 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
   const theme = useTheme();
   const chartColor = color || theme.palette.primary.main;
 
-  if (isLoading) {
-    return (
-      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          Loading histogram...
-        </Typography>
-      </Box>
-    );
-  }
+  // Memoize computed values
+  const { yAxisMax, meanBinLabel, medianBinLabel } = useMemo(() => {
+    const maxCount = Math.max(...data.bins.map((b) => b.count));
+    const max = Math.ceil(maxCount * 1.1);
+    const meanLabel = data.bins.find((bin) => data.mean >= bin.binStart && data.mean <= bin.binEnd)?.label;
+    const medianLabel = data.bins.find((bin) => data.median >= bin.binStart && data.median <= bin.binEnd)?.label;
+    return { yAxisMax: max, meanBinLabel: meanLabel, medianBinLabel: medianLabel };
+  }, [data.bins, data.mean, data.median]);
 
-  if (error) {
-    return (
-      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
-        <Typography variant="body2" color="error">
-          Error loading histogram: {error.message}
-        </Typography>
-      </Box>
-    );
-  }
+  // Memoize should render check
+  const shouldRender = useMemo(() => {
+    return !isLoading && !error && data.bins.length > 0;
+  }, [isLoading, error, data.bins.length]);
 
-  if (data.bins.length === 0) {
-    return (
-      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          No data available for histogram
-        </Typography>
-      </Box>
-    );
-  }
-
-  const maxCount = Math.max(...data.bins.map((b) => b.count));
-  const yAxisMax = Math.ceil(maxCount * 1.1);
-
-  const renderInlineLegend = React.useCallback(({ width: chartWidth, margin: chartMargin }: { width?: number; margin?: { top?: number; right?: number; bottom?: number; left?: number } }) => {
+  // Memoize inline legend rendering - position in right-top corner using SVG percentage
+  const renderInlineLegend = useCallback((props: any) => {
     const padding = 6;
     const swatchSize = 12;
     const gap = 6;
@@ -82,66 +65,42 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
       { type: 'line', label: 'Median', color: theme.palette.warning.main, dashed: true },
     ];
 
-    const measure = (text: string) => {
-      try {
-        const c = document.createElement('canvas');
-        const ctx = c.getContext('2d');
-        if (ctx) {
-          ctx.font = '12px sans-serif';
-          return Math.ceil(ctx.measureText(text).width);
-        }
-      } catch {
-        // Ignore
-      }
-      return text.length * 8;
-    };
-
     const rowHeight = 16;
-    const legendWidth = Math.min(320, padding * 2 + Math.max(...items.map((it) => swatchSize + gap + measure(it.label))));
-    const legendHeight = padding * 2 + items.length * rowHeight + (items.length - 1) * 4;
-
-    const m = chartMargin || { top: 0, right: 0, bottom: 0, left: 0 };
-    const effectiveWidth = typeof chartWidth === 'number' && chartWidth > 0 ? chartWidth : 400;
-    const innerRight = effectiveWidth - (m.right || 0);
-    const inset = 8;
-    const startX = Math.max((m.left || 0) + inset, innerRight - legendWidth - inset);
-    const startY = (m.top || 0) + inset;
+    const legendXPercent = 85;
+    const startY = 16;
+    const { width = 600 } = props;
+    const xOffset = (width * legendXPercent) / 100;
 
     return (
       <g>
-        <rect
-          x={startX}
-          y={startY}
-          width={legendWidth}
-          height={legendHeight}
-          rx={6}
-          ry={6}
-          fill="#fff"
-          fillOpacity={0.85}
-          stroke={theme.palette.divider}
-        />
         {items.map((it, idx) => {
           const y = startY + padding + idx * (rowHeight + 4);
           return (
             <g key={it.label}>
               {it.type === 'box' ? (
-                <rect x={startX + padding} y={y + 2} width={swatchSize} height={swatchSize} fill={it.color} stroke={it.color} />
+                <rect
+                  x={xOffset}
+                  y={y + 2}
+                  width={swatchSize}
+                  height={swatchSize}
+                  fill={it.color}
+                  stroke={it.color}
+                />
               ) : (
-                <g>
-                  <line
-                    x1={startX + padding}
-                    x2={startX + padding + swatchSize}
-                    y1={y + 8}
-                    y2={y + 8}
-                    stroke={it.color}
-                    strokeWidth={2}
-                    strokeDasharray={it.dashed ? '5 5' : undefined}
-                  />
-                </g>
+                <line
+                  x1={xOffset + padding}
+                  x2={xOffset + padding + swatchSize}
+                  y1={y + 8}
+                  y2={y + 8}
+                  stroke={it.color}
+                  strokeWidth={2}
+                  strokeDasharray={it.dashed ? '5 5' : undefined}
+                />
               )}
               <text
-                x={startX + padding + swatchSize + gap}
+                x={xOffset}
                 y={y + 12}
+                dx={swatchSize + gap}
                 fill={theme.palette.text.primary}
                 fontSize={12}
                 alignmentBaseline="baseline"
@@ -153,12 +112,45 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
         })}
       </g>
     );
-  }, [chartColor, theme.palette.divider, theme.palette.text.primary, theme.palette.error.main, theme.palette.warning.main]);
+  }, [chartColor, theme.palette.text.primary, theme.palette.error.main, theme.palette.warning.main]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          Loading histogram...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="error">
+          Error loading histogram: {error.message}
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Empty state
+  if (!shouldRender) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          No data available for histogram
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex' }} data-chart-id="histogram">
       <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
-        <BarChart data={data.bins} margin={{ top: 24, right: 30, left: 28, bottom: 8 }}>
+        <BarChart data={data.bins} margin={{ top: 24, right: 100, left: 28, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
           <XAxis
             dataKey="label"
@@ -195,35 +187,52 @@ const DistributionHistogram: React.FC<DistributionHistogramProps> = ({
             ))}
           </Bar>
 
-          <ReferenceLine
-            x={data.bins.find((bin) => data.mean >= bin.binStart && data.mean <= bin.binEnd)?.label}
-            stroke={theme.palette.error.main}
-            strokeDasharray="5 5"
-            strokeWidth={2}
-            label={{
-              value: `Mean: ${formatCurrencyGerman(data.mean)}`,
-              position: 'insideTopRight',
-              fill: theme.palette.error.main,
-              fontSize: 11,
-            }}
-          />
+          {meanBinLabel && (
+            <ReferenceLine
+              x={meanBinLabel}
+              stroke={theme.palette.error.main}
+              strokeDasharray="5 5"
+              strokeWidth={2}
+              label={{
+                value: `Mean: ${formatCurrencyGerman(data.mean)}`,
+                position: 'insideTopRight',
+                fill: theme.palette.error.main,
+                fontSize: 11,
+              }}
+            />
+          )}
 
-          <ReferenceLine
-            x={data.bins.find((bin) => data.median >= bin.binStart && data.median <= bin.binEnd)?.label}
-            stroke={theme.palette.warning.main}
-            strokeDasharray="3 3"
-            strokeWidth={2}
-            label={{
-              value: `Median: ${formatCurrencyGerman(data.median)}`,
-              position: 'insideTopRight',
-              fill: theme.palette.warning.main,
-              fontSize: 11,
-            }}
-          />
+          {medianBinLabel && (
+            <ReferenceLine
+              x={medianBinLabel}
+              stroke={theme.palette.warning.main}
+              strokeDasharray="3 3"
+              strokeWidth={2}
+              label={{
+                value: `Median: ${formatCurrencyGerman(data.median)}`,
+                position: 'insideTopRight',
+                fill: theme.palette.warning.main,
+                fontSize: 11,
+              }}
+            />
+          )}
         </BarChart>
       </ResponsiveContainer>
     </Box>
   );
 };
 
+// Memoize the main component with custom comparison
+const DistributionHistogram = memo(DistributionHistogramInner, (prevProps, nextProps) => {
+  return (
+    prevProps.data === nextProps.data &&
+    prevProps.color === nextProps.color &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});
+
+DistributionHistogram.displayName = 'DistributionHistogram';
+
 export default DistributionHistogram;
+export { DistributionHistogram };

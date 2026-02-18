@@ -1313,6 +1313,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               data={dashboardData}
               columnMapping={dashboardColumnMapping}
               nameColumn={nameColumn}
+              deferRendering={true}
             />
           </ErrorBoundary>
         </DialogContent>
