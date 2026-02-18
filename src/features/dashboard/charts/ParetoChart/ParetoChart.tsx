@@ -254,7 +254,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: -1, gap: 0 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', lineHeight: 1, mb: -0.5 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8rem', lineHeight: 1.2, mb: -0.5 }}>
           {eightyPercentIndex + 1} contributor{eightyPercentIndex + 1 > 1 ? 's' : ''} account for ~80% of total value
         </Typography>
 
