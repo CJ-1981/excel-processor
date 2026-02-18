@@ -25,36 +25,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunk for React core libraries and ALL React-related packages
-          // This prevents duplicate React instances
-          if (id.includes('node_modules/react') ||
-              id.includes('node_modules/react-dom') ||
-              id.includes('node_modules/react-is') ||
-              id.includes('node_modules/scheduler') ||
-              id.includes('node_modules/@dnd-kit') ||
-              id.includes('node_modules/@hello-pangea/dnd') ||
-              id.includes('node_modules/recharts')) {
-            return 'vendor-react';
-          }
-
-          // Vendor chunk for MUI components and Emotion styling
-          if (id.includes('node_modules/@mui') || id.includes('node_modules/@emotion')) {
-            return 'vendor-mui';
-          }
-
-          // Vendor chunk for data processing libraries (xlsx, jspdf)
-          if (id.includes('node_modules/xlsx') ||
-              id.includes('node_modules/jspdf') ||
-              id.includes('node_modules/@types/jspdf')) {
-            return 'vendor-data';
-          }
-
-          // Vendor chunk for other third-party libraries
+          // Put ALL node_modules in vendor chunk to avoid circular dependencies
+          // This ensures React is only loaded once
           if (id.includes('node_modules')) {
             return 'vendor';
           }
 
-          // Default chunk for application code
+          // Application code
           return 'app';
         },
       },
