@@ -51,11 +51,13 @@ const CustomAxisTick: React.FC<CustomAxisTickProps> = ({ x, y, payload }) => {
   if (newlineIndex !== -1) {
     const week = label.substring(0, newlineIndex);
     const date = label.substring(newlineIndex + 1);
-    // Use dy offset for second line
+    // Use tspan for both lines with proper vertical alignment and padding
     return (
-      <text x={x} y={y} textAnchor="middle" fontSize={11} fill="currentColor">
-        {week}
-        <tspan textAnchor="middle" dy="14" fontSize={9} fill="currentColor" opacity={0.7}>
+      <text x={x} y={y} textAnchor="middle" fill="currentColor">
+        <tspan x={x} dy="0.7em" fontSize={11} fontWeight={500}>
+          {week}
+        </tspan>
+        <tspan x={x} dy="14" fontSize={9} fill="currentColor" opacity={0.7}>
           {date}
         </tspan>
       </text>
@@ -289,6 +291,7 @@ const TrendChartInner: React.FC<TrendChartProps> = ({
             tickLine={{ stroke: theme.palette.text.secondary }}
             height={50}
             interval="preserveStartEnd"
+            minTickGap={35}
           />
           <YAxis
             stroke={theme.palette.text.primary}

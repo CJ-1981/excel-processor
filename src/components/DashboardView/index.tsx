@@ -1777,7 +1777,7 @@ function aggregateByTimeMultiple(
   };
 
   return {
-    weekly: sortByDate(weeklyAggregated, (key, d) => `${key} (${fmtMonthDay(((d as any).latest as Date) || d.date)})`),
+    weekly: sortByDate(weeklyAggregated, (key, d) => `${key}\n(${fmtMonthDay(((d as any).latest as Date) || d.date)})`),
     monthly: sortByDate(monthlyAggregated),
     quarterly: sortByDate(quarterlyAggregated),
     yearly: sortByDate(yearlyAggregated),
@@ -1912,7 +1912,7 @@ function aggregateByFilenameDateMultiple(
   };
 
   return {
-    weekly: sortByDate(weeklyAggregated, (key, d) => `${key} (${fmtMonthDay(((d as any).latest as Date) || d.date)})`),
+    weekly: sortByDate(weeklyAggregated, (key, d) => `${key}\n(${fmtMonthDay(((d as any).latest as Date) || d.date)})`),
     monthly: sortByDate(monthlyAggregated),
     quarterly: sortByDate(quarterlyAggregated),
     yearly: sortByDate(yearlyAggregated),
