@@ -25,22 +25,21 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunk for React core libraries and related
+          // Vendor chunk for React core libraries and ALL React-related packages
+          // This prevents duplicate React instances
           if (id.includes('node_modules/react') ||
               id.includes('node_modules/react-dom') ||
+              id.includes('node_modules/react-is') ||
+              id.includes('node_modules/scheduler') ||
               id.includes('node_modules/@dnd-kit') ||
-              id.includes('node_modules/@hello-pangea/dnd')) {
+              id.includes('node_modules/@hello-pangea/dnd') ||
+              id.includes('node_modules/recharts')) {
             return 'vendor-react';
           }
 
           // Vendor chunk for MUI components and Emotion styling
           if (id.includes('node_modules/@mui') || id.includes('node_modules/@emotion')) {
             return 'vendor-mui';
-          }
-
-          // Vendor chunk for Recharts library
-          if (id.includes('node_modules/recharts')) {
-            return 'vendor-charts';
           }
 
           // Vendor chunk for data processing libraries (xlsx, jspdf)
