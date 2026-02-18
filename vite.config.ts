@@ -25,8 +25,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunk for React core libraries
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+          // Vendor chunk for React core libraries and related
+          if (id.includes('node_modules/react') ||
+              id.includes('node_modules/react-dom') ||
+              id.includes('node_modules/@dnd-kit') ||
+              id.includes('node_modules/@hello-pangea/dnd')) {
             return 'vendor-react';
           }
 
@@ -41,7 +44,6 @@ export default defineConfig({
           }
 
           // Vendor chunk for data processing libraries (xlsx, jspdf)
-          // These are lazy-loaded and only used in specific components
           if (id.includes('node_modules/xlsx') ||
               id.includes('node_modules/jspdf') ||
               id.includes('node_modules/@types/jspdf')) {
