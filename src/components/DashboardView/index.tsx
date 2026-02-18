@@ -1231,7 +1231,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     value={periodType}
                     onChange={(e) => setPeriodType(e.target.value as PeriodType)}
                     onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
                     style={{
                       minWidth: 120,
                       height: 44,
@@ -1266,7 +1265,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     value="line"
                     title="Line Chart"
                     onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     <ShowChart />
                   </ToggleButton>
@@ -1274,7 +1272,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     value="area"
                     title="Area Chart"
                     onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     <AreaChartIcon />
                   </ToggleButton>
@@ -1282,7 +1279,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     value="stacked"
                     title="Stacked Area"
                     onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     <StackedLineChart />
                   </ToggleButton>
