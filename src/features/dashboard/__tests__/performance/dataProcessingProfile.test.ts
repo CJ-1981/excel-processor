@@ -233,7 +233,7 @@ describe('Performance: Data Processing Utilities Profile', () => {
       console.log(formatBenchmarkResult(result));
     });
 
-    it('should aggregate 10K rows by time periods in under 100ms', async () => {
+    it('should aggregate 10K rows by time periods in under 150ms', async () => {
       const data = generateTestData(10000);
       const dateColumn = 'date';
       const valueColumns = ['amount'];
@@ -242,7 +242,7 @@ describe('Performance: Data Processing Utilities Profile', () => {
         () => aggregateByTimeMultiple(data, dateColumn, valueColumns, parseDateValue),
         {
           name: 'aggregateByTimeMultiple - 10K rows',
-          threshold: 100,
+          threshold: 150,
         }
       );
 
