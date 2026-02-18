@@ -1222,9 +1222,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
             </Box>
             {hasTimeSeriesData && (
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onMouseDown={(e) => {
-                // Only stop propagation if clicking directly on the Box, not on interactive children
-                if (e.currentTarget === e.target) {
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onPointerDown={(e) => {
+                // Only stop mouse events, not touch events (allows iOS native controls to work)
+                if (e.pointerType === 'mouse') {
                   e.stopPropagation();
                 }
               }}>
