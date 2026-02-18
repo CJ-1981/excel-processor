@@ -202,7 +202,7 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
                   {amountData.map((_, index) => (
                     <Cell key={`cell-amount-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
-                  <LabelList dataKey="value" position="right" fontSize={11} fill={theme.palette.text.secondary} formatter={(v) => formatCurrencyGerman(Number(v || 0))} />
+                  <LabelList dataKey="value" position="right" fontSize={11} fill={theme.palette.text.secondary} formatter={(v: number | string) => formatCurrencyGerman(Number(v || 0))} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

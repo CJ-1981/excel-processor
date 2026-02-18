@@ -61,7 +61,7 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({
 
   return (
     <div
-      ref={containerRef}
+      ref={containerRef as React.RefObject<HTMLDivElement>}
       className={className}
       style={{
         ...style,

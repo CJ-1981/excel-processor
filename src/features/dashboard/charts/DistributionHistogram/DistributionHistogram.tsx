@@ -177,7 +177,10 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
               border: `1px solid ${theme.palette.divider}`,
               borderRadius: theme.shape.borderRadius,
             }}
-            formatter={(value: number | undefined, name: string | undefined) => [value ?? 0, name === 'count' ? 'Count' : name ?? '']}
+            formatter={(value: number | string, name: string, props: any) => {
+              const numValue = typeof value === 'number' ? value : parseFloat(value);
+              return [numValue ?? 0, name === 'count' ? 'Count' : name ?? ''];
+            }}
             labelFormatter={(label) => `Range: ${label}`}
           />
           <Customized component={renderInlineLegend} />
