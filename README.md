@@ -134,6 +134,16 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.6.2 (2026-02-18)
+*   **iOS Mobile Web Improvements**:
+    *   Chart download buttons (PNG/JPG) now work correctly on iOS Safari
+    *   Pareto chart "account for" text font size increased for better readability
+*   **Known Issue**: Trend chart controls (period dropdown and chart type buttons) do not work on iOS mobile web. Use desktop browser for full functionality.
+*   **Build Improvements**:
+    *   Simplified chunking strategy to prevent circular dependencies
+    *   Bundled all React-related packages in single vendor-react chunk
+    *   Fixed react-is version override to 18.3.1
+
 ### v1.6.1 (2026-02-16)
 *   **UI Redesign**: Simplified "Value Columns" selector to show a summary count instead of redundant chips.
 *   **Enhanced Series Management**: Added a dedicated, styled area for selected data series with color pickers and better visual grouping.
