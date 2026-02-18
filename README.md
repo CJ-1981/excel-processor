@@ -134,7 +134,7 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
-### v1.6.2 (2026-02-18)
+### v1.7.1 (2026-02-18)
 *   **iOS Mobile Web Improvements**:
     *   Chart download buttons (PNG/JPG) now work correctly on iOS Safari
     *   Pareto chart "account for" text font size increased for better readability
@@ -143,6 +143,30 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
     *   Simplified chunking strategy to prevent circular dependencies
     *   Bundled all React-related packages in single vendor-react chunk
     *   Fixed react-is version override to 18.3.1
+
+### v1.7.0 (2026-02-18)
+*   **Dashboard Architecture Refactoring**:
+    *   Modularized dashboard components into feature-based structure
+    *   Extracted 6 chart modules (TrendChart, TopDonorsChart, StatisticsTable, DistributionHistogram, ParetoChart, RangeDistributionCharts)
+    *   Created reusable components (ChartExport, ColumnSelector, DashboardGrid)
+    *   Added 7 custom React hooks for data management and chart interactions
+    *   Added 4 utility modules for calculations, colors, data analysis, and date extraction
+*   **Chart UI Improvements**:
+    *   Fixed legend positioning to 85% for all charts
+    *   Fixed color consistency when toggling columns (use original column index)
+    *   Fixed X-axis two-line labels with tspan approach
+    *   Fixed histogram mean/median legend icons with pixel calculation
+    *   Removed boundary box from legends
+*   **Testing & Performance**:
+    *   Added comprehensive performance benchmarking suite
+    *   Added ChartErrorBoundary for better error handling
+    *   Added ChartSkeleton for loading states
+    *   Added chunk load handler for optimized code splitting
+    *   Created 2000+ tests for dashboard module
+*   **Build Configuration**:
+    *   Added vite.config.test.ts for isolated test environment
+    *   Added deployment tests to validate production builds
+    *   Optimized chunk loading strategy for better performance
 
 ### v1.6.1 (2026-02-16)
 *   **UI Redesign**: Simplified "Value Columns" selector to show a summary count instead of redundant chips.
