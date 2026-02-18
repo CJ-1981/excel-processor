@@ -33,3 +33,12 @@ input {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* Ensure controls receive pointer events properly on all platforms */
+.chart-controls {
+  pointer-events: auto !important;
+}
+
+.chart-controls * {
+  pointer-events: auto !important;
+}

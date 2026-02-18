@@ -1222,12 +1222,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               </IconButton>
             </Box>
             {hasTimeSeriesData && (
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onPointerDown={(e) => {
-                // Only stop mouse events, not touch events (allows iOS native controls to work)
-                if (e.pointerType === 'mouse') {
-                  e.stopPropagation();
-                }
-              }}>
+              <Box className="chart-controls" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Box sx={{ minWidth: 120 }}>
                   <Typography variant="caption" sx={{ mb: 0.5, ml: 1.5, color: 'text.secondary' }}>
                     Period
