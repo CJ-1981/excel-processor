@@ -1230,7 +1230,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   <select
                     value={periodType}
                     onChange={(e) => setPeriodType(e.target.value as PeriodType)}
-                    onMouseDown={(e) => e.stopPropagation()}
                     style={{
                       minWidth: 120,
                       height: 44,
@@ -1240,6 +1239,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       backgroundColor: 'var(--mui-palette-background-paper, #fff)',
                       fontSize: '0.875rem',
                       cursor: 'pointer',
+                      touchAction: 'manipulation',
                     }}
                   >
                     <option value="weekly">Weekly</option>
@@ -1258,28 +1258,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       minHeight: 44,
                       padding: '8px 12px',
                       WebkitTapHighlightColor: 'rgba(0, 0, 0, 0.1)',
+                      touchAction: 'manipulation',
                     },
                   }}
                 >
-                  <ToggleButton
-                    value="line"
-                    title="Line Chart"
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
+                  <ToggleButton value="line" title="Line Chart">
                     <ShowChart />
                   </ToggleButton>
-                  <ToggleButton
-                    value="area"
-                    title="Area Chart"
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
+                  <ToggleButton value="area" title="Area Chart">
                     <AreaChartIcon />
                   </ToggleButton>
-                  <ToggleButton
-                    value="stacked"
-                    title="Stacked Area"
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
+                  <ToggleButton value="stacked" title="Stacked Area">
                     <StackedLineChart />
                   </ToggleButton>
                 </ToggleButtonGroup>
