@@ -3,6 +3,10 @@
   "private": true,
   "version": "1.7.0",
   "type": "module",
+  "overrides": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -54,7 +58,7 @@
     "happy-dom": "^20.6.1",
     "jsdom": "^27.0.1",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
+    "typescript-eslint": "^8.14.0",
     "vite": "^7.2.4",
     "vitest": "^4.0.18"
   }
