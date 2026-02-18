@@ -177,7 +177,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
               border: `1px solid ${theme.palette.divider}`,
               borderRadius: theme.shape.borderRadius,
             }}
-            formatter={(value: number | string, name: string, props: any) => {
+            formatter={(value: number | string, name: string) => {
               const numValue = typeof value === 'number' ? value : parseFloat(value);
               return [numValue ?? 0, name === 'count' ? 'Count' : name ?? ''];
             }}
