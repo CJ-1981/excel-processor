@@ -21,9 +21,6 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(formatDateGerman()),
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
-  resolve: {
-    dedupe: ['react', 'react-dom'],
-  },
   build: {
     rollupOptions: {
       output: {
