@@ -1230,9 +1230,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   <select
                     value={periodType}
                     onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     style={{
                       minWidth: 120,
-                      height: 32,
+                      height: 44,
                       padding: '4px 8px',
                       borderRadius: '4px',
                       border: '1px solid rgba(0, 0, 0, 0.23)',
@@ -1260,13 +1262,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     },
                   }}
                 >
-                  <ToggleButton value="line" title="Line Chart">
+                  <ToggleButton
+                    value="line"
+                    title="Line Chart"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     <ShowChart />
                   </ToggleButton>
-                  <ToggleButton value="area" title="Area Chart">
+                  <ToggleButton
+                    value="area"
+                    title="Area Chart"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     <AreaChartIcon />
                   </ToggleButton>
-                  <ToggleButton value="stacked" title="Stacked Area">
+                  <ToggleButton
+                    value="stacked"
+                    title="Stacked Area"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     <StackedLineChart />
                   </ToggleButton>
                 </ToggleButtonGroup>
