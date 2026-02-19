@@ -21,7 +21,7 @@ import { APP_VERSION } from './version';
 import { loadNameMergeState, applyNameMerging } from './utils/nameMergeUtils';
 import { debug, warn } from './utils/logger';
 
-type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
+export type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
 function App() {
   const { t } = useTranslation();

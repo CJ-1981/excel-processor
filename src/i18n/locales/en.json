@@ -151,6 +151,8 @@
       "preliminaryCertificate": "Preliminary Certificate (Standard)",
       "preliminaryCertificateHint": "Temporary tax certificate for donations",
       "taxNumber": "Tax Number",
+      "taxDate": "Exemption Notice Date",
+      "taxDateHint": "Date when the tax office issued the exemption notice",
       "validFrom": "Valid From",
       "location": "Location",
       "date": "Date",

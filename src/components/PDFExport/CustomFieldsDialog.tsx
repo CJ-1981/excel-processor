@@ -519,16 +519,16 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               />
               <FormField
                 type="text"
-                label={t('pdfExport.customFields.validFrom')}
-                value={taxValidFrom}
-                onChange={setTaxValidFrom}
-                sx={{ mb: 0 }}
-              />
-              <FormField
-                type="text"
                 label={t('pdfExport.customFields.taxDate')}
                 value={taxDate1}
                 onChange={setTaxDate1}
+                helperText={t('pdfExport.customFields.taxDateHint')}
+              />
+              <FormField
+                type="text"
+                label={t('pdfExport.customFields.validFrom')}
+                value={taxValidFrom}
+                onChange={setTaxValidFrom}
                 sx={{ mb: 0 }}
               />
             </>

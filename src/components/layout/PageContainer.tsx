@@ -1,6 +1,6 @@
-import { Container, Box } from '@mui/material';
+import { Container } from '@mui/material';
 import type { SxProps, Theme } from '@mui/system';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface PageContainerProps {
   children: ReactNode;

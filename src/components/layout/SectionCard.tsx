@@ -1,7 +1,7 @@
 import { Paper } from '@mui/material';
 import type { PaperProps } from '@mui/material/Paper';
 import type { SxProps, Theme } from '@mui/system';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface SectionCardProps extends Omit<PaperProps, 'sx'> {
   children: ReactNode;
