@@ -1026,49 +1026,6 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           sx={{ width: { xs: '100%', md: '30%' } }}
         />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            {t('detailedView.rowsSelected', { total: filteredAndSortedData.length, selected: includedRowIndices.size })}
-          </Typography>
-          <FormGroup sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={autoDeselectZeros}
-                  onChange={(e) => setAutoDeselectZeros(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={
-                <Tooltip title={t('detailedView.autoDeselectTooltip')} arrow>
-                  <span>{t('detailedView.autoDeselectZeros')}</span>
-                </Tooltip>
-              }
-              sx={{ mr: 1 }}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={hideDeselectedRows}
-                  onChange={(e) => {
-                    const newValue = e.target.checked;
-                    setHideDeselectedRows(newValue);
-                    // Persist to localStorage
-                    try {
-                      localStorage.setItem('excel-processor-hide-deselected', String(newValue));
-                    } catch {}
-                    setPage(0); // Reset to first page when toggling
-                  }}
-                  size="small"
-                />
-              }
-              label={
-                <Tooltip title={t('detailedView.hideDeselectedTooltip')} arrow>
-                  <span>{t('detailedView.hideDeselected')}</span>
-                </Tooltip>
-              }
-              sx={{ mr: 1 }}
-            />
-          </FormGroup>
           {(searchTerm || hasAnyColumnFilter) && (
             <>
               <Tooltip title={t('detailedView.selectRowsTooltip')} arrow>
@@ -1127,6 +1084,51 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             </span>
           </Tooltip>
         </Box>
+      </Box>
+      {/* Second row: Selection message and toggle switches */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          {t('detailedView.rowsSelected', { total: filteredAndSortedData.length, selected: includedRowIndices.size })}
+        </Typography>
+        <FormGroup sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={autoDeselectZeros}
+                onChange={(e) => setAutoDeselectZeros(e.target.checked)}
+                size="small"
+              />
+            }
+            label={
+              <Tooltip title={t('detailedView.autoDeselectTooltip')} arrow>
+                <span>{t('detailedView.autoDeselectZeros')}</span>
+              </Tooltip>
+            }
+            sx={{ mr: 1 }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={hideDeselectedRows}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
+                  setHideDeselectedRows(newValue);
+                  // Persist to localStorage
+                  try {
+                    localStorage.setItem('excel-processor-hide-deselected', String(newValue));
+                  } catch {}
+                  setPage(0); // Reset to first page when toggling
+                }}
+                size="small"
+              />
+            }
+            label={
+              <Tooltip title={t('detailedView.hideDeselectedTooltip')} arrow>
+                <span>{t('detailedView.hideDeselected')}</span>
+              </Tooltip>
+            }
+          />
+        </FormGroup>
       </Box>
       {/* Column Filter Info and Clear Button */}
       {hasAnyColumnFilter && (

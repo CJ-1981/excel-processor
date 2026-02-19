@@ -79,23 +79,44 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
       setColumns(allColumns);
       debug('ColumnSelector', 'allColumns built:', allColumns.length, 'options');
 
-      // Auto-select first column with non-empty value from first row
-      const firstNonEmpty = allColumns.find(col => col.rowIndex === 1 && col.value !== '(empty)');
-      if (firstNonEmpty) {
-        debug('ColumnSelector', 'auto-selecting:', firstNonEmpty);
-        setSelectedColumn(firstNonEmpty.original);
-        // If headers are already in keys (CSV), use headerRowIndex = 0
-        const effectiveRowIndex = hasRealHeaders ? 0 : firstNonEmpty.rowIndex;
+      // Auto-select column intelligently
+      // Priority: 1) Column with name-related keywords, 2) First non-empty column
+      const nameKeywords = ['name', '이름', '성명', 'Name', 'NAME', '이름 ', ' 성명'];
+
+      // Function to check if a value contains name-related keywords
+      const isNameRelated = (value: string): boolean => {
+        return nameKeywords.some(keyword => value.toLowerCase().includes(keyword.toLowerCase()));
+      };
+
+      // First, try to find a column with name-related keyword in header or value
+      const nameColumn = allColumns.find(col =>
+        isNameRelated(col.original) || isNameRelated(col.display) || isNameRelated(col.value)
+      );
+
+      if (nameColumn) {
+        debug('ColumnSelector', 'auto-selecting name column:', nameColumn);
+        setSelectedColumn(nameColumn.original);
+        const effectiveRowIndex = hasRealHeaders ? 0 : nameColumn.rowIndex;
         setSelectedRowIndex(effectiveRowIndex);
-        onColumnSelect(firstNonEmpty.original, effectiveRowIndex);
-      } else if (allColumns.length > 0) {
-        debug('ColumnSelector', 'selecting first available:', allColumns[0]);
-        setSelectedColumn(allColumns[0].original);
-        const effectiveRowIndex = hasRealHeaders ? 0 : allColumns[0].rowIndex;
-        setSelectedRowIndex(effectiveRowIndex);
-        onColumnSelect(allColumns[0].original, effectiveRowIndex);
+        onColumnSelect(nameColumn.original, effectiveRowIndex);
       } else {
-        debug('ColumnSelector', 'no columns to select!');
+        // Fallback: auto-select first column with non-empty value from first row
+        const firstNonEmpty = allColumns.find(col => col.rowIndex === 1 && col.value !== '(empty)');
+        if (firstNonEmpty) {
+          debug('ColumnSelector', 'auto-selecting first non-empty:', firstNonEmpty);
+          setSelectedColumn(firstNonEmpty.original);
+          const effectiveRowIndex = hasRealHeaders ? 0 : firstNonEmpty.rowIndex;
+          setSelectedRowIndex(effectiveRowIndex);
+          onColumnSelect(firstNonEmpty.original, effectiveRowIndex);
+        } else if (allColumns.length > 0) {
+          debug('ColumnSelector', 'selecting first available:', allColumns[0]);
+          setSelectedColumn(allColumns[0].original);
+          const effectiveRowIndex = hasRealHeaders ? 0 : allColumns[0].rowIndex;
+          setSelectedRowIndex(effectiveRowIndex);
+          onColumnSelect(allColumns[0].original, effectiveRowIndex);
+        } else {
+          debug('ColumnSelector', 'no columns to select!');
+        }
       }
     }
   }, [data, onColumnSelect]);

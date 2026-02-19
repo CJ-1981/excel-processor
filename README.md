@@ -134,6 +134,37 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.9.0 (2026-02-19)
+*   **PDF Template System Improvements**:
+    *   Added `customFieldDefaults` support in PDF templates for per-template default values
+    *   Implemented flexible setter mapping system for automatic field binding
+    *   Multiple templates can now have different default values (signature location, tax numbers, dates)
+*   **User Preferences Persistence**:
+    *   Tax-related fields now persist in localStorage across sessions
+    *   User-entered values are automatically saved and reused
+    *   No need to re-enter tax information or edit template files each time
+*   **Reset to Defaults Button**:
+    *   Added reset button in PDF export dialog to restore template defaults
+    *   Clears localStorage and reloads values from selected template
+    *   Easy recovery from accidentally entered wrong data
+*   **Decimal Point Handling**:
+    *   Fixed number fields to display at most 2 decimal places
+    *   Proper rounding for all monetary values in PDF export dialog
+    *   Consistent formatting prevents floating point precision issues
+*   **Mutually Exclusive Tax Options**:
+    *   Tax exemption checkboxes now properly mutually exclusive (radio buttons)
+    *   Group-based checkbox system for future mutually exclusive options
+    *   "Tax Exemption According to Exemption Notice" set as default selection
+*   **Editable Tax Fields**:
+    *   All tax number and date fields are now fully editable
+    *   Previously disabled fields for "Preliminary Certificate" option now editable
+*   **UI Text Updates**:
+    *   PDF export button updated to "EXPORT PDF" (English) / "PDF 출력" (Korean)
+    *   Consistent button text across detailed data view and export dialog
+*   **Bug Fixes**:
+    *   Fixed FormField number input to properly handle decimal values
+    *   Fixed monthly amount aggregation rounding issues
+
 ### v1.8.0 (2026-02-19)
 *   **Material UI v7 Upgrade**:
     *   Upgraded from Material-UI v5 to v7 (latest)

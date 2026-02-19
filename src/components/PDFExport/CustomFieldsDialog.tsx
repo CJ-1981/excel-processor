@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import ColorizeIcon from '@mui/icons-material/Colorize';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { FormField } from './FormField';
 import { aggregateByMonth } from '../../utils/monthlyAggregator';
 import {
@@ -60,12 +61,11 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [signatureLocation, setSignatureLocation] = useState('Kelsterbach');
   // Waiver: 'yes' or 'no' (string for radio button group)
   const [waiverChoice, setWaiverChoice] = useState<'yes' | 'no'>('no');
-  const [taxOption1, setTaxOption1] = useState(false);
-  const [taxOption2, setTaxOption2] = useState(true);
-  const [taxNumber1, setTaxNumber1] = useState('');
-  const [taxDate1, setTaxDate1] = useState('');
-  const [taxNumber2] = useState('4525057301');
-  const [taxDate2] = useState('29.04.2011');
+  const [taxExemptionOption, setTaxExemptionOption] = useState<'freistellungsbescheid' | 'vorlaeufigeBescheinigung'>('freistellungsbescheid');
+  const [taxNumber1, setTaxNumber1] = useState('Frankfurt/Main StNr. 14 255 72251');
+  const [taxDate1, setTaxDate1] = useState('23.12.2025');
+  const [taxNumber2, setTaxNumber2] = useState('Frankfurt/Main StNr. 4525057301');
+  const [taxDate2, setTaxDate2] = useState('29.04.2011');
   const [taxValidFrom, setTaxValidFrom] = useState('27.12.2016');
   const [notMembership, setNotMembership] = useState(true);
 
@@ -73,7 +73,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [textColor, setTextColor] = useState('#FF0000'); // Default: red
 
   // Available numeric columns (internal key -> label mapping)
-  const [numericColumns, setNumericColumns] = useState<Array<{id: string, label: string}>>([]);
+  const [numericColumns, setNumericColumns] = useState<Array<{ id: string, label: string }>>([]);
 
   // Preset colors for user to choose from
   const presetColors = [
@@ -92,7 +92,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     if (open) {
       // Get numeric columns from visible headers
       // Filter to only include columns that have numeric values in the data
-      const numericCols: Array<{id: string, label: string}> = [];
+      const numericCols: Array<{ id: string, label: string }> = [];
 
       const isPureNumericString = (str: string): boolean => {
         return /^[-]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(String(str).trim());
@@ -144,13 +144,36 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
       // Set default values from template, falling back to hardcoded defaults
       setWaiverChoice('no');
-      setTaxOption2(true);
-      setTaxOption1(false);
+      setTaxExemptionOption('freistellungsbescheid');
       setNotMembership(true);
 
-      // Use template-specific default for signatureLocation if available
-      if (template.customFieldDefaults?.signatureLocation) {
-        setSignatureLocation(String(template.customFieldDefaults.signatureLocation));
+      // Flexible mapping: automatically apply all customFieldDefaults to matching state variables
+      if (template.customFieldDefaults) {
+        const defaults = template.customFieldDefaults;
+        const setterMap: Record<string, (value: any) => void> = {
+          signatureLocation: setSignatureLocation,
+          taxExemptionOption: setTaxExemptionOption,
+          taxNumber1: setTaxNumber1,
+          taxDate1: setTaxDate1,
+          taxNumber2: setTaxNumber2,
+          taxDate2: setTaxDate2,
+          taxValidFrom: setTaxValidFrom,
+        };
+
+        // Load saved values from localStorage (priority over template defaults)
+        const storedDefaults = loadDefaultsFromStorage();
+
+        // Apply defaults: localStorage takes priority, then template defaults
+        Object.entries(defaults).forEach(([key, value]) => {
+          const setter = setterMap[key];
+          if (setter) {
+            // Use localStorage value if available, otherwise use template default
+            const finalValue = storedDefaults?.[key] ?? value;
+            if (finalValue !== undefined && finalValue !== null) {
+              setter(finalValue);
+            }
+          }
+        });
       }
     }
   }, [open, context.data, context.visibleHeaders, context.selectedNames, template]);
@@ -207,7 +230,26 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         dec: aggregation.dec,
       });
 
-      setTotalAmount(aggregation.total);
+      // Round monthly amounts to 2 decimal places
+      const roundedAmounts = {
+        jan: Math.round(aggregation.jan * 100) / 100,
+        feb: Math.round(aggregation.feb * 100) / 100,
+        mar: Math.round(aggregation.mar * 100) / 100,
+        apr: Math.round(aggregation.apr * 100) / 100,
+        may: Math.round(aggregation.may * 100) / 100,
+        jun: Math.round(aggregation.jun * 100) / 100,
+        jul: Math.round(aggregation.jul * 100) / 100,
+        aug: Math.round(aggregation.aug * 100) / 100,
+        sep: Math.round(aggregation.sep * 100) / 100,
+        oct: Math.round(aggregation.oct * 100) / 100,
+        nov: Math.round(aggregation.nov * 100) / 100,
+        dec: Math.round(aggregation.dec * 100) / 100,
+      };
+      setMonthlyAmounts(roundedAmounts);
+
+      // Calculate total from rounded amounts
+      const total = Object.values(roundedAmounts).reduce((sum, val) => sum + val, 0);
+      setTotalAmount(Math.round(total * 100) / 100);
       setDonationPeriod(aggregation.dateRange);
     }
   }, [amountColumn, context.data, context.includedIndices, context.visibleHeaders, context.sourceFiles]);
@@ -229,9 +271,61 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     const newAmounts = { ...monthlyAmounts, [month]: value };
     setMonthlyAmounts(newAmounts);
 
-    // Recalculate total
+    // Recalculate total and round to 2 decimal places
     const newTotal = Object.values(newAmounts).reduce((sum, val) => sum + val, 0);
-    setTotalAmount(newTotal);
+    setTotalAmount(Math.round(newTotal * 100) / 100);
+  };
+
+  // Helper functions for localStorage persistence
+  const STORAGE_KEY = 'pdfExportDefaults';
+
+  const saveDefaultsToStorage = () => {
+    const defaults = {
+      signatureLocation,
+      taxExemptionOption,
+      taxNumber1,
+      taxDate1,
+      taxNumber2,
+      taxDate2,
+      taxValidFrom,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+  };
+
+  const loadDefaultsFromStorage = () => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.warn('Failed to load PDF export defaults from storage:', error);
+    }
+    return null;
+  };
+
+  const clearDefaultsFromStorage = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    // Reload template defaults after clearing storage
+    if (template.customFieldDefaults) {
+      const defaults = template.customFieldDefaults;
+      const setterMap: Record<string, (value: any) => void> = {
+        signatureLocation: setSignatureLocation,
+        taxExemptionOption: setTaxExemptionOption,
+        taxNumber1: setTaxNumber1,
+        taxDate1: setTaxDate1,
+        taxNumber2: setTaxNumber2,
+        taxDate2: setTaxDate2,
+        taxValidFrom: setTaxValidFrom,
+      };
+
+      Object.entries(defaults).forEach(([key, value]) => {
+        const setter = setterMap[key];
+        if (setter && value !== undefined && value !== null) {
+          setter(value);
+        }
+      });
+    }
   };
 
   // Handle confirm
@@ -247,8 +341,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       // Convert radio choice to boolean flags for PDF generation
       verzichtJa: String(waiverChoice === 'yes'),
       verzichtNein: String(waiverChoice === 'no'),
-      taxOption1: String(taxOption1),
-      taxOption2: String(taxOption2),
+      taxExemptionOption: taxExemptionOption,
       taxNumber1,
       taxDate1,
       taxNumber2,
@@ -257,6 +350,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       notMembership: String(notMembership),
       ...monthlyAmounts,
     };
+
+    // Save current values to localStorage for next time
+    saveDefaultsToStorage();
 
     // Pass textColor along with customFields
     onConfirm(customFields as Record<string, string | number>, textColor);
@@ -334,6 +430,28 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                 }}
               />
               <ColorizeIcon sx={{ fontSize: 14, color: '#666' }} />
+            </Box>
+            {/* Reset button */}
+            <Box
+              onClick={clearDefaultsFromStorage}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1,
+                py: 0.5,
+                border: '1px dashed #999',
+                borderRadius: 0.5,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                  borderColor: '#666',
+                },
+              }}
+              title={t('pdfExport.resetDefaults')}
+            >
+              <RestartAltIcon sx={{ fontSize: 14, color: '#666' }} />
             </Box>
           </Box>
         </Box>
@@ -496,20 +614,25 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           />
           <Divider sx={{ my: 1 }} />
           <FormField
-            type="checkbox"
-            label={t('pdfExport.customFields.taxExemptionNotice')}
-            value={taxOption1}
-            onChange={setTaxOption1}
-            helperText={t('pdfExport.customFields.taxExemptionNoticeHint')}
+            type="radio"
+            label={t('pdfExport.customFields.taxExemptionType')}
+            value={taxExemptionOption}
+            onChange={setTaxExemptionOption}
+            radioGroupName="tax-exemption-option"
+            radioOptions={[
+              {
+                value: 'freistellungsbescheid',
+                label: t('pdfExport.customFields.taxExemptionNotice'),
+                helperText: t('pdfExport.customFields.taxExemptionNoticeHint'),
+              },
+              {
+                value: 'vorlaeufigeBescheinigung',
+                label: t('pdfExport.customFields.preliminaryCertificate'),
+                helperText: t('pdfExport.customFields.preliminaryCertificateHint'),
+              },
+            ]}
           />
-          <FormField
-            type="checkbox"
-            label={t('pdfExport.customFields.preliminaryCertificate')}
-            value={taxOption2}
-            onChange={setTaxOption2}
-            helperText={t('pdfExport.customFields.preliminaryCertificateHint')}
-          />
-          {taxOption1 && (
+          {taxExemptionOption === 'freistellungsbescheid' && (
             <>
               <FormField
                 type="text"
@@ -523,6 +646,23 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                 value={taxDate1}
                 onChange={setTaxDate1}
                 helperText={t('pdfExport.customFields.taxDateHint')}
+                sx={{ mb: 0 }}
+              />
+            </>
+          )}
+          {taxExemptionOption === 'vorlaeufigeBescheinigung' && (
+            <>
+              <FormField
+                type="text"
+                label={t('pdfExport.customFields.taxNumber')}
+                value={taxNumber2}
+                onChange={setTaxNumber2}
+              />
+              <FormField
+                type="text"
+                label={t('pdfExport.customFields.taxDate')}
+                value={taxDate2}
+                onChange={setTaxDate2}
               />
               <FormField
                 type="text"

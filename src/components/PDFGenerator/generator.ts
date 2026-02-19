@@ -14,6 +14,7 @@ import type {
   TextBlockSection,
   CheckboxFieldSection,
   BoxSection,
+  DividerSection,
   CustomDataTableSection,
 } from '../../types';
 
@@ -47,7 +48,15 @@ export async function generatePDF(
         yPosition = await renderTable(doc, section as TableSection, context, yPosition);
         break;
       case 'customDataTable':
-        yPosition = await renderCustomDataTable(doc, section as CustomDataTableSection, context, yPosition);
+        // Check if table has absolute X or Y position
+        const dataTable = section as CustomDataTableSection;
+        if (dataTable.y !== undefined || dataTable.x !== undefined) {
+          // Absolute positioned - use specified positions and don't update yPosition
+          await renderCustomDataTable(doc, dataTable, context, dataTable.y ?? yPosition, dataTable.x);
+        } else {
+          // Flow mode - use current yPosition
+          yPosition = await renderCustomDataTable(doc, dataTable, context, yPosition);
+        }
         break;
       case 'footer':
         renderFooter(doc, section as FooterSection, context);
@@ -73,6 +82,10 @@ export async function generatePDF(
       // Spacer to advance Y position
       case 'spacer':
         yPosition += (section as any).height;
+        break;
+      // Divider line
+      case 'divider':
+        renderDivider(doc, section as DividerSection);
         break;
     }
   }
@@ -339,7 +352,8 @@ async function renderCustomDataTable(
   doc: jsPDF,
   section: CustomDataTableSection,
   context: PDFGenerationContext,
-  startY: number
+  startY: number,
+  startX?: number  // Optional absolute X position
 ): Promise<number> {
   // Process body data with optional variable substitution
   const body = section.rows.map(row =>
@@ -358,8 +372,25 @@ async function renderCustomDataTable(
   // Store original cell data for checking custom fields in willDrawCell
   const originalRows = section.rows;
 
+  // Prepare column styles for per-column alignment
+  const columnStyles: any = {};
+  if (section.options.columnAlign) {
+    section.options.columnAlign.forEach((align, index) => {
+      columnStyles[index] = { cellWidth: 'wrap' };
+      // Map align values to autoTable halign values
+      const alignMap: Record<string, string> = {
+        left: 'left',
+        center: 'center',
+        right: 'right',
+        justify: 'justify',
+      };
+      columnStyles[index].halign = alignMap[align] || 'left';
+    });
+  }
+
   // Generate table
-  autoTable(doc, {
+  // Build autoTable options
+  const autoTableOptions: any = {
     head: section.options.showHeaders ? [section.headers] : undefined,
     body: body,
     startY: startY,
@@ -369,7 +400,10 @@ async function renderCustomDataTable(
       lineColor: hexToRgb(section.options.borderColor),
       lineWidth: section.options.borderWidth,
       font: hasKorean && isKoreanFontLoaded() ? 'NotoSansKR' : 'helvetica',
+      // Apply table-level alignment if no column-specific alignment
+      halign: section.options.align ?? 'left',
     },
+    columnStyles: Object.keys(columnStyles).length > 0 ? columnStyles : undefined,
     headStyles: section.options.showHeaders ? {
       fillColor: hexToRgb(section.options.headerBackgroundColor),
       textColor: hexToRgb(section.options.headerTextColor),
@@ -395,7 +429,14 @@ async function renderCustomDataTable(
         }
       }
     },
-  });
+  };
+
+  // Add margin for absolute X positioning
+  if (startX !== undefined) {
+    autoTableOptions.margin = { left: startX, top: startY, right: 15, bottom: 15 };
+  }
+
+  autoTable(doc, autoTableOptions);
 
   return (doc as any).lastAutoTable.finalY + 10;
 }
@@ -470,14 +511,28 @@ function renderCheckbox(
   context: PDFGenerationContext
 ): void {
   const boxSize = section.boxSize ?? 10;
-  const checked = typeof section.checked === 'string'
-    ? substituteVariables(section.checked, context) === 'true'
-    : section.checked;
+  const labelGap = section.labelGap ?? 5;  // Default gap of 5 units
+
+  // Handle mutually exclusive checkboxes (grouped by group property)
+  let checked: boolean;
+  if (section.group && section.groupValue) {
+    // For grouped checkboxes, compare the actual value with this checkbox's groupValue
+    const actualValue = typeof section.checked === 'string'
+      ? substituteVariables(section.checked, context)
+      : String(section.checked);
+    checked = actualValue === section.groupValue;
+  } else {
+    // Standard checkbox behavior: check if value equals 'true'
+    checked = typeof section.checked === 'string'
+      ? substituteVariables(section.checked, context) === 'true'
+      : section.checked;
+  }
+
   const label = substituteVariables(section.label, context);
 
   // Calculate available width for text (page width - right margin - checkbox position)
   const pageWidth = doc.internal.pageSize.getWidth();
-  const maxTextWidth = pageWidth - 15 - (section.x + boxSize + 5);
+  const maxTextWidth = pageWidth - 15 - (section.x + boxSize + labelGap);
 
   // Draw checkbox square
   doc.setDrawColor(0);
@@ -505,14 +560,14 @@ function renderCheckbox(
   // Draw all lines, first line aligned with checkbox, rest below
   lines.forEach((line: string, index: number) => {
     const lineY = section.y + (index * lineHeight);
-    doc.text(line, section.x + boxSize + 5, lineY);
+    doc.text(line, section.x + boxSize + labelGap, lineY);
   });
 }
 
 function renderBox(
   doc: jsPDF,
   section: BoxSection,
-  _context: PDFGenerationContext,
+  context: PDFGenerationContext,
   _generatorRef: { doc: jsPDF; context: PDFGenerationContext }
 ): void {
   // Draw box border and background
@@ -528,9 +583,65 @@ function renderBox(
   }
 
   // Render nested sections (positioned relative to box)
-  // For simplicity, nested sections maintain their absolute positions
-  // but are rendered within the box's coordinate space
-  // TODO: Implement nested section rendering when needed
+  // Nested section coordinates are offsets from box's x, y
+  if (section.sections && section.sections.length > 0) {
+    for (const nestedSection of section.sections) {
+      // Get offset values (default to 0 if not present)
+      const xOffset = (nestedSection as any).x ?? 0;
+      const yOffset = (nestedSection as any).y ?? 0;
+
+      // Adjust coordinates to be relative to box position
+      const adjustedSection = {
+        ...nestedSection,
+        x: section.x + xOffset,
+        y: section.y + yOffset,
+      };
+
+      // Render based on nested section type
+      switch (adjustedSection.type) {
+        case 'textBlock':
+          renderTextBlock(doc, adjustedSection as TextBlockSection, context);
+          break;
+        case 'checkbox':
+          renderCheckbox(doc, adjustedSection as CheckboxFieldSection, context);
+          break;
+        case 'labeledField':
+          renderLabeledField(doc, adjustedSection as LabeledFieldSection, context);
+          break;
+        // Add more section types as needed
+      }
+    }
+  }
+}
+
+function renderDivider(
+  doc: jsPDF,
+  section: DividerSection
+): void {
+  const color = section.color ?? '#000000';
+  const lineWidth = section.lineWidth ?? 0.5;
+
+  // Set color and line width
+  doc.setDrawColor(...hexToRgb(color));
+  doc.setLineWidth(lineWidth);
+
+  // Draw the line from (x, y) to (x + width, y)
+  if (section.style === 'dashed') {
+    // Draw dashed line manually
+    const dashLength = 3;
+    const gapLength = 2;
+    let currentX = section.x;
+    const endX = section.x + section.width;
+
+    while (currentX < endX) {
+      const segmentEnd = Math.min(currentX + dashLength, endX);
+      doc.line(currentX, section.y, segmentEnd, section.y);
+      currentX = segmentEnd + gapLength;
+    }
+  } else {
+    // Solid line (default)
+    doc.line(section.x, section.y, section.x + section.width, section.y);
+  }
 }
 
 function renderFooter(

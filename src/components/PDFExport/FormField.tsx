@@ -68,14 +68,18 @@ export const FormField: React.FC<FormFieldProps> = ({
         <TextField
           label={label}
           type="number"
-          value={value || ''}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          value={typeof value === 'number' ? Math.round(value * 100) / 100 : value || ''}
+          onChange={(e) => {
+            const parsed = parseFloat(e.target.value);
+            const rounded = isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
+            onChange(rounded);
+          }}
           disabled={disabled}
           fullWidth={fullWidth}
           sx={baseSx}
           size="small"
           InputProps={{
-            inputProps: { step: '0.01', min: '0' },
+            inputProps: { step: '0.01', min: '0', lang: 'en-US' },
             style: textColor ? { color: textColor } : undefined,
           }}
         />

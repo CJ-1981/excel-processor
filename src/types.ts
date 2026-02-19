@@ -66,6 +66,7 @@ export type TemplateSection =
   | BoxSection
   | PageBreakSection
   | SpacerSection
+  | DividerSection
   | CustomDataTableSection;
 
 export interface HeaderSection {
@@ -106,6 +107,8 @@ export interface CustomDataTableSection {
   type: 'customDataTable';
   headers: string[];
   rows: string[][];  // 2D array of cell values
+  x?: number;  // Absolute X position (optional - if omitted, uses default margin)
+  y?: number;  // Absolute Y position (optional - if omitted, flows from previous content)
   options: {
     showHeaders: boolean;
     repeatHeader: boolean;
@@ -119,6 +122,8 @@ export interface CustomDataTableSection {
     alternateRowColor2: string;
     fontSize: number;
     cellPadding: number;
+    align?: 'left' | 'center' | 'right' | 'justify';  // Table alignment
+    columnAlign?: Array<'left' | 'center' | 'right'>;  // Per-column alignment
   };
   // Support variable substitution in cell values
   substituteVariables?: boolean;
@@ -186,6 +191,9 @@ export interface CheckboxFieldSection {
   y: number;
   fontSize?: number;
   boxSize?: number;  // Size of checkbox square
+  labelGap?: number;  // Gap between checkbox and label (default: 5)
+  group?: string;  // Group ID for mutually exclusive checkboxes (only one can be checked)
+  groupValue?: string;  // Value that this checkbox represents in the group (e.g., 'option1', 'option2')
 }
 
 // Group/border container (optional, for visual grouping)
@@ -211,6 +219,17 @@ export interface PageBreakSection {
 export interface SpacerSection {
   type: 'spacer';
   height: number;
+}
+
+// Divider line section
+export interface DividerSection {
+  type: 'divider';
+  x: number;
+  y: number;
+  width: number;
+  color?: string;  // Default: '#000000'
+  lineWidth?: number;  // Default: 0.5
+  style?: 'solid' | 'dashed';  // Default: 'solid'
 }
 
 export interface PDFGenerationContext {
