@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, Box, Typography, ListSubheader } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { debug } from '../utils/logger';
 
 interface ColumnSelectorProps {
   data: any[];
@@ -24,8 +25,8 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
 
   useEffect(() => {
     if (data.length > 0) {
-      console.log('ColumnSelector - data[0] sample:', data[0]);
-      console.log('ColumnSelector - all keys:', Object.keys(data[0]));
+      debug('ColumnSelector', 'data[0] sample:', data[0]);
+      debug('ColumnSelector', 'all keys:', Object.keys(data[0]));
 
       // Get column headers from the data structure
       const rawHeaders = Object.keys(data[0]);
@@ -36,7 +37,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
       const rowsToScan = Math.min(3, data.length);
       const allColumns: ColumnOption[] = [];
 
-      console.log('ColumnSelector - rawHeaders:', rawHeaders);
+      debug('ColumnSelector', 'rawHeaders:', rawHeaders);
 
       // For each column, show the value from each of the first 3 rows
       // Skip source metadata columns
@@ -76,25 +77,25 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
       });
 
       setColumns(allColumns);
-      console.log('ColumnSelector - allColumns built:', allColumns.length, 'options');
+      debug('ColumnSelector', 'allColumns built:', allColumns.length, 'options');
 
       // Auto-select first column with non-empty value from first row
       const firstNonEmpty = allColumns.find(col => col.rowIndex === 1 && col.value !== '(empty)');
       if (firstNonEmpty) {
-        console.log('ColumnSelector - auto-selecting:', firstNonEmpty);
+        debug('ColumnSelector', 'auto-selecting:', firstNonEmpty);
         setSelectedColumn(firstNonEmpty.original);
         // If headers are already in keys (CSV), use headerRowIndex = 0
         const effectiveRowIndex = hasRealHeaders ? 0 : firstNonEmpty.rowIndex;
         setSelectedRowIndex(effectiveRowIndex);
         onColumnSelect(firstNonEmpty.original, effectiveRowIndex);
       } else if (allColumns.length > 0) {
-        console.log('ColumnSelector - selecting first available:', allColumns[0]);
+        debug('ColumnSelector', 'selecting first available:', allColumns[0]);
         setSelectedColumn(allColumns[0].original);
         const effectiveRowIndex = hasRealHeaders ? 0 : allColumns[0].rowIndex;
         setSelectedRowIndex(effectiveRowIndex);
         onColumnSelect(allColumns[0].original, effectiveRowIndex);
       } else {
-        console.log('ColumnSelector - no columns to select!');
+        debug('ColumnSelector', 'no columns to select!');
       }
     }
   }, [data, onColumnSelect]);
@@ -108,7 +109,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     // Find the column with this original name and row index
     const selectedCol = columns.find(col => col.original === originalColumnName && col.rowIndex === rowIndex);
     if (selectedCol) {
-      console.log('ColumnSelector - user selected:', selectedCol);
+      debug('ColumnSelector', 'user selected:', selectedCol);
       setSelectedColumn(originalColumnName);
       // Detect if headers are already in keys (CSV) and override to 0
       const rawHeaders = Object.keys(data[0] || {});
@@ -130,15 +131,15 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
     return acc;
   }, {} as Record<number, ColumnOption[]>);
 
-  console.log('ColumnSelector - groupedColumns:', Object.keys(groupedColumns));
-  console.log('ColumnSelector - selectedColumn value:', selectedColumn);
+  debug('ColumnSelector', 'groupedColumns:', Object.keys(groupedColumns));
+  debug('ColumnSelector', 'selectedColumn value:', selectedColumn);
 
   if (data.length === 0) {
     return null;
   }
 
   if (columns.length === 0) {
-    console.log('ColumnSelector - no columns available!');
+    debug('ColumnSelector', 'no columns available!');
     return null;
   }
 

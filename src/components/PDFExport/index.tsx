@@ -7,12 +7,14 @@ import {
   Button,
   Typography,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { TemplateSelector } from './TemplateSelector';
 import { CustomFieldsDialog } from './CustomFieldsDialog';
 import { BUILT_IN_TEMPLATES } from '../../templates/built-in';
 import { generatePDF } from '../PDFGenerator/generator';
 import { templateRequiresCustomFields } from '../../utils/templateParser';
 import type { PDFGenerationContext } from '../../types';
+import { warn } from '../../utils/logger';
 
 interface PDFExportDialogProps {
   open: boolean;
@@ -25,6 +27,7 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
   onClose,
   context,
 }) => {
+  const { t } = useTranslation();
   const [selectedTemplate, setSelectedTemplate] = useState(BUILT_IN_TEMPLATES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCustomFields, setShowCustomFields] = useState(false);
@@ -55,8 +58,8 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
       await generatePDF(template, ctx);
       onClose();
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      alert('Failed to generate PDF. Please try again.');
+      warn('PDFExport', 'PDF generation failed:', error);
+      alert(t('pdfExport.failed'));
     } finally {
       setIsGenerating(false);
     }
@@ -66,10 +69,10 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
     <>
       {/* Main PDF Export Dialog */}
       <Dialog open={open && !showCustomFields} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Export as PDF</DialogTitle>
+        <DialogTitle>{t('pdfExport.title')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {context.includedIndices.size} rows selected for export
+            {t('pdfExport.rowsSelected', { count: context.includedIndices.size })}
           </Typography>
           <TemplateSelector
             templates={BUILT_IN_TEMPLATES}
@@ -79,14 +82,14 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose} disabled={isGenerating}>
-            Cancel
+            {t('pdfExport.cancel')}
           </Button>
           <Button
             variant="contained"
             onClick={handleExport}
             disabled={isGenerating}
           >
-            {isGenerating ? 'Generating...' : needsCustomFields ? 'Next' : 'Export PDF'}
+            {isGenerating ? t('pdfExport.generating') : needsCustomFields ? t('pdfExport.next') : t('pdfExport.exportPdf')}
           </Button>
         </DialogActions>
       </Dialog>

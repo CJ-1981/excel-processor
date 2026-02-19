@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "엑셀 데이터 처리기",
+    "title": "엑셀 데이터 병합 및 대시보드",
     "version": "버전",
     "lastUpdated": "마지막 업데이트"
   },
@@ -8,7 +8,12 @@
     "title": "엑셀/CSV 파일 업로드",
     "button": "파일 업로드",
     "changeButton": "파일 변경 ({{count}}개 선택됨)",
-    "selected": "선택됨"
+    "selected": "선택됨",
+    "dragDrop": "엑셀 파일을 여기로 드래그 앤 드롭하거나 클릭하여 선택하세요. 여러 파일을 한 번에 업로드할 수 있습니다.",
+    "dropFiles": "파일을 여기에 드롭하세요",
+    "orClick": "또는 클릭하여 찾아보기",
+    "supportedFormats": ".xlsx, .xls, .csv 파일 지원",
+    "selectedFiles": "선택된 파일 ({{count}}개)"
   },
   "progress": {
     "reading": "파일 읽는 중...",
@@ -16,7 +21,7 @@
     "processing": "처리 중...",
     "processed": "{{completed}}/{{total}}개 파일 처리됨",
     "error": "{{count}}개 오류",
-    "failed": "{{count}}개 파일을 불러오지 못했습니다. 나머지 파일로 계続합니다."
+    "failed": "{{count}}개 파일을 불러오지 못했습니다. 나머지 파일로 계산합니다."
   },
   "sheetSelector": {
     "title": "병합할 시트 선택",
@@ -25,13 +30,13 @@
     "merge": "{{count}}개 시트 병합"
   },
   "columnSelector": {
-    "title": "이름 열 선택",
-    "subtitle": "헤더 행을 식별하기 위해 처음 3개 행의 값 표시",
+    "title": "이름 데이터가 포함된 열을 선택하세요",
+    "subtitle": "헤더 행을 식별하기 위해 처음 3개 행의 값들을 표시합니다. 이름이 포함된 열을 선택하면 나머지 열이 데이터 열로 간주됩니다.",
     "label": "이름 열 선택",
     "row": "{{number}}행"
   },
   "uniqueNames": {
-    "title": "고유 이름",
+    "title": "고유 이름 찾기",
     "found": "\"{{column}}\"에서 {{count}}개의 고유한 값을 찾았습니다",
     "searchPlaceholder": "이름 검색...",
     "selected": "선택됨",
@@ -86,7 +91,7 @@
     "andMore": "외 {{count}}개 더보기",
     "searchAllColumns": "모든 열 검색...",
     "rowsSelected": "{{total}}개 행 중 선택됨",
-    "autoDeselectZeros": "빈/0값 행 자동 선택 해제",
+    "autoDeselectZeros": "비었거나 값이 0인 행 자동으로 선택 해제",
     "autoDeselectTooltip": "현재 표시된 데이터 열만 확인합니다",
     "hideDeselected": "선택 해제된 행 숨기기",
     "hideDeselectedTooltip": "선택 해제된 행을 일시적으로 숨깁니다. 내보내기에는 선택 사항이 적용됩니다",
@@ -116,6 +121,52 @@
     "dashboard": "대시보드 ({{count}})",
     "dashboardTitle": "대시보드",
     "dashboardFailed": "대시보드를 렌더링하지 못했습니다"
+  },
+  "pdfExport": {
+    "title": "PDF로 내보내기",
+    "rowsSelected": "{{count}}개 행이 내보내기에 선택됨",
+    "cancel": "취소",
+    "generating": "생성 중...",
+    "next": "다음",
+    "exportPdf": "PDF 내보내기",
+    "failed": "PDF 생성에 실패했습니다. 다시 시도해 주세요.",
+    "customFields": {
+      "title": "PDF 내보내기 - 사용자 정의 필드",
+      "donorName": "기부자 이름",
+      "address": "주소",
+      "amountColumn": "금액 열",
+      "amountColumnHint": "기부금이 포함된 열을 선택하세요",
+      "monthlyAmounts": "월별 기부금액 (EUR)",
+      "totalAmount": "총 금액 (EUR)",
+      "amountInWords": "금액(문자)",
+      "period": "기간",
+      "taxExemption": "회비 아님 (세금 공제)",
+      "taxExemptionHint": "이것은 회비가 아니라 기부금임을 확인합니다",
+      "waiverReimbursementYes": "경비 환급 권리 포기 (예)",
+      "waiverReimbursementNo": "경비 환급 권리 포기 (아니오)",
+      "waiverReimbursementYesHint": "경비 환급 청구권을 포기합니다",
+      "waiverReimbursementNoHint": "경비 환급 청구권을 포기하지 않습니다",
+      "taxExemptionNotice": "면제 결정서에 따른 세금 면제",
+      "taxExemptionNoticeHint": "소득세법 § 10 Abs. 1 Nr. 3 EStG에 따른 면제 통지서가 있습니다",
+      "preliminaryCertificate": "예비 증명서 (표준)",
+      "preliminaryCertificateHint": "기부금을 위한 임시 세금 증명서",
+      "taxNumber": "세금 번호",
+      "validFrom": "발급일",
+      "location": "위치",
+      "date": "날짜",
+      "signature": "서명",
+      "summary": "요약"
+    },
+    "colors": {
+      "red": "빨간색",
+      "black": "검은색",
+      "blue": "파란색",
+      "green": "초록색",
+      "darkBlue": "진한 파란색",
+      "brown": "갈색",
+      "purple": "보라색",
+      "gray": "회색"
+    }
   },
   "mergedData": {
     "title": "병합된 데이터",
@@ -149,7 +200,7 @@
     "donors": "{{count}}명 기여자",
     "showFewer": "적게 보기",
     "showMore": "더 보기",
-    "descriptiveStatistics": "기술 통계",
+    "descriptiveStatistics": "통계",
     "distributionHistogram": "분포 히스토그램",
     "paretoAnalysis": "파레토 분석 (80/20 법칙)",
     "rangeDistribution": "범위 분포",
@@ -213,7 +264,7 @@
     "percentile95": "95번째",
     "cumulativePercent": "누적 %",
     "percent80Threshold": "80% 임계값",
-    "contributors80": "{{count}}명의 기여자가 전체 값의 약 80%를 차지함",
+    "contributors80": "{{count}}명의 기부자가 전체 값의 약 80%를 차지함",
     "mean": "평균",
     "medianLabel": "중앙값"
   }

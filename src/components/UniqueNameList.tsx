@@ -24,6 +24,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useTranslation } from 'react-i18next';
+import { debug } from '../utils/logger';
 
 interface UniqueNameListProps {
   data: any[];
@@ -136,12 +137,12 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
       })
       .filter(Boolean);
 
-    console.log('UniqueNameList Debug:');
-    console.log('- Original column key:', nameColumn);
-    console.log('- Header row index:', headerRowIndex);
-    console.log('- Actual column name from header:', actualColumnName);
-    console.log('- Total rows:', data.length);
-    console.log('- Names found:', names.slice(0, 10));
+    debug('UniqueNameList', 'Debug:');
+    debug('UniqueNameList', '- Original column key:', nameColumn);
+    debug('UniqueNameList', '- Header row index:', headerRowIndex);
+    debug('UniqueNameList', '- Actual column name from header:', actualColumnName);
+    debug('UniqueNameList', '- Total rows:', data.length);
+    debug('UniqueNameList', '- Names found:', names.slice(0, 10));
 
     return Array.from(new Set(names));
   }, [data, nameColumn, headerRowIndex]);

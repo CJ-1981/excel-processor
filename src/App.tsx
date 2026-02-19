@@ -8,8 +8,10 @@ import SheetSelector from './components/SheetSelector';
 import FileProgressIndicator from './components/FileProgressIndicator';
 import NameMergingPanel from './components/NameMergingPanel';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import WorkflowStepper from './components/WorkflowStepper';
+import { PageContainer, SectionCard } from './components/layout';
 
-import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
+import { CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 import type { ParsedFile, ParseProgress, NameMergeState, ExcelDataArray, ExcelRowData } from './types';
@@ -17,6 +19,7 @@ import * as XLSX from 'xlsx';
 import { processInBatches } from './utils/batchProcessor';
 import { APP_VERSION } from './version';
 import { loadNameMergeState, applyNameMerging } from './utils/nameMergeUtils';
+import { debug, warn } from './utils/logger';
 
 type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
@@ -91,7 +94,7 @@ function App() {
       try {
         localStorage.setItem('excel-processor-column-visibility', JSON.stringify(updated));
       } catch (error) {
-        console.warn('Could not save column visibility to localStorage:', error);
+        warn('ColumnVisibility', 'Could not save to localStorage:', error);
       }
       return updated;
     });
@@ -181,7 +184,7 @@ function App() {
 
 
   const handleMergeSheets = (selectedSheetIdentifiers: string[], files?: ParsedFile[]) => {
-    console.log('Merging sheets:', selectedSheetIdentifiers);
+    debug('SheetSelector', 'Merging sheets:', selectedSheetIdentifiers);
     const fileSource = files || parsedFiles; // Use direct files if provided, else from state
 
     const sheetsToMerge: ExcelRowData[][] = []; // Array of arrays of row objects
@@ -218,12 +221,12 @@ function App() {
     });
 
     setMergedData(combinedData);
-    console.log('Merged data created. Total rows:', combinedData.length);
-    
+    debug('Merge', 'Merged data created. Total rows:', combinedData.length);
+
     // Add a check to prevent error on empty data
     if (combinedData.length > 0) {
-      console.log('Sample row:', combinedData[0]);
-      console.log('All columns:', Object.keys(combinedData[0]));
+      debug('Merge', 'Sample row:', combinedData[0]);
+      debug('Merge', 'All columns:', Object.keys(combinedData[0]));
     }
     
     setStatus('data_merged');
@@ -238,7 +241,7 @@ function App() {
     setSelectedNameColumn(columnName);
     setHeaderRowIndex(rowIndex);
     setBaseSelectedNames([]);
-    console.log('Selected Name Column:', columnName, 'from row', rowIndex);
+    debug('ColumnSelector', 'Selected Name Column:', columnName, 'from row', rowIndex);
   }, []);
 
 
@@ -246,7 +249,7 @@ function App() {
     // Simply update baseSelectedNames - the derived selectedUniqueNames
     // will automatically include merged display names for active groups
     setBaseSelectedNames(names);
-    console.log('Selected Base Names:', names);
+    debug('NameSelector', 'Selected Base Names:', names);
   }, []);
 
   const handleToggleDetailedViewFullScreen = useCallback(() => {
@@ -389,27 +392,32 @@ function App() {
 
 
   return (
-    <Container component="main" maxWidth="md">
+    <PageContainer maxWidth="lg">
       <CssBaseline />
       <Box
         sx={{
-          marginTop: 8,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          mb: 4
         }}
       >
-        <Typography component="h1" variant="h4" gutterBottom>
+        <Typography component="h1" variant="h3" gutterBottom fontWeight="bold">
           {t('app.title')}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
           <Typography variant="body2" color="text.secondary">
             {t('app.version')} {APP_VERSION} • {t('app.lastUpdated')}: {__BUILD_TIME__}
           </Typography>
           <LanguageSwitcher />
         </Box>
+      </Box>
 
+      <WorkflowStepper currentStep={status} />
+
+      <SectionCard>
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
+      </SectionCard>
 
         {status === 'parsing' && (
           <>
@@ -419,39 +427,45 @@ function App() {
         )}
 
         {status === 'files_uploaded' && (
-          <SheetSelector
-            files={parsedFiles}
-            onMerge={handleMergeSheets}
-            onCancel={handleCancelMerge}
-          />
+          <SectionCard sx={{ mt: 3 }}>
+            <SheetSelector
+              files={parsedFiles}
+              onMerge={handleMergeSheets}
+              onCancel={handleCancelMerge}
+            />
+          </SectionCard>
         )}
 
         {status === 'data_merged' && mergedData.length > 0 && (
-          <Box sx={{ mt: 4, width: '100%' }}>
-            <Typography variant="h5" gutterBottom>{t('mergedData.title')}</Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              {t('mergedData.rowsCombined', { count: mergedData.length })}
-            </Typography>
-            <ColumnSelector data={mergedData} onColumnSelect={handleColumnSelect} />
+          <Box sx={{ mt: 3, width: '100%' }}>
+            <SectionCard sx={{ mb: 3 }}>
+              <Typography variant="h5" gutterBottom>{t('mergedData.title')}</Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                {t('mergedData.rowsCombined', { count: mergedData.length })}
+              </Typography>
+              <ColumnSelector data={mergedData} onColumnSelect={handleColumnSelect} />
+            </SectionCard>
 
             {selectedNameColumn && (
               <>
-                <UniqueNameList
-                  data={mergedData}
-                  nameColumn={selectedNameColumn}
-                  headerRowIndex={headerRowIndex}
-                  selectedNames={selectedUniqueNames}
-                  onNamesSelect={handleUniqueNamesSelect}
-                />
+                <SectionCard sx={{ mb: 3 }}>
+                  <UniqueNameList
+                    data={mergedData}
+                    nameColumn={selectedNameColumn}
+                    headerRowIndex={headerRowIndex}
+                    selectedNames={selectedUniqueNames}
+                    onNamesSelect={handleUniqueNamesSelect}
+                  />
+                </SectionCard>
 
                 {/* Name Merging Panel */}
-                <Box sx={{ mt: 2, mb: 2 }}>
+                <SectionCard sx={{ mb: 3 }}>
                   <NameMergingPanel
                     availableNames={availableUniqueNames}
                     mergeState={nameMergeState}
                     onMergeStateChange={setNameMergeState}
                   />
-                </Box>
+                </SectionCard>
               </>
             )}
 
@@ -488,8 +502,7 @@ function App() {
             {detailedViewContent}
           </Box>
         </Dialog>
-      </Box>
-    </Container>
+    </PageContainer>
   );
 }
 

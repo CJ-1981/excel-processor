@@ -8,7 +8,12 @@
     "title": "Upload Excel/CSV File(s)",
     "button": "Upload File(s)",
     "changeButton": "Change Files ({{count}} selected)",
-    "selected": "Selected"
+    "selected": "Selected",
+    "dragDrop": "Drag & drop Excel files here",
+    "dropFiles": "Drop files here",
+    "orClick": "or click to browse",
+    "supportedFormats": "Supports .xlsx, .xls, .csv files",
+    "selectedFiles": "Selected Files ({{count}})"
   },
   "progress": {
     "reading": "Reading files...",
@@ -116,6 +121,52 @@
     "dashboard": "Dashboard ({{count}})",
     "dashboardTitle": "Dashboard",
     "dashboardFailed": "Dashboard failed to render"
+  },
+  "pdfExport": {
+    "title": "Export as PDF",
+    "rowsSelected": "{{count}} rows selected for export",
+    "cancel": "Cancel",
+    "generating": "Generating...",
+    "next": "Next",
+    "exportPdf": "Export PDF",
+    "failed": "Failed to generate PDF. Please try again.",
+    "customFields": {
+      "title": "PDF Export - Custom Fields",
+      "donorName": "Donor Name",
+      "address": "Address",
+      "amountColumn": "Amount Column",
+      "amountColumnHint": "Select the column containing donation amounts",
+      "monthlyAmounts": "Monthly Amounts (EUR)",
+      "totalAmount": "Total Amount (EUR)",
+      "amountInWords": "Amount in Words",
+      "period": "Period",
+      "taxExemption": "Not a Membership Fee",
+      "taxExemptionHint": "I confirm this is a donation and not a membership fee",
+      "waiverReimbursementYes": "Waiver of Expenditure Reimbursement (Yes)",
+      "waiverReimbursementNo": "Waiver of Expenditure Reimbursement (No)",
+      "waiverReimbursementYesHint": "I waive my right to reimbursement of expenses",
+      "waiverReimbursementNoHint": "I do not waive reimbursement rights",
+      "taxExemptionNotice": "Tax Exemption According to Exemption Notice",
+      "taxExemptionNoticeHint": "Tax office approved tax exemption notice according to § 10 Abs. 1 Nr. 3 EStG (German Income Tax Act)",
+      "preliminaryCertificate": "Preliminary Certificate (Standard)",
+      "preliminaryCertificateHint": "Temporary tax certificate for donations",
+      "taxNumber": "Tax Number",
+      "validFrom": "Valid From",
+      "location": "Location",
+      "date": "Date",
+      "signature": "Signature",
+      "summary": "Summary"
+    },
+    "colors": {
+      "red": "Red",
+      "black": "Black",
+      "blue": "Blue",
+      "green": "Green",
+      "darkBlue": "Dark Blue",
+      "brown": "Brown",
+      "purple": "Purple",
+      "gray": "Gray"
+    }
   },
   "mergedData": {
     "title": "Merged Data",

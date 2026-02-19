@@ -2,6 +2,7 @@ import React from 'react';
 import {
   TextField,
   Checkbox,
+  Radio,
   FormControlLabel,
   FormControl,
   InputLabel,
@@ -9,19 +10,24 @@ import {
   MenuItem,
   Box,
   Typography,
+  RadioGroup,
+  FormLabel,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 
 interface FormFieldProps {
-  type: 'text' | 'number' | 'checkbox' | 'select';
+  type: 'text' | 'number' | 'checkbox' | 'select' | 'radio';
   label: string;
   value: any;
   onChange: (value: any) => void;
   options?: string[]; // For select type
+  radioOptions?: Array<{value: string, label: string, helperText?: string}>; // For radio type
+  radioGroupName?: string; // Required for radio type to group radios together
   disabled?: boolean;
   fullWidth?: boolean;
   sx?: any;
   textColor?: string; // For showing preview color in text input
+  helperText?: string; // Helper text for form field
 }
 
 export const FormField: React.FC<FormFieldProps> = ({
@@ -30,10 +36,13 @@ export const FormField: React.FC<FormFieldProps> = ({
   value,
   onChange,
   options,
+  radioOptions,
+  radioGroupName,
   disabled = false,
   fullWidth = true,
   sx,
   textColor,
+  helperText,
 }) => {
   const baseSx = { mb: 2, ...sx };
 
@@ -84,9 +93,16 @@ export const FormField: React.FC<FormFieldProps> = ({
               />
             }
             label={
-              <Typography variant="body2" component="div">
-                {label}
-              </Typography>
+              <Box>
+                <Typography variant="body2" component="div">
+                  {label}
+                </Typography>
+                {helperText && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    {helperText}
+                  </Typography>
+                )}
+              </Box>
             }
           />
         </Box>
@@ -109,6 +125,38 @@ export const FormField: React.FC<FormFieldProps> = ({
               </MenuItem>
             ))}
           </Select>
+        </FormControl>
+      );
+
+    case 'radio':
+      return (
+        <FormControl sx={baseSx} fullWidth={fullWidth}>
+          <FormLabel component="legend">{label}</FormLabel>
+          <RadioGroup
+            name={radioGroupName || 'radio-group'}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            {radioOptions?.map((option) => (
+              <FormControlLabel
+                key={option.value}
+                value={option.value}
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body2" component="div">
+                      {option.label}
+                    </Typography>
+                    {option.helperText && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                        {option.helperText}
+                      </Typography>
+                    )}
+                  </Box>
+                }
+              />
+            ))}
+          </RadioGroup>
         </FormControl>
       );
 

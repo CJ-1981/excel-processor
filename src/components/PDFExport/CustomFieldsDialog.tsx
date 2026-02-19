@@ -17,6 +17,7 @@ import {
   Box,
   type SelectChangeEvent,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import ColorizeIcon from '@mui/icons-material/Colorize';
 import { FormField } from './FormField';
 import { aggregateByMonth } from '../../utils/monthlyAggregator';
@@ -42,6 +43,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   context,
   template,
 }) => {
+  const { t } = useTranslation();
   // State for form fields
   const [donorName, setDonorName] = useState('');
   const [donorAddress, setDonorAddress] = useState('');
@@ -56,15 +58,15 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [donationPeriod, setDonationPeriod] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [signatureLocation, setSignatureLocation] = useState('Kelsterbach');
-  const [verzichtJa, setVerzichtJa] = useState(false);
-  const [verzichtNein, setVerzichtNein] = useState(true);
+  // Waiver: 'yes' or 'no' (string for radio button group)
+  const [waiverChoice, setWaiverChoice] = useState<'yes' | 'no'>('no');
   const [taxOption1, setTaxOption1] = useState(false);
   const [taxOption2, setTaxOption2] = useState(true);
   const [taxNumber1, setTaxNumber1] = useState('');
   const [taxDate1, setTaxDate1] = useState('');
   const [taxNumber2] = useState('4525057301');
   const [taxDate2] = useState('29.04.2011');
-  const [taxValidFrom] = useState('27.12.2016');
+  const [taxValidFrom, setTaxValidFrom] = useState('27.12.2016');
   const [notMembership, setNotMembership] = useState(true);
 
   // Text color for PDF
@@ -75,14 +77,14 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
   // Preset colors for user to choose from
   const presetColors = [
-    { name: 'Red', value: '#FF0000' },
-    { name: 'Black', value: '#000000' },
-    { name: 'Blue', value: '#0000FF' },
-    { name: 'Green', value: '#008000' },
-    { name: 'Dark Blue', value: '#00008B' },
-    { name: 'Brown', value: '#A52A2A' },
-    { name: 'Purple', value: '#800080' },
-    { name: 'Gray', value: '#808080' },
+    { name: t('pdfExport.colors.red'), value: '#FF0000' },
+    { name: t('pdfExport.colors.black'), value: '#000000' },
+    { name: t('pdfExport.colors.blue'), value: '#0000FF' },
+    { name: t('pdfExport.colors.green'), value: '#008000' },
+    { name: t('pdfExport.colors.darkBlue'), value: '#00008B' },
+    { name: t('pdfExport.colors.brown'), value: '#A52A2A' },
+    { name: t('pdfExport.colors.purple'), value: '#800080' },
+    { name: t('pdfExport.colors.gray'), value: '#808080' },
   ];
 
   // Initialize data when dialog opens
@@ -141,8 +143,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setIssueDate(formatTodayDateGerman());
 
       // Set default values from template, falling back to hardcoded defaults
-      setVerzichtNein(true);
-      setVerzichtJa(false);
+      setWaiverChoice('no');
       setTaxOption2(true);
       setTaxOption1(false);
       setNotMembership(true);
@@ -243,8 +244,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       donationPeriod,
       issueDate,
       signatureLocation,
-      verzichtJa: String(verzichtJa),
-      verzichtNein: String(verzichtNein),
+      // Convert radio choice to boolean flags for PDF generation
+      verzichtJa: String(waiverChoice === 'yes'),
+      verzichtNein: String(waiverChoice === 'no'),
       taxOption1: String(taxOption1),
       taxOption2: String(taxOption2),
       taxNumber1,
@@ -273,7 +275,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
       <DialogTitle>
         <Box sx={{ position: 'relative', pr: 20 }}>
-          PDF Export - Custom Fields
+          {t('pdfExport.customFields.title')}
           {/* Compact color picker in top right */}
           <Box
             sx={{
@@ -340,7 +342,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       <DialogContent sx={{ pb: 2 }}>
         {/* Section 1: Donor Information */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Donor Information
+          {t('pdfExport.customFields.donorName')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           {context.selectedNames.length > 1 ? (
@@ -354,7 +356,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Donor Name"
+                  label={t('pdfExport.customFields.donorName')}
                   size="small"
                   sx={{ mb: 2 }}
                   InputProps={{
@@ -367,7 +369,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           ) : (
             <FormField
               type="text"
-              label="Donor Name"
+              label={t('pdfExport.customFields.donorName')}
               value={donorName}
               onChange={setDonorName}
               textColor={textColor}
@@ -375,7 +377,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           )}
           <FormField
             type="text"
-            label="Address"
+            label={t('pdfExport.customFields.address')}
             value={donorAddress}
             onChange={setDonorAddress}
             sx={{ mb: 0 }}
@@ -385,15 +387,15 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 2: Amount Column Selection */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Column Selection
+          {t('pdfExport.customFields.amountColumn')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormControl fullWidth size="small">
-            <InputLabel id="amount-column-label">Amount Column</InputLabel>
+            <InputLabel id="amount-column-label">{t('pdfExport.customFields.amountColumn')}</InputLabel>
             <Select
               labelId="amount-column-label"
               value={amountColumn}
-              label="Amount Column"
+              label={t('pdfExport.customFields.amountColumn')}
               onChange={handleAmountColumnChange}
             >
               {numericColumns.map((col) => (
@@ -404,13 +406,13 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             </Select>
           </FormControl>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Select the column containing donation amounts
+            {t('pdfExport.customFields.amountColumnHint')}
           </Typography>
         </Paper>
 
         {/* Section 3: Monthly Amounts */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Monthly Amounts (EUR)
+          {t('pdfExport.customFields.monthlyAmounts')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -431,12 +433,12 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 4: Totals */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Summary
+          {t('pdfExport.customFields.summary')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormField
             type="number"
-            label="Total Amount (EUR)"
+            label={t('pdfExport.customFields.totalAmount')}
             value={totalAmount}
             onChange={setTotalAmount}
             fullWidth
@@ -444,7 +446,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           />
           <FormField
             type="text"
-            label="Amount in Words"
+            label={t('pdfExport.customFields.amountInWords')}
             value={amountInWords}
             onChange={setAmountInWords}
             fullWidth
@@ -452,7 +454,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           />
           <FormField
             type="text"
-            label="Period"
+            label={t('pdfExport.customFields.period')}
             value={donationPeriod}
             onChange={setDonationPeriod}
             sx={{ mb: 0 }}
@@ -462,74 +464,92 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
         {/* Section 5: Tax Options */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Tax Options
+          {t('pdfExport.customFields.taxExemptionNotice')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormField
-            type="checkbox"
-            label="Waiver of Reimbursement (Yes)"
-            value={verzichtJa}
-            onChange={setVerzichtJa}
-          />
-          <FormField
-            type="checkbox"
-            label="Waiver of Reimbursement (No)"
-            value={verzichtNein}
-            onChange={setVerzichtNein}
+            type="radio"
+            label={t('pdfExport.customFields.taxExemptionNotice')}
+            value={waiverChoice}
+            onChange={setWaiverChoice}
+            radioGroupName="waiver-choice"
+            radioOptions={[
+              {
+                value: 'yes',
+                label: t('pdfExport.customFields.waiverReimbursementYes'),
+                helperText: t('pdfExport.customFields.waiverReimbursementYesHint'),
+              },
+              {
+                value: 'no',
+                label: t('pdfExport.customFields.waiverReimbursementNo'),
+                helperText: t('pdfExport.customFields.waiverReimbursementNoHint'),
+              },
+            ]}
           />
           <Divider sx={{ my: 1 }} />
           <FormField
             type="checkbox"
-            label="Tax Exemption According to Exemption Notice"
+            label={t('pdfExport.customFields.taxExemption')}
+            value={notMembership}
+            onChange={setNotMembership}
+            helperText={t('pdfExport.customFields.taxExemptionHint')}
+          />
+          <Divider sx={{ my: 1 }} />
+          <FormField
+            type="checkbox"
+            label={t('pdfExport.customFields.taxExemptionNotice')}
             value={taxOption1}
             onChange={setTaxOption1}
+            helperText={t('pdfExport.customFields.taxExemptionNoticeHint')}
           />
           <FormField
             type="checkbox"
-            label="Preliminary Certificate (Standard)"
+            label={t('pdfExport.customFields.preliminaryCertificate')}
             value={taxOption2}
             onChange={setTaxOption2}
+            helperText={t('pdfExport.customFields.preliminaryCertificateHint')}
           />
           {taxOption1 && (
             <>
               <FormField
                 type="text"
-                label="Tax Number 1"
+                label={t('pdfExport.customFields.taxNumber')}
                 value={taxNumber1}
                 onChange={setTaxNumber1}
               />
               <FormField
                 type="text"
-                label="Date 1"
+                label={t('pdfExport.customFields.validFrom')}
+                value={taxValidFrom}
+                onChange={setTaxValidFrom}
+                sx={{ mb: 0 }}
+              />
+              <FormField
+                type="text"
+                label={t('pdfExport.customFields.taxDate')}
                 value={taxDate1}
                 onChange={setTaxDate1}
                 sx={{ mb: 0 }}
               />
             </>
           )}
-          <FormField
-            type="checkbox"
-            label="Not a Membership Fee"
-            value={notMembership}
-            onChange={setNotMembership}
-          />
         </Paper>
 
         {/* Section 6: Signature */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          Signature
+          {t('pdfExport.customFields.signature')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <FormField
             type="text"
-            label="Location"
+            label={t('pdfExport.customFields.location')}
             value={signatureLocation}
             onChange={setSignatureLocation}
             textColor={textColor}
           />
           <FormField
             type="text"
-            label="Date"
+            label={t('pdfExport.customFields.date')}
             value={issueDate}
             onChange={setIssueDate}
             sx={{ mb: 0 }}
@@ -539,9 +559,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('pdfExport.cancel')}</Button>
         <Button variant="contained" onClick={handleConfirm}>
-          Export PDF
+          {t('pdfExport.exportPdf')}
         </Button>
       </DialogActions>
     </Dialog>

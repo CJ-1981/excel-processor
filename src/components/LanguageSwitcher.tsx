@@ -1,18 +1,12 @@
 import React from 'react';
-import { Button, Box } from '@mui/material';
+import { Button, Box, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-
-// Flag emoji for languages
-const FLAGS = {
-  en: '🇺🇸', // US flag for English
-  ko: '🇰🇷', // South Korea flag for Korean
-};
 
 /**
  * LanguageSwitcher Component
  *
  * Provides a button to toggle between English and Korean languages.
- * Displays the current language flag and the opposite language name.
+ * Simple text-based design with country code and language name.
  * Click to switch to the other language.
  * Persists the selected language in localStorage.
  */
@@ -30,9 +24,6 @@ const LanguageSwitcher: React.FC = () => {
   const currentLang = i18n.language;
   // Get the opposite language code
   const oppositeLangCode = currentLang === 'en' ? 'ko' : 'en';
-  // Show the opposite flag and name (what clicking will switch to)
-  const oppositeFlag = FLAGS[oppositeLangCode as keyof typeof FLAGS] || FLAGS.ko;
-  const oppositeLang = currentLang === 'en' ? 'korean' : 'english';
 
   return (
     <Box sx={{ minWidth: 80 }}>
@@ -40,14 +31,28 @@ const LanguageSwitcher: React.FC = () => {
         variant="outlined"
         size="small"
         onClick={handleLanguageToggle}
-        startIcon={<span style={{ fontSize: '1.2rem' }}>{oppositeFlag}</span>}
         sx={{
           minWidth: 100,
           textTransform: 'none',
           fontWeight: 500,
         }}
       >
-        {t(`language.${oppositeLang}`)}
+        <Typography
+          component="span"
+          sx={{
+            mr: 0.5,
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            fontSize: '0.75rem',
+            bgcolor: 'action.hover',
+            px: 0.75,
+            py: 0.25,
+            borderRadius: 0.5,
+          }}
+        >
+          {oppositeLangCode === 'en' ? 'EN' : 'KO'}
+        </Typography>
+        {oppositeLangCode === 'en' ? t('language.english') : t('language.korean')}
       </Button>
     </Box>
   );

@@ -134,6 +134,41 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.8.0 (2026-02-19)
+*   **Material UI v7 Upgrade**:
+    *   Upgraded from Material-UI v5 to v7 (latest)
+    *   Enhanced UI with modern Material-UI v7 components and design patterns
+    *   Improved layout consistency with new PageContainer and SectionCard components
+    *   Added visual workflow stepper showing application progress
+*   **Internationalization (i18n)**:
+    *   Added comprehensive internationalization support with react-i18next
+    *   Added Korean language support alongside English
+    *   Language switcher with EN/KO badges in header
+    *   Translated all UI elements including PDF export dialogs
+    *   Added helper text for complex tax options in Korean and English
+*   **Enhanced File Upload**:
+    *   Improved drag-and-drop functionality with visual feedback
+    *   File chips showing name, size, and type icons
+    *   Better visual states for drag enter/leave/drop events
+*   **PDF Export Improvements**:
+    *   Added complete Korean translations for PDF export dialogs
+    *   Made waiver reimbursement options mutually exclusive (radio buttons)
+    *   Enhanced tax option explanations with helper text
+    *   Fixed missing state setter for taxValidFrom field
+*   **Performance Optimization**:
+    *   Implemented centralized debug logging system
+    *   Debug logs can be toggled via localStorage flag
+    *   Improved console output for production use
+*   **UI/UX Enhancements**:
+    *   Consistent spacing and elevation throughout application
+    *   Better visual hierarchy with improved typography
+    *   Responsive design improvements for mobile devices
+    *   Simplified language switcher design (text-based badges)
+*   **Bug Fixes**:
+    *   Fixed MUI type imports (SxProps, PaperProps from @mui/system)
+    *   Resolved emoji rendering issues on Windows 10 (fallback to text badges)
+    *   Fixed PDF export state management issues
+
 ### v1.7.1 (2026-02-18)
 *   **iOS Mobile Web Improvements**:
     *   Chart download buttons (PNG/JPG) now work correctly on iOS Safari
