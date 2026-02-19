@@ -14,6 +14,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
 import { PDFExportDialog } from './PDFExport';
 import DashboardView from './DashboardView';
@@ -101,6 +102,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
   setColumnVisibility,
   columnMapping: propsColumnMapping
 }) => {
+  const { t } = useTranslation();
+
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -245,8 +248,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
 
     // Always add source file columns first if they exist
     if (keys.includes('_sourceFileName')) {
-      dynamicHeaders.push({ id: '_sourceFileName', label: 'Source File', numeric: false });
-      dynamicHeaders.push({ id: '_sourceSheetName', label: 'Source Sheet', numeric: false });
+      dynamicHeaders.push({ id: '_sourceFileName', label: t('detailedView.fromFilename'), numeric: false });
+      dynamicHeaders.push({ id: '_sourceSheetName', label: t('detailedView.fromSheet'), numeric: false });
     }
 
     // For other columns, use the actual display names from the header row
@@ -585,8 +588,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       mapping[header.id] = header.label;
     });
     // Provide friendly labels for metadata columns even if not visible
-    mapping._sourceFileName = mapping._sourceFileName || 'Origin File';
-    mapping._sourceSheetName = mapping._sourceSheetName || 'Origin Sheet';
+    mapping._sourceFileName = mapping._sourceFileName || t('detailedView.fromFilename');
+    mapping._sourceSheetName = mapping._sourceSheetName || t('detailedView.fromSheet');
     return mapping;
   }, [visibleHeaders]);
 
@@ -882,13 +885,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     <Box sx={{ mt: isFullScreen ? 0 : 4, width: '100%', height: isFullScreen ? '100%' : 'auto', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" gutterBottom={!isFullScreen}>
-          Details for:{' '}
+          {t('detailedView.detailsFor')}{' '}
           <strong>
             {selectedUniqueNames.length <= 3
               ? selectedUniqueNames.join(', ')
-              : `${selectedUniqueNames.slice(0, 2).join(', ')} and ${selectedUniqueNames.length - 2} more`}
+              : `${selectedUniqueNames.slice(0, 2).join(', ')} ${t('detailedView.andMore', { count: selectedUniqueNames.length - 2 })}`}
           </strong>
-          {' '}({filteredAndSortedData.length} rows)
+          {' '}({filteredAndSortedData.length} {t('detailedView.rows')})
         </Typography>
         <Box>
           <IconButton onClick={onToggleFullScreen} size="small" sx={{ ml: 1 }}>
@@ -909,10 +912,10 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             }}
           >
             <MenuItem dense onClick={handleSelectAllColumns} disabled={allColumnsSelected}>
-              <Typography variant="body2">Select All</Typography>
+              <Typography variant="body2">{t('detailedView.selectAllColumns')}</Typography>
             </MenuItem>
             <MenuItem dense onClick={handleUnselectAllColumns} disabled={!allColumnsSelected}>
-              <Typography variant="body2">Unselect All</Typography>
+              <Typography variant="body2">{t('detailedView.unselectAllColumns')}</Typography>
             </MenuItem>
             <Divider />
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -956,7 +959,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                                     <Typography variant="body2">{header.label}</Typography>
                                     {header.id === '_sourceFileName' && (
                                       <Chip
-                                        label="From filename"
+                                        label={t('detailedView.fromFilename')}
                                         size="small"
                                         variant="outlined"
                                         color="info"
@@ -969,7 +972,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                                     )}
                                     {header.id === '_sourceSheetName' && (
                                       <Chip
-                                        label="From sheet"
+                                        label={t('detailedView.fromSheet')}
                                         size="small"
                                         variant="outlined"
                                         sx={{
@@ -1000,7 +1003,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         <TextField
           variant="outlined"
           size="small"
-          placeholder="Search all columns..."
+          placeholder={t('detailedView.searchAllColumns')}
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -1024,7 +1027,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            {includedRowIndices.size} of {filteredAndSortedData.length} rows selected
+            {t('detailedView.rowsSelected', { total: filteredAndSortedData.length, selected: includedRowIndices.size })}
           </Typography>
           <FormGroup sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
             <FormControlLabel
@@ -1036,8 +1039,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 />
               }
               label={
-                <Tooltip title="Only checks currently visible data columns" arrow>
-                  <span>Auto-deselect empty/zero-value rows</span>
+                <Tooltip title={t('detailedView.autoDeselectTooltip')} arrow>
+                  <span>{t('detailedView.autoDeselectZeros')}</span>
                 </Tooltip>
               }
               sx={{ mr: 1 }}
@@ -1059,8 +1062,8 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 />
               }
               label={
-                <Tooltip title="Temporarily hide deselected rows; selection still applies to exports" arrow>
-                  <span>Hide deselected</span>
+                <Tooltip title={t('detailedView.hideDeselectedTooltip')} arrow>
+                  <span>{t('detailedView.hideDeselected')}</span>
                 </Tooltip>
               }
               sx={{ mr: 1 }}
@@ -1068,7 +1071,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </FormGroup>
           {(searchTerm || hasAnyColumnFilter) && (
             <>
-              <Tooltip title="Select all currently visible rows (after search/filters)" arrow>
+              <Tooltip title={t('detailedView.selectRowsTooltip')} arrow>
                 <span>
                   <Button
                     variant="outlined"
@@ -1077,11 +1080,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                     disabled={filteredAndSortedData.length === 0}
                     sx={{ width: { xs: '100%', md: 'auto' } }}
                   >
-                    Select All
+                    {t('detailedView.selectAll')}
                   </Button>
                 </span>
               </Tooltip>
-              <Tooltip title="Deselect all currently visible rows (after search/filters)" arrow>
+              <Tooltip title={t('detailedView.deselectRowsTooltip')} arrow>
                 <span>
                   <Button
                     variant="outlined"
@@ -1090,13 +1093,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                     disabled={includedRowIndices.size === 0}
                     sx={{ width: { xs: '100%', md: 'auto' } }}
                   >
-                    Deselect All
+                    {t('detailedView.deselectAll')}
                   </Button>
                 </span>
               </Tooltip>
             </>
           )}
-          <Tooltip title="Exports included rows and currently visible columns" arrow>
+          <Tooltip title={t('detailedView.exportCsvTooltip')} arrow>
             <span>
               <Button
                 variant="contained"
@@ -1105,11 +1108,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 disabled={includedRowIndices.size === 0}
                 sx={{ width: { xs: '100%', md: 'auto' } }}
               >
-                Export as CSV ({includedRowIndices.size})
+                {t('detailedView.exportCsv', { count: includedRowIndices.size })}
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title="Generates PDF using included rows and visible columns" arrow>
+          <Tooltip title={t('detailedView.pdfTooltip')} arrow>
             <span>
               <Button
                 variant="contained"
@@ -1119,7 +1122,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 startIcon={<PictureAsPdfIcon />}
                 sx={{ width: { xs: '100%', md: 'auto' } }}
               >
-                PDF ({includedRowIndices.size})
+                {t('detailedView.pdf', { count: includedRowIndices.size })}
               </Button>
             </span>
           </Tooltip>
@@ -1130,7 +1133,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
           <Chip
             size="small"
-            label="Column filters active"
+            label={t('detailedView.columnFiltersActive')}
             color="primary"
             variant="outlined"
             onDelete={handleClearAllColumnFilters}
@@ -1142,7 +1145,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             onClick={handleClearAllColumnFilters}
             startIcon={<FilterAltOffIcon />}
           >
-            Clear all filters
+            {t('detailedView.clearAllFilters')}
           </Button>
         </Box>
       )}
@@ -1168,7 +1171,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                       handleSelectAllRows();
                     }
                   }}
-                  inputProps={{ 'aria-label': 'select all visible rows' }}
+                  inputProps={{ 'aria-label': t('detailedView.selectAllRowsAria') }}
                 />
               </TableCell>
               {visibleHeaders.map((headCell, index) => (
@@ -1187,7 +1190,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                     >
                       {headCell.label}
                     </TableSortLabel>
-                    <Tooltip title={hasColumnFilter(headCell.id) ? 'Filter active' : 'Filter column'}>
+                    <Tooltip title={hasColumnFilter(headCell.id) ? t('detailedView.filterActive') : t('detailedView.filterColumn')}>
                       <IconButton
                         size="small"
                         onClick={(e) => handleFilterClick(e, headCell.id)}
@@ -1241,7 +1244,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               <TableCell />
               {visibleHeaders.map((headCell, index) => (
                 <TableCell key={`total-${headCell.id}`} align={index === 0 ? 'left' : headCell.numeric ? 'right' : 'left'} sx={{ borderRight: index < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
-                  {index === 0 ? 'Total' : (typeof columnTotals[headCell.id] === 'number' ? (columnTotals[headCell.id] as number).toFixed(2) : columnTotals[headCell.id])}
+                  {index === 0 ? t('detailedView.total') : (typeof columnTotals[headCell.id] === 'number' ? (columnTotals[headCell.id] as number).toFixed(2) : columnTotals[headCell.id])}
                 </TableCell>
               ))}
             </TableRow>
@@ -1267,7 +1270,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             startIcon={<DashboardIcon />}
             size="small"
           >
-            Dashboard ({(() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)()})
+            {t('detailedView.dashboard', { count: (() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)() })}
           </Button>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
@@ -1297,7 +1300,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <DashboardIcon />
-            <Typography variant="h6">Dashboard</Typography>
+            <Typography variant="h6">{t('detailedView.dashboardTitle')}</Typography>
           </Box>
           <IconButton
             aria-label="close"
@@ -1308,7 +1311,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
-          <ErrorBoundary title="Dashboard failed to render.">
+          <ErrorBoundary title={t('detailedView.dashboardFailed')}>
             <DashboardView
               data={dashboardData}
               columnMapping={dashboardColumnMapping}
@@ -1344,11 +1347,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             {/* Header */}
             <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
               <Typography variant="subtitle2" gutterBottom>
-                Filter: {visibleHeaders.find(h => h.id === activeFilterColumn)?.label}
+                {t('detailedView.filter')}: {visibleHeaders.find(h => h.id === activeFilterColumn)?.label}
               </Typography>
               <TextField
                 size="small"
-                placeholder="Search values..."
+                placeholder={t('detailedView.searchValues')}
                 value={filterSearchTerm}
                 onChange={(e) => setFilterSearchTerm(e.target.value)}
                 fullWidth
@@ -1369,13 +1372,13 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   size="small"
                   onClick={() => handleSelectAllFilterValues(activeFilterColumn)}
                 >
-                  Select All
+                  {t('detailedView.selectAll')}
                 </Button>
                 <Button
                   size="small"
                   onClick={() => handleDeselectAllFilterValues(activeFilterColumn)}
                 >
-                  Deselect All
+                  {t('detailedView.deselectAll')}
                 </Button>
               </Box>
               <Button
@@ -1383,7 +1386,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 onClick={() => handleClearColumnFilter(activeFilterColumn)}
                 color="error"
               >
-                Reset
+                {t('detailedView.reset')}
               </Button>
             </Box>
 
@@ -1426,7 +1429,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
             {/* Footer */}
             <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
               <Typography variant="caption" color="text.secondary">
-                {columnFilters[activeFilterColumn]?.size || getUniqueColumnValues(activeFilterColumn).length} of {getUniqueColumnValues(activeFilterColumn).length} values selected
+                {t('detailedView.valuesSelected', { selected: columnFilters[activeFilterColumn]?.size || getUniqueColumnValues(activeFilterColumn).length, total: getUniqueColumnValues(activeFilterColumn).length })}
               </Typography>
             </Box>
           </Box>

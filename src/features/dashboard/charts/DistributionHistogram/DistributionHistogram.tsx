@@ -5,6 +5,7 @@
  */
 
 import React, { useMemo, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
@@ -37,6 +38,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
   isLoading = false,
   error,
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const chartColor = color || theme.palette.primary.main;
 
@@ -60,9 +62,9 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
     const swatchSize = 12;
     const gap = 6;
     const items = [
-      { type: 'box', label: 'Count', color: chartColor },
-      { type: 'line', label: 'Mean', color: theme.palette.error.main, dashed: true },
-      { type: 'line', label: 'Median', color: theme.palette.warning.main, dashed: true },
+      { type: 'box', label: t('charts.count'), color: chartColor },
+      { type: 'line', label: t('charts.mean'), color: theme.palette.error.main, dashed: true },
+      { type: 'line', label: t('charts.medianLabel'), color: theme.palette.warning.main, dashed: true },
     ];
 
     const rowHeight = 16;
@@ -112,14 +114,14 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
         })}
       </g>
     );
-  }, [chartColor, theme.palette.text.primary, theme.palette.error.main, theme.palette.warning.main]);
+  }, [chartColor, theme.palette.text.primary, theme.palette.error.main, theme.palette.warning.main, t]);
 
   // Loading state
   if (isLoading) {
     return (
       <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Loading histogram...
+          {t('charts.loadingData')}
         </Typography>
       </Box>
     );
@@ -130,7 +132,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
     return (
       <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="error">
-          Error loading histogram: {error.message}
+          {t('charts.errorLoading', { message: error.message })}
         </Typography>
       </Box>
     );
@@ -141,7 +143,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
     return (
       <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          No data available for histogram
+          {t('charts.noDataForHistogram')}
         </Typography>
       </Box>
     );
@@ -165,7 +167,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
             stroke={theme.palette.text.secondary}
             domain={[0, yAxisMax]}
             label={{
-              value: 'Count',
+              value: t('charts.count'),
               angle: -90,
               position: 'insideLeft',
               style: { textAnchor: 'middle', fill: theme.palette.text.secondary },
@@ -179,7 +181,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
             }}
             formatter={(value: number | string, name: string) => {
               const numValue = typeof value === 'number' ? value : parseFloat(value);
-              return [numValue ?? 0, name === 'count' ? 'Count' : name ?? ''];
+              return [numValue ?? 0, name === 'count' ? t('charts.count') : name ?? ''];
             }}
             labelFormatter={(label) => `Range: ${label}`}
           />
@@ -197,7 +199,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
               strokeDasharray="5 5"
               strokeWidth={2}
               label={{
-                value: `Mean: ${formatCurrencyGerman(data.mean)}`,
+                value: `${t('charts.mean')}: ${formatCurrencyGerman(data.mean)}`,
                 position: 'insideTopRight',
                 fill: theme.palette.error.main,
                 fontSize: 11,
@@ -212,7 +214,7 @@ const DistributionHistogramInner: React.FC<DistributionHistogramProps> = ({
               strokeDasharray="3 3"
               strokeWidth={2}
               label={{
-                value: `Median: ${formatCurrencyGerman(data.median)}`,
+                value: `${t('charts.medianLabel')}: ${formatCurrencyGerman(data.median)}`,
                 position: 'insideTopRight',
                 fill: theme.palette.warning.main,
                 fontSize: 11,

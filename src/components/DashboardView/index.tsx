@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -79,6 +80,7 @@ type ChartType = 'line' | 'area' | 'stacked';
 const FILENAME_DATE_PATTERN = /(\d{8})/;
 
 const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, nameColumn, deferRendering = false }) => {
+  const { t } = useTranslation();
   // Track component renders to identify unnecessary re-renders
   const renderCount = React.useRef(0);
   renderCount.current += 1;
@@ -932,7 +934,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="h6" color="text.secondary">
-          No data available for dashboard
+          {t('dashboard.noDataAvailable')}
         </Typography>
       </Box>
     );
@@ -943,7 +945,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     return (
       <Box sx={{ p: 3, textAlign: 'center', minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Loading dashboard...
+          {t('dashboard.loading')}
         </Typography>
       </Box>
     );
@@ -959,12 +961,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography variant="h5" gutterBottom>
-            Data Dashboard
+            {t('dashboard.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Showing {analysis.metadata.filteredRows} rows
+            {t('dashboard.showingRows', { count: analysis.metadata.filteredRows })}
             {analysis.metadata.dateRange && (
-              <> from {formatDateGerman(analysis.metadata.dateRange.start)} to {formatDateGerman(analysis.metadata.dateRange.end)}</>
+              <> {t('dashboard.fromTo', { start: formatDateGerman(analysis.metadata.dateRange.start), end: formatDateGerman(analysis.metadata.dateRange.end) })}</>
             )}
           </Typography>
         </Box>
@@ -972,14 +974,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           {/* Date column selector */}
           {!useFilenameDates && (
             <FormControl size="small" sx={{ minWidth: 180 }}>
-              <InputLabel>Date Column</InputLabel>
+              <InputLabel>{t('dashboard.dateColumn')}</InputLabel>
               <Select
                 value={selectedDateColumn || ''}
-                label="Date Column"
+                label={t('dashboard.dateColumn')}
                 onChange={(e) => setSelectedDateColumn(e.target.value || null)}
               >
                 <MenuItem value="">
-                  <em>None</em>
+                  <em>{t('dashboard.none')}</em>
                 </MenuItem>
                 {availableDateColumns.map((col) => (
                   <MenuItem key={col} value={col}>
@@ -989,7 +991,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       </Typography>
                       {availableDateColumns.length > 0 && !availableDateColumns.includes(col) && (
                         <Chip
-                          label="Not date"
+                          label={t('dashboard.notDate')}
                           size="small"
                           variant="outlined"
                           color="warning"
@@ -1010,7 +1012,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 size="small"
               />
             }
-            label={<Typography variant="body2">Anonymize names</Typography>}
+            label={<Typography variant="body2">{t('dashboard.anonymizeNames')}</Typography>}
           />
         </Box>
       </Box>
@@ -1018,7 +1020,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       {/* Column Selectors */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
-          Configure Dashboard Charts
+          {t('dashboard.configureCharts')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           {hasFilenameDates && (
@@ -1033,7 +1035,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   size="small"
                 />
               }
-              label="Use filename dates (YYYYMMDD)"
+              label={t('dashboard.useFilenameDates')}
             />
           )}
         </Box>
@@ -1049,7 +1051,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             borderColor: 'divider',
           }}>
             <Typography variant="caption" sx={{ width: '100%', mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Data Series (drag to reorder • click to toggle • X to hide)
+              {t('dashboard.dataSeries')}
             </Typography>
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="columns" direction="horizontal">
@@ -1134,7 +1136,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
         {availableNumericColumns.length === 0 && (
           <Alert severity="warning" sx={{ mt: 2 }}>
-            No numeric columns detected. Make sure your data contains numeric values.
+            {t('dashboard.noNumericColumns')}
           </Alert>
         )}
       </Paper>
@@ -1144,7 +1146,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       {/* Layout controls */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" color="text.secondary">Row height</Typography>
+          <Typography variant="body2" color="text.secondary">{t('dashboard.rowHeight')}</Typography>
           <FormControl size="small" sx={{ minWidth: 80 }}>
             <Select value={rowHeight} onChange={(e) => setRowHeight(Number(e.target.value))}>
               {[30, 40, 50, 60, 70, 80].map(v => (
@@ -1158,7 +1160,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           size="small"
           onClick={handleResetLayout}
         >
-          Reset Layout
+          {t('dashboard.resetLayout')}
         </Button>
       </Box>
 
@@ -1188,7 +1190,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <TrendingUp color="primary" />
               <Typography variant="h6">
-                {hasTimeSeriesData ? 'Trend Over Time' : 'Trend Analysis'}
+                {hasTimeSeriesData ? t('dashboard.trendOverTime') : t('dashboard.trendAnalysis')}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
@@ -1196,7 +1198,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 size="small"
                 onClick={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
                 onTouchEnd={(e) => downloadChartAsImage('trend-chart', 'png', e as any)}
-                title="Download as PNG"
+                title={t('dashboard.downloadAsPng')}
                 sx={{ minWidth: 44, minHeight: 44 }}
               >
                 <Download fontSize="small" />
@@ -1205,15 +1207,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 size="small"
                 onClick={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
                 onTouchEnd={(e) => downloadChartAsImage('trend-chart', 'jpg', e as any)}
-                title="Download as JPG"
+                title={t('dashboard.downloadAsJpg')}
                 sx={{ minWidth: 44, minHeight: 44 }}
               >
                 <Download fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', 2)} title="Taller (increase height)">
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', 2)} title={t('dashboard.taller')}>
                 <UnfoldMore fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', -2)} title="Shorter (decrease height)">
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('trend-chart', -2)} title={t('dashboard.shorter')}>
                 <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
@@ -1221,7 +1223,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onMouseDown={(e) => e.stopPropagation()}>
                 <Box sx={{ minWidth: 120 }} onClick={(e) => e.stopPropagation()}>
                   <Typography variant="caption" sx={{ mb: 0.5, ml: 1.5, color: 'text.secondary' }}>
-                    Period
+                    {t('dashboard.period')}
                   </Typography>
                   <select
                     value={periodType}
@@ -1242,10 +1244,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       touchAction: 'manipulation',
                     }}
                   >
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
+                    <option value="weekly">{t('dashboard.weekly')}</option>
+                    <option value="monthly">{t('dashboard.monthly')}</option>
+                    <option value="quarterly">{t('dashboard.quarterly')}</option>
+                    <option value="yearly">{t('dashboard.yearly')}</option>
                   </select>
                 </Box>
                 <ToggleButtonGroup
@@ -1266,13 +1268,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     },
                   }}
                 >
-                  <ToggleButton value="line" title="Line Chart">
+                  <ToggleButton value="line" title={t('dashboard.lineChart')}>
                     <ShowChart />
                   </ToggleButton>
-                  <ToggleButton value="area" title="Area Chart">
+                  <ToggleButton value="area" title={t('dashboard.areaChart')}>
                     <AreaChartIcon />
                   </ToggleButton>
-                  <ToggleButton value="stacked" title="Stacked Area">
+                  <ToggleButton value="stacked" title={t('dashboard.stackedArea')}>
                     <StackedLineChart />
                   </ToggleButton>
                 </ToggleButtonGroup>
@@ -1293,10 +1295,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               <Box sx={{ py: 8, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
                   {(selectedValueColumns || []).length === 0
-                    ? 'Select value columns above to see trend analysis.'
+                    ? t('dashboard.selectColumns')
                     : !useFilenameDates && !selectedDateColumn
-                      ? 'Enable "Use filename dates" or select a date column above.'
-                      : 'No trend data available for the selected columns.'}
+                      ? t('dashboard.enableFilenameDates')
+                      : t('dashboard.noTrendData')}
                 </Typography>
               </Box>
             )}
@@ -1309,45 +1311,45 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <BarChart color="primary" />
-                <Typography variant="h6">Top Contributors</Typography>
+                <Typography variant="h6">{t('dashboard.topContributors')}</Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
                 <IconButton
                   size="small"
                   onMouseDown={(e) => downloadChartAsImage('top-contributors', 'png', e as any)}
-                  title="Download as PNG"
+                  title={t('dashboard.downloadAsPng')}
                 >
                   <Download fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
                   onMouseDown={(e) => downloadChartAsImage('top-contributors', 'jpg', e as any)}
-                  title="Download as JPG"
+                  title={t('dashboard.downloadAsJpg')}
                 >
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title="Taller (increase height)">
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', 2)} title={t('dashboard.taller')}>
                   <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title="Shorter (decrease height)">
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('top-contributors', -2)} title={t('dashboard.shorter')}>
                   <UnfoldLess fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
                   onClick={() => setTopDonorsCount(prev => Math.max(5, prev - 5))}
                   disabled={topDonorsCount <= 5}
-                  title="Show fewer"
+                  title={t('dashboard.showFewer')}
                 >
                   <RemoveIcon fontSize="small" />
                 </IconButton>
                 <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'center' }}>
-                  {topDonorsCount} donors
+                  {t('dashboard.donors', { count: topDonorsCount })}
                 </Typography>
                 <IconButton
                   size="small"
                   onClick={() => setTopDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
                   disabled={topDonorsCount >= allContributorsData.length}
-                  title="Show more"
+                  title={t('dashboard.showMore')}
                 >
                   <AddIcon fontSize="small" />
                 </IconButton>
@@ -1368,12 +1370,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, mb: 2 }}>
             <TableChart color="primary" />
-            <Typography variant="h6">Descriptive Statistics</Typography>
+            <Typography variant="h6">{t('dashboard.descriptiveStatistics')}</Typography>
             <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', 2)} title="Taller (increase height)">
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', 2)} title={t('dashboard.taller')}>
                 <UnfoldMore fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', -2)} title="Shorter (decrease height)">
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', -2)} title={t('dashboard.shorter')}>
                 <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>
@@ -1388,24 +1390,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           <Paper key="histogram" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1, flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="subtitle1">
-                Distribution Histogram
+                {t('dashboard.distributionHistogram')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
                 <IconButton
                   size="small"
                   onMouseDown={(e) => downloadChartAsImage('histogram', 'png', e as any)}
-                  title="Download as PNG"
+                  title={t('dashboard.downloadAsPng')}
                 >
                   <Download fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
                   onMouseDown={(e) => downloadChartAsImage('histogram', 'jpg', e as any)}
-                  title="Download as JPG"
+                  title={t('dashboard.downloadAsJpg')}
                 >
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title="Fewer bins">
+                <IconButton size="small" onClick={() => setHistogramBins(prev => Math.max(10, prev - 10))} disabled={histogramBins <= 10} title={t('dashboard.fewerBins')}>
                   <RemoveIcon fontSize="small" />
                 </IconButton>
                 <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'center' }}>
@@ -1415,14 +1417,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   size="small"
                   onClick={() => setHistogramBins(prev => Math.min(200, prev + 10))}
                   disabled={histogramBins >= 200}
-                  title="More bins"
+                  title={t('dashboard.moreBins')}
                 >
                   <AddIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title="Taller (increase height)">
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', 2)} title={t('dashboard.taller')}>
                   <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title="Shorter (decrease height)">
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('histogram', -2)} title={t('dashboard.shorter')}>
                   <UnfoldLess fontSize="small" />
                 </IconButton>
                 <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
@@ -1430,7 +1432,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   size="small"
                   onClick={handleHistogramZoomOut}
                   disabled={histogramZoomMin === null && histogramZoomMax === null}
-                  title="Zoom out"
+                  title={t('dashboard.zoomOut')}
                 >
                   <RemoveIcon fontSize="small" />
                 </IconButton>
@@ -1438,7 +1440,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   size="small"
                   onClick={handleHistogramZoomIn}
                   disabled={distributionValues.length === 0}
-                  title="Zoom in"
+                  title={t('dashboard.zoomIn')}
                 >
                   <AddIcon fontSize="small" />
                 </IconButton>
@@ -1448,7 +1450,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       size="small"
                       onClick={handleHistogramPanLeft}
                       disabled={histogramZoomMin !== null && histogramZoomMin <= distributionMinMax.min}
-                      title="Pan left"
+                      title={t('dashboard.panLeft')}
                     >
                       {'<'}
                     </IconButton>
@@ -1456,7 +1458,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       size="small"
                       onClick={handleHistogramPanRight}
                       disabled={histogramZoomMax !== null && histogramZoomMax >= distributionMinMax.max}
-                      title="Pan right"
+                      title={t('dashboard.panRight')}
                     >
                       {'>'}
                     </IconButton>
@@ -1465,7 +1467,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                       onClick={handleHistogramZoomReset}
                       sx={{ ml: 0.5 }}
                     >
-                      Reset
+                      {t('dashboard.reset')}
                     </Button>
                   </>
                 )}
@@ -1478,7 +1480,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
               />
               {(histogramZoomMin !== null || histogramZoomMax !== null) && (
                 <Typography variant="caption" color="text.secondary" align="center" display="block">
-                  Zoomed: {formatCurrencyGerman(histogramZoomMin ?? distributionMinMax.min)} - {formatCurrencyGerman(histogramZoomMax ?? distributionMinMax.max)}
+                  {t('dashboard.zoomed', { min: formatCurrencyGerman(histogramZoomMin ?? distributionMinMax.min), max: formatCurrencyGerman(histogramZoomMax ?? distributionMinMax.max) })}
                 </Typography>
               )}
             </Box>
@@ -1492,41 +1494,41 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           <Paper key="pareto" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
               <Typography variant="subtitle1">
-                Pareto Analysis (80/20 Rule)
+                {t('dashboard.paretoAnalysis')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
                 <IconButton
                   size="small"
                   onMouseDown={(e) => downloadChartAsImage('pareto', 'png', e as any)}
-                  title="Download as PNG"
+                  title={t('dashboard.downloadAsPng')}
                 >
                   <Download fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
                   onMouseDown={(e) => downloadChartAsImage('pareto', 'jpg', e as any)}
-                  title="Download as JPG"
+                  title={t('dashboard.downloadAsJpg')}
                 >
                   <Download fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title="Taller (increase height)">
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', 2)} title={t('dashboard.taller')}>
                   <UnfoldMore fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title="Shorter (decrease height)">
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('pareto', -2)} title={t('dashboard.shorter')}>
                   <UnfoldLess fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title="Show fewer"
+                <IconButton size="small" onClick={() => setParetoDonorsCount(prev => Math.max(5, prev - 5))} disabled={paretoDonorsCount <= 5} title={t('dashboard.showFewer')}
                 >
                   <RemoveIcon fontSize="small" />
                 </IconButton>
                 <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'center' }}>
-                  {paretoDonorsCount >= allContributorsData.length ? `All ${allContributorsData.length}` : `${paretoDonorsCount} donors`}
+                  {paretoDonorsCount >= allContributorsData.length ? t('dashboard.all', { count: allContributorsData.length }) : t('dashboard.donors', { count: paretoDonorsCount })}
                 </Typography>
                 <IconButton
                   size="small"
                   onClick={() => setParetoDonorsCount(prev => Math.min(allContributorsData.length, prev + 5))}
                   disabled={paretoDonorsCount >= allContributorsData.length}
-                  title="Show more"
+                  title={t('dashboard.showMore')}
                 >
                   <AddIcon fontSize="small" />
                 </IconButton>
@@ -1548,27 +1550,27 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
               <PieChartIcon color="primary" />
-              <Typography variant="h6">Range Distribution</Typography>
+              <Typography variant="h6">{t('dashboard.rangeDistribution')}</Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
               <IconButton
                 size="small"
                 onMouseDown={(e) => downloadChartAsImage('range-distribution', 'png', e as any)}
-                title="Download as PNG"
+                title={t('dashboard.downloadAsPng')}
               >
                 <Download fontSize="small" />
               </IconButton>
               <IconButton
                 size="small"
                 onMouseDown={(e) => downloadChartAsImage('range-distribution', 'jpg', e as any)}
-                title="Download as JPG"
+                title={t('dashboard.downloadAsJpg')}
               >
                 <Download fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', 2)} title="Taller (increase height)">
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', 2)} title={t('dashboard.taller')}>
                 <UnfoldMore fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', -2)} title="Shorter (decrease height)">
+              <IconButton size="small" onClick={() => handleAdjustWidgetHeight('range-distribution', -2)} title={t('dashboard.shorter')}>
                 <UnfoldLess fontSize="small" />
               </IconButton>
             </Box>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, Box, Typography, ListSubheader } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 interface ColumnSelectorProps {
   data: any[];
@@ -15,6 +16,8 @@ interface ColumnOption {
 }
 
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect }) => {
+  const { t } = useTranslation();
+
   const [columns, setColumns] = useState<ColumnOption[]>([]);
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [selectedRowIndex, setSelectedRowIndex] = useState<number>(1);
@@ -141,17 +144,17 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
 
   return (
     <Box sx={{ mt: 3, width: '100%' }}>
-      <Typography variant="h6" gutterBottom>Select Column for Names</Typography>
+      <Typography variant="h6" gutterBottom>{t('columnSelector.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        Showing values from first 3 rows to identify header row
+        {t('columnSelector.subtitle')}
       </Typography>
       <FormControl fullWidth>
-        <InputLabel id="column-select-label">Select Name Column</InputLabel>
+        <InputLabel id="column-select-label">{t('columnSelector.label')}</InputLabel>
         <Select
           labelId="column-select-label"
           id="column-select"
           value={selectedRowIndex ? `${selectedRowIndex}-${selectedColumn}` : ''}
-          label="Select Name Column"
+          label={t('columnSelector.label')}
           onChange={handleChange}
           MenuProps={{
             PaperProps: {
@@ -163,7 +166,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
         >
           {Object.entries(groupedColumns).flatMap(([rowNum, cols]) => [
             <ListSubheader key={`header-${rowNum}`} sx={{ bgcolor: 'grey.100', fontWeight: 'bold' }}>
-              Row {rowNum}
+              {t('columnSelector.row', { number: rowNum })}
             </ListSubheader>,
             ...cols.map((column) => (
               <MenuItem key={`${column.rowIndex}-${column.original}`} value={`${column.rowIndex}-${column.original}`}>

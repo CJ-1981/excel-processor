@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Box, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 // The component now takes a callback that receives a FileList
 interface ExcelUploaderProps {
@@ -8,6 +9,8 @@ interface ExcelUploaderProps {
 }
 
 const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }) => {
+  const { t } = useTranslation();
+
   // We only keep track of the file names for display purposes
   const [fileNames, setFileNames] = useState<string[]>([]);
 
@@ -21,11 +24,13 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
   };
 
   const fileCount = fileNames.length;
-  const buttonText = fileCount > 0 ? `Change Files (${fileCount} selected)` : 'Upload File(s)';
+  const buttonText = fileCount > 0
+    ? t('uploader.changeButton', { count: fileCount })
+    : t('uploader.button');
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>Upload Excel/CSV File(s)</Typography>
+      <Typography variant="h6" gutterBottom>{t('uploader.title')}</Typography>
       <input
         accept=".xlsx, .xls, .csv"
         style={{ display: 'none' }}
@@ -42,7 +47,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
       </label>
       {fileCount > 0 && (
         <Typography variant="body1" sx={{ mt: 1 }}>
-          Selected: {fileNames.join(', ')}
+          {t('uploader.selected')}: {fileNames.join(', ')}
         </Typography>
       )}
     </Box>

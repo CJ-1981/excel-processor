@@ -5,6 +5,7 @@
  */
 
 import React, { useCallback, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   LineChart,
@@ -135,6 +136,7 @@ const TrendChartInner: React.FC<TrendChartProps> = ({
   isLoading = false,
   error,
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const gridColor = theme.palette.divider;
   const isStacked = type === 'stacked';
@@ -237,7 +239,7 @@ const TrendChartInner: React.FC<TrendChartProps> = ({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Loading chart data...
+          {t('charts.loadingData')}
         </Typography>
       </Box>
     );
@@ -255,7 +257,7 @@ const TrendChartInner: React.FC<TrendChartProps> = ({
         }}
       >
         <Typography variant="body2" color="error">
-          Error loading chart: {error.message}
+          {t('charts.errorLoading', { message: error.message })}
         </Typography>
       </Box>
     );
@@ -273,7 +275,7 @@ const TrendChartInner: React.FC<TrendChartProps> = ({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          No data available for the selected period
+          {t('charts.noDataForPeriod')}
         </Typography>
       </Box>
     );

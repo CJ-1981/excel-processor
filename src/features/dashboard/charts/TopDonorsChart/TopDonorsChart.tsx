@@ -5,6 +5,7 @@
  */
 
 import React, { useMemo, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
@@ -50,17 +51,17 @@ interface CustomTooltipProps {
 }
 
 // CustomTooltip factory function - creates tooltip with access to chartData for index lookup
-const createCustomTooltip = (chartData: Array<{ name: string; value: number; count: number; percentage: number }>) => {
+const createCustomTooltip = (chartData: Array<{ name: string; value: number; count: number; percentage: number }>, t: any) => {
   const CustomTooltipComponent = memo(({ active, payload, label, anonymize = false }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
 
       // Find the index for anonymized tooltip label
-      let anonymizedLabel = '(Anonymized)';
+      let anonymizedLabel = t('charts.anonymized');
       if (anonymize) {
         const index = chartData.findIndex(d => d.name === data.name);
         if (index !== -1) {
-          anonymizedLabel = `(Anonymized #${index + 1})`;
+          anonymizedLabel = t('charts.anonymized', { index: index + 1 });
         }
       }
 
@@ -79,13 +80,13 @@ const createCustomTooltip = (chartData: Array<{ name: string; value: number; cou
             {anonymize ? anonymizedLabel : label}
           </Typography>
           <Typography variant="body2" sx={{ color: payload[0].color }}>
-            Value: {formatTooltipValue(data.value)}
+            {t('charts.value')}: {formatTooltipValue(data.value)}
           </Typography>
           <Typography variant="body2" sx={{ color: payload[0].color }}>
-            Count: {data.count}
+            {t('charts.count')}: {data.count}
           </Typography>
           <Typography variant="body2" sx={{ color: payload[0].color }}>
-            Percentage: {data.percentage.toFixed(1)}%
+            {t('charts.percentage')}: {data.percentage.toFixed(1)}%
           </Typography>
         </Box>
       );
@@ -104,6 +105,7 @@ const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
   isLoading = false,
   error,
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const COLORS = getChartColors();
   const gridColor = theme.palette.divider;
@@ -124,14 +126,14 @@ const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
   }, [isLoading, error, data.length]);
 
   // Create CustomTooltip component with access to chartData for index lookup
-  const CustomTooltip = useMemo(() => createCustomTooltip(chartData), [chartData]);
+  const CustomTooltip = useMemo(() => createCustomTooltip(chartData, t), [chartData, t]);
 
   // Memoize inline legend rendering - position in right-top corner using SVG percentage
   const renderInlineLegend = useCallback(() => {
     const padding = 6;
     const boxSize = 12;
     const gap = 6;
-    const label = valueLabel || 'Value';
+    const label = valueLabel || t('charts.value');
 
     const legendXPercent = 85;
     const startY = 16;
@@ -159,7 +161,7 @@ const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
         </text>
       </g>
     );
-  }, [valueLabel, COLORS, theme.palette.text.primary, gridColor]);
+  }, [valueLabel, COLORS, theme.palette.text.primary, gridColor, t]);
 
   // Memoize X-axis tick formatter for anonymization
   const formatXAxisTick = useCallback((value: unknown, index: number) => {
@@ -182,7 +184,7 @@ const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Loading chart data...
+          {t('charts.loadingData')}
         </Typography>
       </Box>
     );
@@ -202,7 +204,7 @@ const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
         }}
       >
         <Typography variant="body2" color="error">
-          Error loading chart: {error.message}
+          {t('charts.errorLoading', { message: error.message })}
         </Typography>
       </Box>
     );
@@ -222,7 +224,7 @@ const TopDonorsChartInner: React.FC<TopDonorsChartProps> = ({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          No data available
+          {t('charts.noDataAvailable')}
         </Typography>
       </Box>
     );

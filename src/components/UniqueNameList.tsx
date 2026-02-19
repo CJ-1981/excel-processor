@@ -23,6 +23,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useTranslation } from 'react-i18next';
 
 interface UniqueNameListProps {
   data: any[];
@@ -40,7 +41,8 @@ interface HeadCell {
   numeric: boolean;
 }
 
-const headCells: HeadCell[] = [
+// Default headCells (will be overridden by translations)
+const defaultHeadCells: HeadCell[] = [
   { id: 'name', numeric: false, label: 'Name' },
 ];
 
@@ -69,7 +71,7 @@ function EnhancedTableHead(props: {
             inputProps={{ 'aria-label': 'select all names' }}
           />
         </TableCell>
-        {headCells.map((headCell) => (
+        {defaultHeadCells.map((headCell: HeadCell) => (
           <TableCell
             key={headCell.id}
             align={headCell.numeric ? 'right' : 'left'}
@@ -91,6 +93,8 @@ function EnhancedTableHead(props: {
 }
 
 const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, headerRowIndex, selectedNames, onNamesSelect }) => {
+  const { t } = useTranslation();
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('name');
@@ -280,15 +284,15 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
   return (
     <Box sx={{ mt: 4, width: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="h6">Unique Names</Typography>
+        <Typography variant="h6">{t('uniqueNames.title')}</Typography>
         <Typography variant="body2" color="text.secondary">
-          Found {uniqueNames.length} unique values in "{nameColumn}"
+          {t('uniqueNames.found', { count: uniqueNames.length, column: nameColumn })}
         </Typography>
       </Box>
       <TextField
         fullWidth
         variant="outlined"
-        placeholder="Search names..."
+        placeholder={t('uniqueNames.searchPlaceholder')}
         value={searchTerm}
         onChange={(e) => {
           setSearchTerm(e.target.value);
@@ -326,12 +330,12 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Chip
                 size="small"
-                label={`${selectedNames.length} selected`}
+                label={`${selectedNames.length} ${t('uniqueNames.selected')}`}
                 color="primary"
               />
               {searchTerm && selectedMatchingSearch > 0 && (
                 <Typography variant="caption" color="text.secondary">
-                  ({selectedMatchingSearch} match search)
+                  ({t('uniqueNames.matchSearch', { count: selectedMatchingSearch })})
                 </Typography>
               )}
             </Box>
@@ -344,7 +348,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
                 }}
                 color="error"
               >
-                Clear all
+                {t('uniqueNames.clearAll')}
               </Button>
               <IconButton size="small">
                 {showSelectedExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -388,12 +392,12 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
       {searchTerm && (
         <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="body2" color="text.secondary">
-            {displayedNames.length} result{displayedNames.length !== 1 ? 's' : ''} for "{searchTerm}"
+            {t('uniqueNames.searchResults', { count: displayedNames.length, term: searchTerm })}
           </Typography>
           {selectedMatchingSearch > 0 && (
             <Chip
               size="small"
-              label={`${selectedMatchingSearch} selected`}
+              label={`${selectedMatchingSearch} ${t('uniqueNames.selected')}`}
               color="primary"
               variant="outlined"
             />
@@ -405,7 +409,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
               onClick={handleSelectAllSearched}
               disabled={allMatchingSearch.length === selectedMatchingSearch}
             >
-              Select all
+              {t('uniqueNames.selectAll')}
             </Button>
             <Button
               size="small"
@@ -414,7 +418,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
               onClick={handleDeselectAllSearched}
               disabled={selectedMatchingSearch === 0}
             >
-              Deselect all
+              {t('uniqueNames.deselectAll')}
             </Button>
           </Box>
         </Box>
@@ -462,7 +466,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
               })}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={headCells.length + 1} />
+                  <TableCell colSpan={2} />
                 </TableRow>
               )}
             </TableBody>

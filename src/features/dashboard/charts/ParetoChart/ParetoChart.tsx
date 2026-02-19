@@ -5,6 +5,7 @@
  */
 
 import React, { useMemo, memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ComposedChart,
   Bar,
@@ -31,17 +32,17 @@ interface CustomTooltipProps {
 }
 
 // CustomTooltip factory function - creates tooltip with access to displayData for index lookup
-const createCustomTooltip = (displayData: ParetoDataPoint[]) => {
+const createCustomTooltip = (displayData: ParetoDataPoint[], t: any) => {
   const CustomTooltipComponent = memo(({ active, payload, label, anonymize = false, valueLabel }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
 
       // Find the index for anonymized tooltip label
-      let anonymizedLabel = '(Anonymized)';
+      let anonymizedLabel = t('charts.anonymized');
       if (anonymize) {
         const index = displayData.findIndex(d => d.category === data.category);
         if (index !== -1) {
-          anonymizedLabel = `(Anonymized #${index + 1})`;
+          anonymizedLabel = t('charts.anonymized', { index: index + 1 });
         }
       }
 
@@ -62,7 +63,7 @@ const createCustomTooltip = (displayData: ParetoDataPoint[]) => {
           {payload.map((entry: any, index: number) => (
             <Typography key={index} variant="body2" sx={{ color: entry.color }}>
               {entry.name === 'cumulativePercentage'
-                ? `Cumulative %: ${formatPercentGerman(entry.value ?? 0)}`
+                ? `${t('charts.cumulativePercent')}: ${formatPercentGerman(entry.value ?? 0)}`
                 : entry.name === 'value'
                   ? `${valueLabel}: ${formatCurrencyGerman(entry.value ?? 0)}`
                   : `${entry.name}: ${entry.value}`
@@ -106,6 +107,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
   isLoading = false,
   error,
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const primaryBarColor = barColor || theme.palette.primary.main;
   const secondaryLineColor = lineColor || theme.palette.secondary.main;
@@ -136,14 +138,14 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
   }, [anonymize, displayData.length]);
 
   // Create CustomTooltip component with access to displayData for index lookup
-  const CustomTooltip = useMemo(() => createCustomTooltip(displayData), [displayData]);
+  const CustomTooltip = useMemo(() => createCustomTooltip(displayData, t), [displayData, t]);
 
   // Loading state
   if (isLoading) {
     return (
       <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Loading Pareto chart...
+          {t('charts.loadingData')}
         </Typography>
       </Box>
     );
@@ -154,7 +156,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
     return (
       <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="error">
-          Error loading chart: {error.message}
+          {t('charts.errorLoading', { message: error.message })}
         </Typography>
       </Box>
     );
@@ -165,7 +167,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
     return (
       <Box sx={{ width: '100%', height: '100%', py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          No data available for Pareto analysis
+          {t('charts.noDataForPareto')}
         </Typography>
       </Box>
     );
@@ -208,7 +210,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
               domain={[0, 100]}
               tickFormatter={(value) => `${value}%`}
               label={{
-                value: 'Cumulative %',
+                value: t('charts.cumulativePercent'),
                 angle: 90,
                 position: 'insideRight',
                 style: { textAnchor: 'middle', fill: theme.palette.text.secondary },
@@ -255,7 +257,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
 
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: -1, gap: 0 }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8rem', lineHeight: 1.2, mb: -0.5 }}>
-          {eightyPercentIndex + 1} contributor{eightyPercentIndex + 1 > 1 ? 's' : ''} account for ~80% of total value
+          {t('charts.contributors80', { count: eightyPercentIndex + 1 })}
         </Typography>
 
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
@@ -281,7 +283,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
               }}
             />
             <Typography variant="caption" color="text.secondary">
-              Cumulative %
+              {t('charts.cumulativePercent')}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -294,7 +296,7 @@ const ParetoChartInner: React.FC<ParetoChartProps> = ({
               }}
             />
             <Typography variant="caption" color="text.secondary">
-              80% threshold
+              {t('charts.percent80Threshold')}
             </Typography>
           </Box>
         </Box>

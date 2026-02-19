@@ -2,6 +2,7 @@ import { Box, LinearProgress, Typography, Paper, Alert } from '@mui/material';
 import ErrorIcon from '@mui/icons-material/Error';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import type { ParseProgress } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface FileProgressIndicatorProps {
   /** Progress information */
@@ -18,6 +19,8 @@ interface FileProgressIndicatorProps {
  * - Error count badge if there are errors
  */
 export default function FileProgressIndicator({ progress }: FileProgressIndicatorProps) {
+  const { t } = useTranslation();
+
   const { total, completed, stage, errors } = progress;
   const percentage = total > 0 ? (completed / total) * 100 : 0;
   const hasErrors = errors.length > 0;
@@ -25,11 +28,11 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
   const getStageText = () => {
     switch (stage) {
       case 'reading':
-        return 'Reading files...';
+        return t('progress.reading');
       case 'parsing':
-        return 'Parsing files...';
+        return t('progress.parsing');
       default:
-        return 'Processing...';
+        return t('progress.processing');
     }
   };
 
@@ -62,7 +65,7 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'error.main' }}>
               <ErrorIcon fontSize="small" />
               <Typography variant="body2" color="error">
-                {errors.length} error{errors.length !== 1 ? 's' : ''}
+                {t('progress.error', { count: errors.length })}
               </Typography>
             </Box>
           ) : null}
@@ -95,7 +98,7 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Processed {completed} of {total} file{total !== 1 ? 's' : ''}
+          {t('progress.processed', { completed, total, plural: total === 1 ? '' : 's' })}
         </Typography>
         <Typography variant="body2" color="text.secondary" fontWeight="medium">
           {Math.round(percentage)}%
@@ -106,7 +109,7 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
       {hasErrors && (
         <Alert severity="warning" sx={{ mt: 1 }}>
           <Typography variant="body2">
-            {errors.length} file{errors.length !== 1 ? 's' : ''} failed to load. Will continue with remaining files.
+            {t('progress.failed', { count: errors.length })}
           </Typography>
         </Alert>
       )}

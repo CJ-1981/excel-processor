@@ -42,6 +42,7 @@ import {
   toggleMergeGroupActive,
   setAllMergeGroupsActive,
 } from '../utils/nameMergeUtils';
+import { useTranslation } from 'react-i18next';
 
 interface NameMergingPanelProps {
   availableNames: string[];
@@ -54,6 +55,8 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
   mergeState,
   onMergeStateChange,
 }) => {
+  const { t } = useTranslation();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -226,12 +229,12 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
             {collapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </IconButton>
           <MergeTypeIcon color="primary" />
-          <Typography variant="h6">Name Merging</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>(optional)</Typography>
+          <Typography variant="h6">{t('nameMerging.title')}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>{t('nameMerging.optional')}</Typography>
           {mergeState.mergeGroups.length > 0 && (
             <Chip
               size="small"
-              label={`${mergeState.mergeGroups.length} group${mergeState.mergeGroups.length > 1 ? 's' : ''}`}
+              label={t('nameMerging.groups', { count: mergeState.mergeGroups.length })}
               color="primary"
               variant="outlined"
               sx={{ ml: 1 }}
@@ -242,14 +245,13 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
 
       {!collapsed && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Group similar donor names into a single display name. This affects statistics and dashboards only.
+          {t('nameMerging.description')}
         </Alert>
       )}
 
       {!collapsed && mergeState.mergeGroups.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          {mergedNamesCount} name{mergedNamesCount > 1 ? 's' : ''} merged into {mergeState.mergeGroups.length} group{mergeState.mergeGroups.length > 1 ? 's' : ''}.
-          Merged names will be treated as a single entity in statistics.
+          {t('nameMerging.summary', { count: mergedNamesCount, groupCount: mergeState.mergeGroups.length })}
         </Alert>
       )}
 
@@ -258,7 +260,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <TextField
             size="small"
-            placeholder="Search names..."
+            placeholder={t('nameMerging.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
@@ -269,7 +271,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
             onClick={handleOpenCreateDialog}
             disabled={selectedNames.length < 2}
           >
-            Merge ({selectedNames.length})
+            {t('nameMerging.merge', { count: selectedNames.length })}
           </Button>
         </Box>
 
@@ -281,21 +283,21 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
               onClick={handleSelectAll}
               disabled={unmergedFilteredNames.length === 0}
             >
-              Add All Unmerged
+              {t('nameMerging.addAllUnmerged')}
             </Button>
             <Button
               size="small"
               onClick={handleClearSelection}
               disabled={selectedNames.length === 0}
             >
-              Clear Selection
+              {t('nameMerging.clearSelection')}
             </Button>
           </Box>
         )}
 
         {/* Available Names List */}
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-          Available Names ({filteredNames.length})
+          {t('nameMerging.availableNames', { count: filteredNames.length })}
         </Typography>
         <List
           dense
@@ -310,7 +312,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
           {filteredNames.length === 0 ? (
             <ListItem>
               <ListItemText
-                secondary={searchTerm ? 'No names match your search' : 'No names available'}
+                secondary={searchTerm ? t('nameMerging.noMatch') : t('nameMerging.noNames')}
               />
             </ListItem>
           ) : (
@@ -336,7 +338,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                   </ListItemIcon>
                   <ListItemText
                     primary={name}
-                    secondary={mergeInfo ? `Merged as: ${mergeInfo.displayName}` : undefined}
+                    secondary={mergeInfo ? t('nameMerging.mergedAs', { displayName: mergeInfo.displayName }) : undefined}
                     secondaryTypographyProps={{
                       color: 'primary',
                       variant: 'caption',
@@ -354,11 +356,11 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                Merge Groups
+                {t('nameMerging.mergeGroups')}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {mergeState.mergeGroups.length > 0 && (
-                  <Tooltip title={allGroupsActive ? 'Deactivate All' : 'Activate All'}>
+                  <Tooltip title={allGroupsActive ? t('nameMerging.deactivateAll') : t('nameMerging.activateAll')}>
                     <Switch
                       edge="end"
                       size="small"
@@ -368,14 +370,14 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                     />
                   </Tooltip>
                 )}
-                <Tooltip title="Clear all merge groups">
+                <Tooltip title={t('nameMerging.clearAll')}>
                   <Button
                     size="small"
                     color="error"
                     startIcon={<ClearIcon />}
                     onClick={() => setClearConfirmOpen(true)}
                   >
-                    Clear All
+                    {t('nameMerging.clearAll')}
                   </Button>
                 </Tooltip>
               </Box>
@@ -386,7 +388,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                   <ListItem
                     secondaryAction={
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Tooltip title={group.active ? 'Deactivate' : 'Activate'}>
+                        <Tooltip title={group.active ? t('nameMerging.deactivate') : t('nameMerging.activate')}>
                           <Switch
                             edge="end"
                             size="small"
@@ -395,7 +397,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                             inputProps={{ 'aria-label': 'toggle merge group' }}
                           />
                         </Tooltip>
-                        <Tooltip title="Edit display name">
+                        <Tooltip title={t('nameMerging.edit')}>
                           <IconButton
                             edge="end"
                             size="small"
@@ -404,7 +406,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Split (undo merge)">
+                        <Tooltip title={t('nameMerging.split')}>
                           <IconButton
                             edge="end"
                             size="small"
@@ -427,7 +429,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                       </ListItemIcon>
                       <ListItemText
                         primary={group.displayName}
-                        secondary={`${group.originalNames.length} name${group.originalNames.length > 1 ? 's' : ''}`}
+                        secondary={t('nameMerging.namesCount', { count: group.originalNames.length })}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -451,21 +453,21 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
 
         {/* Create Merge Dialog */}
         <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
-          <DialogTitle>Create Merge Group</DialogTitle>
+          <DialogTitle>{t('nameMerging.createGroup')}</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Merging {selectedNames.length} names into a single entity.
+              {t('nameMerging.mergeDescription', { count: selectedNames.length })}
             </Typography>
             <TextField
               autoFocus
-              label="Display Name"
+              label={t('nameMerging.displayName')}
               fullWidth
               value={newDisplayName}
               onChange={(e) => setNewDisplayName(e.target.value)}
               sx={{ mb: 2 }}
             />
             <Typography variant="caption" color="text.secondary">
-              Names to merge:
+              {t('nameMerging.namesToMerge')}:
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
               {selectedNames.map((name) => (
@@ -474,24 +476,24 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => setCreateDialogOpen(false)}>{t('nameMerging.cancel')}</Button>
             <Button
               onClick={handleCreateMerge}
               variant="contained"
               disabled={!newDisplayName.trim()}
             >
-              Create Merge
+              {t('nameMerging.createMerge')}
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Edit Display Name Dialog */}
         <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
-          <DialogTitle>Edit Display Name</DialogTitle>
+          <DialogTitle>{t('nameMerging.editDisplayName')}</DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
-              label="Display Name"
+              label={t('nameMerging.displayName')}
               fullWidth
               value={newDisplayName}
               onChange={(e) => setNewDisplayName(e.target.value)}
@@ -499,32 +501,32 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => setEditDialogOpen(false)}>{t('nameMerging.cancel')}</Button>
             <Button
               onClick={handleUpdateDisplayName}
               variant="contained"
               disabled={!newDisplayName.trim()}
             >
-              Save
+              {t('nameMerging.save')}
             </Button>
           </DialogActions>
         </Dialog>
-        
+
         {/* Clear All Confirmation Dialog */}
         <Dialog
             open={clearConfirmOpen}
             onClose={() => setClearConfirmOpen(false)}
         >
-          <DialogTitle>Confirm Clear All</DialogTitle>
+          <DialogTitle>{t('nameMerging.confirmClearAll')}</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Are you sure you want to permanently delete all merge groups? This action cannot be undone.
+              {t('nameMerging.confirmClearAllMessage')}
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setClearConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={() => setClearConfirmOpen(false)}>{t('nameMerging.cancel')}</Button>
             <Button onClick={handleClearAll} color="error" variant="contained">
-              Clear All
+              {t('nameMerging.clearAll')}
             </Button>
           </DialogActions>
         </Dialog>

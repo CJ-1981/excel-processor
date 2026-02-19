@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ const formatNumber = (value: number): string => {
 };
 
 const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLoading = false, error }) => {
+  const { t } = useTranslation();
   const [showPercentiles, setShowPercentiles] = useState(false);
 
   // Memoize toggle handler
@@ -52,7 +54,7 @@ const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLo
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Loading statistics...
+          {t('charts.loadingData')}
         </Typography>
       </Box>
     );
@@ -63,7 +65,7 @@ const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLo
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
         <Typography variant="body2" color="error">
-          Error loading statistics: {error.message}
+          {t('charts.errorLoading', { message: error.message })}
         </Typography>
       </Box>
     );
@@ -74,7 +76,7 @@ const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLo
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          No numeric columns found in the data
+          {t('dashboard.noNumericColumns')}
         </Typography>
       </Box>
     );
@@ -88,7 +90,7 @@ const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLo
           endIcon={showPercentiles ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           onClick={togglePercentiles}
         >
-          {showPercentiles ? 'Hide Percentiles' : 'Show Percentiles'}
+          {showPercentiles ? t('charts.hidePercentiles') : t('charts.showPercentiles')}
         </Button>
       </Box>
 
@@ -96,27 +98,27 @@ const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLo
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 'bold' }}>Column</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>{t('charts.column')}</TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Sum
+                {t('charts.sum')}
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Avg
+                {t('charts.avg')}
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Min
+                {t('charts.min')}
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Max
+                {t('charts.max')}
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Median
+                {t('charts.median')}
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Std Dev
+                {t('charts.stdDev')}
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                Count
+                {t('charts.nonNullCount')}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -141,16 +143,16 @@ const StatisticsTableInner: React.FC<StatisticsTableProps> = ({ statistics, isLo
                     <Collapse in={showPercentiles}>
                       <Box sx={{ py: 1, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                         <Typography variant="caption" color="text.secondary">
-                          <strong>25th:</strong> {formatNumber(stat.percentile25)}
+                          <strong>{t('charts.percentile25')}:</strong> {formatNumber(stat.percentile25)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          <strong>75th:</strong> {formatNumber(stat.percentile75)}
+                          <strong>{t('charts.percentile75')}:</strong> {formatNumber(stat.percentile75)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          <strong>90th:</strong> {formatNumber(stat.percentile90)}
+                          <strong>{t('charts.percentile90')}:</strong> {formatNumber(stat.percentile90)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          <strong>95th:</strong> {formatNumber(stat.percentile95)}
+                          <strong>{t('charts.percentile95')}:</strong> {formatNumber(stat.percentile95)}
                         </Typography>
                       </Box>
                     </Collapse>

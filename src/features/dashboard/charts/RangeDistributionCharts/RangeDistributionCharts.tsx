@@ -5,6 +5,7 @@
  */
 
 import React, { useMemo, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
@@ -84,6 +85,38 @@ const CustomTooltip = memo(({ active, payload }: CustomTooltipProps) => {
   );
 });
 
+// Add translation function wrapper
+const createCustomTooltip = (t: any) => {
+  const CustomTooltipWithT = memo(({ active, payload }: CustomTooltipProps) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const d = payload[0].payload;
+    const isCount = d.chartType === 'count';
+    return (
+      <Box
+        sx={{
+          backgroundColor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+          p: 1.5,
+          boxShadow: 3,
+        }}
+      >
+        <Typography variant="subtitle2" gutterBottom>
+          {d.name}
+        </Typography>
+        <Typography variant="body2">
+          {isCount
+            ? `${t('charts.donors')}: ${d.value} (${formatPercentGerman(d.percentage)})`
+            : `${t('charts.amount')}: ${formatCurrencyGerman(d.value)} (${formatPercentGerman(d.percentage)})`}
+        </Typography>
+      </Box>
+    );
+  });
+  CustomTooltipWithT.displayName = 'CustomTooltipWithT';
+  return CustomTooltipWithT;
+};
+
 CustomTooltip.displayName = 'CustomTooltip';
 
 const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
@@ -92,7 +125,11 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
   isLoading = false,
   error,
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
+
+  // Create CustomTooltip component with translation function
+  const CustomTooltip = useMemo(() => createCustomTooltip(t), [t]);
 
   // Memoize computed data transformations (descending order)
   const { totalCount, countData, amountData, totalAmount } = useMemo(() => {
@@ -129,7 +166,7 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
     return (
       <Box sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Loading range distribution...
+          {t('charts.loadingData')}
         </Typography>
       </Box>
     );
@@ -140,7 +177,7 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
     return (
       <Box sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="error">
-          Error loading chart: {error.message}
+          {t('charts.errorLoading', { message: error.message })}
         </Typography>
       </Box>
     );
@@ -151,7 +188,7 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
     return (
       <Box sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          No data available for range distribution
+          {t('charts.noDataForRange')}
         </Typography>
       </Box>
     );
@@ -162,7 +199,7 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <Paper sx={{ flex: 1, minWidth: 320, p: 2 }}>
           <Typography variant="subtitle1" gutterBottom align="center">
-            By Donor Count
+            {t('charts.byDonorCount')}
           </Typography>
           <Box sx={{ height: 360 }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={220}>
@@ -182,13 +219,13 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
             </ResponsiveContainer>
           </Box>
           <Typography variant="caption" color="text.secondary" align="center" display="block">
-            Total: {totalCount} donors
+            {t('charts.totalDonors', { count: totalCount })}
           </Typography>
         </Paper>
 
         <Paper sx={{ flex: 1, minWidth: 320, p: 2 }}>
           <Typography variant="subtitle1" gutterBottom align="center">
-            By Total {valueLabel}
+            {t('charts.byTotalValue', { value: valueLabel })}
           </Typography>
           <Box sx={{ height: 360 }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={220}>
@@ -215,7 +252,7 @@ const RangeDistributionChartsInner: React.FC<RangeDistributionChartsProps> = ({
 
       <Box sx={{ mt: 2 }}>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Range Distribution Summary
+          {t('charts.rangeDistributionSummary')}
         </Typography>
         <Box
           sx={{

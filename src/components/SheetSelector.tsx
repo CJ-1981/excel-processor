@@ -4,6 +4,7 @@ import {
   Divider,
 } from '@mui/material';
 import type { ParsedFile } from '../types.ts';
+import { useTranslation } from 'react-i18next';
 
 interface SheetSelectorProps {
   files: ParsedFile[];
@@ -14,6 +15,8 @@ interface SheetSelectorProps {
 const ITEM_WIDTH = 250; // Fixed width for each file's column
 
 const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel }) => {
+  const { t } = useTranslation();
+
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
 
   const handleToggle = (sheetIdentifier: string) => {
@@ -77,10 +80,9 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
 
   return (
     <Paper elevation={3} sx={{ p: 3, mt: 4, width: '100%', overflow: 'hidden' }}>
-      <Typography variant="h6" gutterBottom>Select Sheets to Merge</Typography>
+      <Typography variant="h6" gutterBottom>{t('sheetSelector.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Select one or more sheets from the uploaded files to combine into a single dataset.
-        Clicking a sheet name will select all sheets with that name across all files.
+        {t('sheetSelector.description')}
       </Typography>
 
       {/* Horizontal Scroll for files */}
@@ -151,14 +153,14 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
         <Button variant="text" onClick={onCancel}>
-          Cancel
+          {t('sheetSelector.cancel')}
         </Button>
         <Button
           variant="contained"
           onClick={handleMergeClick}
           disabled={selectedSheets.length === 0}
         >
-          Merge {selectedSheets.length > 0 ? `(${selectedSheets.length})` : ''} Sheets
+          {t('sheetSelector.merge', { count: selectedSheets.length })}
         </Button>
       </Box>
     </Paper>

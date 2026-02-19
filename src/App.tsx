@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import ExcelUploader from './components/ExcelUploader';
 import ColumnSelector from './components/ColumnSelector';
 import UniqueNameList from './components/UniqueNameList';
@@ -6,6 +7,7 @@ import DetailedDataView from './components/DetailedDataView';
 import SheetSelector from './components/SheetSelector';
 import FileProgressIndicator from './components/FileProgressIndicator';
 import NameMergingPanel from './components/NameMergingPanel';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 import { Container, CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -19,6 +21,8 @@ import { loadNameMergeState, applyNameMerging } from './utils/nameMergeUtils';
 type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
 function App() {
+  const { t } = useTranslation();
+
   // State for the new multi-file workflow
   const [status, setStatus] = useState<AppStatus>('ready');
   const [parsedFiles, setParsedFiles] = useState<ParsedFile[]>([]);
@@ -396,11 +400,14 @@ function App() {
         }}
       >
         <Typography component="h1" variant="h4" gutterBottom>
-          Excel Data Processor
+          {t('app.title')}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          v{APP_VERSION} • Last updated: {__BUILD_TIME__}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('app.version')} {APP_VERSION} • {t('app.lastUpdated')}: {__BUILD_TIME__}
+          </Typography>
+          <LanguageSwitcher />
+        </Box>
 
         <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
 
@@ -421,9 +428,9 @@ function App() {
 
         {status === 'data_merged' && mergedData.length > 0 && (
           <Box sx={{ mt: 4, width: '100%' }}>
-            <Typography variant="h5" gutterBottom>Merged Data</Typography>
+            <Typography variant="h5" gutterBottom>{t('mergedData.title')}</Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              {mergedData.length} rows combined.
+              {t('mergedData.rowsCombined', { count: mergedData.length })}
             </Typography>
             <ColumnSelector data={mergedData} onColumnSelect={handleColumnSelect} />
 
@@ -462,9 +469,9 @@ function App() {
           onClose={handleToggleDetailedViewFullScreen}
         >
           <DialogTitle sx={{ m: 0, p: 2 }}>
-            Detailed Data View (Full Screen)
+            {t('detailedView.fullScreen')}
             <IconButton
-              aria-label="close"
+              aria-label={t('detailedView.close')}
               onClick={handleToggleDetailedViewFullScreen}
               sx={{
                 position: 'absolute',
