@@ -1,7 +1,7 @@
 {
   "name": "excel-processor",
   "private": true,
-  "version": "1.9.0",
+  "version": "1.9.1",
   "type": "module",
   "overrides": {
     "react": "^18.3.1",

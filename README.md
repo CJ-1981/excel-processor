@@ -134,6 +134,15 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.9.1 (2026-02-22)
+*   **Bug Fixes**:
+    *   Fixed: Second selected name not displayed when both "Auto-deselect empty/zero-value rows" and "Hide deselected" are enabled
+    *   Root cause: Column filters were preserved from the first selection, filtering out the second name's values
+    *   Solution: Added useEffect to reset columnFilters when selectedUniqueNames changes
+    *   Fixed auto-deselect effect to use filteredDataWithIndex and row._stableIndex for consistent index tracking
+    *   Fixed i18n plural placeholder issue: Changed broken `{{plural}}` to `(s)` notation for English plural forms
+    *   All plural strings now correctly display "1 group(s)" instead of "1 group{{plural}}"
+
 ### v1.9.0 (2026-02-19)
 *   **PDF Template System Improvements**:
     *   Added `customFieldDefaults` support in PDF templates for per-template default values

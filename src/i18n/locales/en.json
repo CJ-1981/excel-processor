@@ -19,9 +19,9 @@
     "reading": "Reading files...",
     "parsing": "Parsing files...",
     "processing": "Processing...",
-    "processed": "Processed {{completed}} of {{total}} file{{plural}}",
-    "error": "{{count}} error{{plural}}",
-    "failed": "{{count}} file{{plural}} failed to load. Will continue with remaining files."
+    "processed": "Processed {{completed}} of {{total}} file(s)",
+    "error": "{{count}} error(s)",
+    "failed": "{{count}} file(s) failed to load. Will continue with remaining files."
   },
   "sheetSelector": {
     "title": "Select Sheets to Merge",
@@ -42,7 +42,7 @@
     "selected": "selected",
     "matchSearch": "({{count}} match search)",
     "clearAll": "Clear all",
-    "searchResults": "{{count}} result{{plural}} for \"{{term}}\"",
+    "searchResults": "{{count}} result(s) for \"{{term}}\"",
     "select": "Name",
     "selectAll": "Select all",
     "deselectAll": "Deselect all",
@@ -51,9 +51,9 @@
   "nameMerging": {
     "title": "Name Merging",
     "optional": "(optional)",
-    "groups": "{{count}} group{{plural}}",
+    "groups": "{{count}} group(s)",
     "description": "Group similar donor names into a single display name. This affects statistics and dashboards only.",
-    "summary": "{{count}} name{{plural}} merged into {{groupCount}} group{{plural}}. Merged names will be treated as a single entity in statistics.",
+    "summary": "{{count}} name(s) merged into {{groupCount}} group(s). Merged names will be treated as a single entity in statistics.",
     "searchPlaceholder": "Search names...",
     "merge": "Merge ({{count}})",
     "addAllUnmerged": "Add All Unmerged",
@@ -70,7 +70,7 @@
     "deactivate": "Deactivate",
     "edit": "Edit display name",
     "split": "Split (undo merge)",
-    "namesCount": "{{count}} name{{plural}}",
+    "namesCount": "{{count}} name(s)",
     "createGroup": "Create Merge Group",
     "mergeDescription": "Merging {{count}} names into a single entity.",
     "displayName": "Display Name",
@@ -268,7 +268,7 @@
     "percentile95": "95th",
     "cumulativePercent": "Cumulative %",
     "percent80Threshold": "80% threshold",
-    "contributors80": "{{count}} contributor{{plural}} account for ~80% of total value",
+    "contributors80": "{{count}} contributor(s) account for ~80% of total value",
     "mean": "Mean",
     "medianLabel": "Median"
   }
