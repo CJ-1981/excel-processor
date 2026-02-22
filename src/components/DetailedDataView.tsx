@@ -315,6 +315,15 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     }
   }, [autoDeselectZeros]);
 
+  // Reset column filters when selected names change (to avoid filtering out new names' data)
+  useEffect(() => {
+    setColumnFilters({});
+    debug('[DetailedDataView] Column filters reset due to selectedUniqueNames change', {
+      selectedUniqueNames,
+      count: selectedUniqueNames.length
+    });
+  }, [selectedUniqueNames]);
+
   // When opening the Dashboard dialog, nudge charts to measure correctly after dialogs' transition
   useEffect(() => {
     if (showDashboardDialog) {
@@ -408,11 +417,17 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
 
   // Add stable index to filtered data for consistent row tracking
   const filteredDataWithIndex = useMemo(() => {
-    return filteredData.map((row, index) => ({
+    const result = filteredData.map((row, index) => ({
       ...row,
       _stableIndex: index,
     }));
-  }, [filteredData]);
+    debug('[DetailedDataView] filteredDataWithIndex updated', {
+      filteredDataLength: filteredData.length,
+      resultLength: result.length,
+      sampleRowNames: result.slice(0, 5).map(r => ({ _stableIndex: r._stableIndex, nameValue: nameColumn ? (r as any)[nameColumn] : 'N/A' }))
+    });
+    return result;
+  }, [filteredData, nameColumn]);
 
   const filteredAndSortedData = useMemo(() => {
     let currentData = filteredDataWithIndex;
@@ -435,7 +450,16 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     }
 
     // Apply column filters
+    const beforeColumnFilter = currentData.length;
     currentData = currentData.filter(row => rowPassesColumnFilters(row));
+    if (beforeColumnFilter !== currentData.length) {
+      debug('[DetailedDataView] Column filter removed rows', {
+        before: beforeColumnFilter,
+        after: currentData.length,
+        removed: beforeColumnFilter - currentData.length,
+        columnFiltersKeys: Object.keys(columnFilters)
+      });
+    }
 
     // Apply sorting
     if (orderBy) {
@@ -454,8 +478,14 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       });
     }
 
+    debug('[DetailedDataView] filteredAndSortedData computed', {
+      length: currentData.length,
+      searchTerm,
+      orderBy,
+      sampleNames: currentData.slice(0, 5).map(r => ({ _stableIndex: r._stableIndex, nameValue: nameColumn ? (r as any)[nameColumn] : 'N/A' }))
+    });
     return currentData;
-  }, [filteredData, searchTerm, order, orderBy, columnMapping, rowPassesColumnFilters]);
+  }, [filteredData, searchTerm, order, orderBy, columnMapping, rowPassesColumnFilters, nameColumn]);
 
   // Initialize all rows as included when the base filtered data or visible columns change
   useEffect(() => {
@@ -512,15 +542,27 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
 
     // Select all rows using stable indices
     const newSet = new Set<number>();
-    filteredData.forEach((row, index) => {
-      if (autoDeselectZeros && hasNoValidNumericValues(row, visibleDataColumnIds)) {
+    debug('[DetailedDataView] Auto-deselect effect running', {
+      filteredDataWithIndexLength: filteredDataWithIndex.length,
+      autoDeselectZeros,
+      visibleHeadersCount: visibleHeaders.length
+    });
+    filteredDataWithIndex.forEach((row, idx) => {
+      const shouldSkip = autoDeselectZeros && hasNoValidNumericValues(row, visibleDataColumnIds);
+      if (shouldSkip) {
+        debug('[DetailedDataView] Skipping row (no valid numeric values)', { index: idx, _stableIndex: row._stableIndex });
         return;
       }
-      newSet.add(index);
+      newSet.add(row._stableIndex);
     });
 
+    debug('[DetailedDataView] Setting includedRowIndices', {
+      count: newSet.size,
+      indices: Array.from(newSet).slice(0, 10), // First 10 for debugging
+      totalRows: filteredDataWithIndex.length
+    });
     setIncludedRowIndices(newSet);
-  }, [filteredData, autoDeselectZeros, visibleHeaders]); // Recompute when visible columns change
+  }, [filteredDataWithIndex, autoDeselectZeros, visibleHeaders]); // Recompute when visible columns change
 
   // Calculate column totals (only for included rows)
   const columnTotals = useMemo(() => {
@@ -872,7 +914,18 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
 
   // Data to display (optionally hide deselected rows)
   const displayData = hideDeselectedRows
-    ? filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex))
+    ? (() => {
+        const filtered = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex));
+        debug('[DetailedDataView] Display filtering', {
+          hideDeselectedRows,
+          filteredAndSortedDataLength: filteredAndSortedData.length,
+          displayDataLength: filtered.length,
+          includedRowIndicesCount: includedRowIndices.size,
+          sampleIncludedIndices: Array.from(includedRowIndices).slice(0, 10),
+          sampleFilteredStableIndices: filteredAndSortedData.slice(0, 5).map(r => r._stableIndex)
+        });
+        return filtered;
+      })()
     : filteredAndSortedData;
 
   const paginatedData = rowsPerPage > 0
