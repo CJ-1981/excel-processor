@@ -15,18 +15,24 @@ import {
   TextField,
   Paper,
   Box,
+  IconButton,
+  InputAdornment,
   type SelectChangeEvent,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import ColorizeIcon from '@mui/icons-material/Colorize';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import SearchIcon from '@mui/icons-material/Search';
 import { FormField } from './FormField';
+import { ContactMatchBanner } from './ContactMatchBanner';
+import { ContactsLookupDialog } from './ContactsLookupDialog';
 import { aggregateByMonth } from '../../utils/monthlyAggregator';
+import { findMatchingContacts } from '../../utils/contactMatcher';
 import {
   formatTodayDateGerman,
   formatAmountInGermanWords,
 } from '../../utils/germanFormatter';
-import type { PDFGenerationContext } from '../../types';
+import type { PDFGenerationContext, ContactRecord, MatchResult } from '../../types';
 import type { PDFTemplate } from '../../types';
 
 interface CustomFieldsDialogProps {
@@ -35,6 +41,7 @@ interface CustomFieldsDialogProps {
   onConfirm: (customFields: Record<string, string | number>, textColor: string) => void;
   context: PDFGenerationContext;
   template: PDFTemplate;
+  contacts?: ContactRecord[];
 }
 
 export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
@@ -43,6 +50,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   onConfirm,
   context,
   template,
+  contacts = [],
 }) => {
   const { t } = useTranslation();
   // State for form fields
@@ -69,6 +77,11 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [taxValidFrom, setTaxValidFrom] = useState('27.12.2016');
   const [notMembership, setNotMembership] = useState(true);
 
+  // Contacts lookup state
+  const [showLookupDialog, setShowLookupDialog] = useState(false);
+  const [lookupField, setLookupField] = useState<'donorName' | 'donorAddress'>('donorName');
+  const [suggestedContact, setSuggestedContact] = useState<MatchResult | null>(null);
+
   // Text color for PDF
   const [textColor, setTextColor] = useState('#FF0000'); // Default: red
 
@@ -86,6 +99,26 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     { name: t('pdfExport.colors.purple'), value: '#800080' },
     { name: t('pdfExport.colors.gray'), value: '#808080' },
   ];
+
+  // Auto-match contacts based on donorName
+  useEffect(() => {
+    if (donorName) {
+      const matches = findMatchingContacts(donorName, contacts || []);
+      const bestMatch = matches[0];
+      if (bestMatch && bestMatch.confidence >= 80) {
+        // Only suggest if address is different
+        if (bestMatch.contact.address !== donorAddress) {
+          setSuggestedContact(bestMatch);
+        } else {
+          setSuggestedContact(null);
+        }
+      } else {
+        setSuggestedContact(null);
+      }
+    } else {
+      setSuggestedContact(null);
+    }
+  }, [donorName, contacts]);
 
   // Initialize data when dialog opens
   useEffect(() => {
@@ -458,6 +491,18 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       </DialogTitle>
 
       <DialogContent sx={{ pb: 2 }}>
+        {/* Contact Match Banner */}
+        {suggestedContact && (
+          <ContactMatchBanner
+            match={suggestedContact}
+            onApply={() => {
+              setDonorAddress(suggestedContact.contact.address);
+              setSuggestedContact(null);
+            }}
+            onIgnore={() => setSuggestedContact(null)}
+          />
+        )}
+
         {/* Section 1: Donor Information */}
         <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
           {t('pdfExport.customFields.donorName')}
@@ -480,26 +525,83 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                   InputProps={{
                     ...params.InputProps,
                     style: textColor ? { color: textColor } : undefined,
+                    endAdornment: (
+                      <>
+                        {params.InputProps.endAdornment}
+                        {(contacts && contacts.length > 0) && (
+                          <InputAdornment position="end">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setLookupField('donorName');
+                                setShowLookupDialog(true);
+                              }}
+                              edge="end"
+                              title={t('pdfExport.contacts.lookupButton')}
+                            >
+                              <SearchIcon />
+                            </IconButton>
+                          </InputAdornment>
+                        )}
+                      </>
+                    ),
                   }}
                 />
               )}
             />
           ) : (
-            <FormField
-              type="text"
+            <TextField
+              fullWidth
               label={t('pdfExport.customFields.donorName')}
               value={donorName}
-              onChange={setDonorName}
-              textColor={textColor}
+              onChange={(e) => setDonorName(e.target.value)}
+              size="small"
+              sx={{ mb: 2 }}
+              InputProps={{
+                style: textColor ? { color: textColor } : undefined,
+                endAdornment: (contacts && contacts.length > 0) && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setLookupField('donorName');
+                        setShowLookupDialog(true);
+                      }}
+                      edge="end"
+                      title={t('pdfExport.contacts.lookupButton')}
+                    >
+                      <SearchIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           )}
-          <FormField
-            type="text"
+          <TextField
+            fullWidth
             label={t('pdfExport.customFields.address')}
             value={donorAddress}
-            onChange={setDonorAddress}
+            onChange={(e) => setDonorAddress(e.target.value)}
+            size="small"
             sx={{ mb: 0 }}
-            textColor={textColor}
+            InputProps={{
+              style: textColor ? { color: textColor } : undefined,
+              endAdornment: (contacts && contacts.length > 0) && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setLookupField('donorAddress');
+                      setShowLookupDialog(true);
+                    }}
+                    edge="end"
+                    title={t('pdfExport.contacts.lookupButton')}
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         </Paper>
 
@@ -704,6 +806,23 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           {t('pdfExport.exportPdf')}
         </Button>
       </DialogActions>
+
+      {/* Contacts Lookup Dialog */}
+      <ContactsLookupDialog
+        open={showLookupDialog}
+        onClose={() => setShowLookupDialog(false)}
+        onSelect={(contact) => {
+          if (lookupField === 'donorName') {
+            setDonorName(contact.englishName);
+            setDonorAddress(contact.address);
+          } else {
+            setDonorAddress(contact.address);
+          }
+          setShowLookupDialog(false);
+        }}
+        contacts={contacts || []}
+        initialSearchTerm={lookupField === 'donorName' ? donorName : donorAddress}
+      />
     </Dialog>
   );
 };

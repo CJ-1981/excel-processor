@@ -359,3 +359,31 @@ export interface DashboardAnalysis {
     dateRange?: { start: Date; end: Date };
   };
 }
+
+// Contacts Management Types
+export interface ContactRecord {
+  id: string;                    // Unique identifier (UUID)
+  koreanName?: string;           // Korean name (optional)
+  englishName: string;           // English name (required, primary match field)
+  address: string;               // Full address
+  sourceFile?: string;           // Source filename for debugging
+  createdAt: number;             // Timestamp of import
+}
+
+export interface ContactsState {
+  contacts: ContactRecord[];     // All loaded contacts
+  loadedAt?: number;             // Last load timestamp
+  version: string;               // Data structure version for migration
+}
+
+export interface ColumnMapping {
+  koreanName?: string;           // Column index or name for Korean name
+  englishName: string;           // Column index or name for English name (required)
+  address: string;               // Column index or name for address (required)
+}
+
+export interface MatchResult {
+  contact: ContactRecord;        // Matched contact
+  confidence: number;            // Confidence score 0-100
+  matchType: 'exact' | 'fuzzy' | 'partial'; // Type of match
+}

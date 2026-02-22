@@ -1,4 +1,64 @@
 {
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "save": "Save",
+    "back": "Back",
+    "confirm": "Confirm",
+    "apply": "Apply",
+    "ignore": "Ignore",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "contacts": {
+    "upload": {
+      "title": "Upload Contacts",
+      "previewTitle": "Confirm Import",
+      "dragDrop": "Drag & drop contacts file here",
+      "orClick": "or click to browse",
+      "supportedFormats": "Supports .xlsx, .xls, .csv files with Korean name, English name, and Address columns",
+      "invalidFileType": "\"{{fileName}}\" is not a valid Excel or CSV file",
+      "fileTooLarge": "\"{{fileName}}\" exceeds maximum size of {{maxSize}}",
+      "processing": "Processing file...",
+      "successMessage": "Successfully imported {{count}} contacts",
+      "noDataFound": "No data found in file",
+      "cannotDetectColumns": "Cannot detect required columns (English name and Address)",
+      "noValidContacts": "No valid contacts found in file",
+      "preview": "Preview (first 5 contacts):",
+      "moreContacts": "...and {{count}} more contacts",
+      "selectedFile": "Selected file:",
+      "confirm": "Import Contacts"
+    },
+    "lookup": {
+      "title": "Select Contact",
+      "searchPlaceholder": "Search by name...",
+      "resultCount": "{{count}} contact(s) found",
+      "noResults": "No contacts found",
+      "bestMatch": "Best Match",
+      "keyboardHint": "Use arrow keys to navigate, Enter to select, Escape to close"
+    },
+    "manage": {
+      "title": "Manage Contacts",
+      "totalCount": "{{count}} contacts",
+      "export": "Export",
+      "deleteSelected": "Delete ({{count}})",
+      "deleteAll": "Delete All",
+      "searchPlaceholder": "Search contacts...",
+      "showingCount": "Showing {{count}} of {{total}} contacts",
+      "noContacts": "No contacts loaded. Click \"Upload Contacts\" to import contacts from an Excel file.",
+      "noSearchResults": "No contacts match your search.",
+      "koreanName": "Korean Name",
+      "englishName": "English Name",
+      "address": "Address",
+      "source": "Source File",
+      "deleteSelectedTitle": "Delete Selected Contacts",
+      "deleteAllTitle": "Delete All Contacts",
+      "deleteSelectedConfirm": "Are you sure you want to delete {{count}} selected contact(s)?",
+      "deleteAllConfirm": "Are you sure you want to delete all contacts? This cannot be undone.",
+      "lastImport": "Last imported: {{date}}"
+    }
+  },
   "app": {
     "title": "Excel Data Processor",
     "version": "Version",
@@ -170,6 +230,18 @@
       "brown": "Brown",
       "purple": "Purple",
       "gray": "Gray"
+    },
+    "contacts": {
+      "uploadButton": "Upload Contacts",
+      "manageButton": "Manage Contacts",
+      "lookupButton": "Lookup Contact",
+      "noContacts": "No contacts loaded",
+      "contactsCount": "{{count}} contacts",
+      "matchBanner": {
+        "suggestion": "Found matching contact: {{name}} ({{confidence}}% match)",
+        "apply": "Apply",
+        "ignore": "Ignore"
+      }
     }
   },
   "mergedData": {

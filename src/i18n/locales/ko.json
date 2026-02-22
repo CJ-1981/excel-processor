@@ -1,4 +1,64 @@
 {
+  "common": {
+    "cancel": "취소",
+    "close": "닫기",
+    "delete": "삭제",
+    "save": "저장",
+    "back": "뒤로",
+    "confirm": "확인",
+    "apply": "적용",
+    "ignore": "무시",
+    "yes": "예",
+    "no": "아니오"
+  },
+  "contacts": {
+    "upload": {
+      "title": "연락처 업로드",
+      "previewTitle": "가져오기 확인",
+      "dragDrop": "연락처 파일을 여기로 드래그 앤 드롭하거나 클릭하여 선택하세요",
+      "orClick": "또는 클릭하여 찾아보기",
+      "supportedFormats": "국문 이름, 영문 이름, 주소 열이 포함된 .xlsx, .xls, .csv 파일 지원",
+      "invalidFileType": "\"{{fileName}}\"은(는) 올바른 엑셀 또는 CSV 파일이 아닙니다",
+      "fileTooLarge": "\"{{fileName}}\"이(가) 최대 크기({{maxSize}})를 초과했습니다",
+      "processing": "파일 처리 중...",
+      "successMessage": "{{count}}개 연락처를 성공적으로 가져왔습니다",
+      "noDataFound": "파일에서 데이터를 찾을 수 없습니다",
+      "cannotDetectColumns": "필수 열(영문 이름 및 주소)을 감지할 수 없습니다",
+      "noValidContacts": "파일에서 유효한 연락처를 찾을 수 없습니다",
+      "preview": "미리보기 (처음 5개 연락처):",
+      "moreContacts": "...그 외 {{count}}개 연락처",
+      "selectedFile": "선택된 파일:",
+      "confirm": "연락처 가져오기"
+    },
+    "lookup": {
+      "title": "연락처 선택",
+      "searchPlaceholder": "이름으로 검색...",
+      "resultCount": "{{count}}개 연락처를 찾았습니다",
+      "noResults": "연락처를 찾을 수 없습니다",
+      "bestMatch": "최적 일치",
+      "keyboardHint": "방향키로 탐색, Enter로 선택, Escape로 닫기"
+    },
+    "manage": {
+      "title": "연락처 관리",
+      "totalCount": "{{count}}개 연락처",
+      "export": "내보내기",
+      "deleteSelected": "삭제 ({{count}})",
+      "deleteAll": "모두 삭제",
+      "searchPlaceholder": "연락처 검색...",
+      "showingCount": "{{count}}/{{total}}개 연락처 표시 중",
+      "noContacts": "로드된 연락처가 없습니다. 엑셀 파일에서 연락처를 가져오려면 \"연락처 업로드\"를 클릭하세요.",
+      "noSearchResults": "검색과 일치하는 연락처가 없습니다.",
+      "koreanName": "국문 이름",
+      "englishName": "영문 이름",
+      "address": "주소",
+      "source": "원본 파일",
+      "deleteSelectedTitle": "선택된 연락처 삭제",
+      "deleteAllTitle": "모든 연락처 삭제",
+      "deleteSelectedConfirm": "선택한 {{count}}개 연락처를 삭제하시겠습니까?",
+      "deleteAllConfirm": "모든 연락처를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      "lastImport": "마지막 가져오기: {{date}}"
+    }
+  },
   "app": {
     "title": "엑셀 데이터 병합 및 대시보드",
     "version": "버전",
@@ -170,6 +230,18 @@
       "brown": "갈색",
       "purple": "보라색",
       "gray": "회색"
+    },
+    "contacts": {
+      "uploadButton": "연락처 업로드",
+      "manageButton": "연락처 관리",
+      "lookupButton": "연락처 조회",
+      "noContacts": "로드된 연락처 없음",
+      "contactsCount": "{{count}}개 연락처",
+      "matchBanner": {
+        "suggestion": "일치하는 연락처 찾음: {{name}} ({{confidence}}% 일치)",
+        "apply": "적용",
+        "ignore": "무시"
+      }
     }
   },
   "mergedData": {
