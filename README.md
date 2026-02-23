@@ -134,6 +134,42 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.10.0 (2026-02-23)
+*   **Contacts List Feature**:
+    *   Upload contacts from XLS/CSV files with auto column detection
+    *   Supports Korean name, English name, and address columns
+    *   Auto-detects column mappings with common header patterns (Korean: 한글이름, English name, etc.)
+    *   Fallback to manual column mapping dialog if auto-detection fails
+    *   Store contacts in localStorage for persistence across sessions
+    *   Manage loaded contacts with view, delete, and export functionality
+*   **Intelligent Contact Lookup**:
+    *   Searchable contacts lookup dialog in PDF export custom fields
+    *   Fuzzy matching algorithm with confidence scoring (Levenshtein distance)
+    *   Auto-suggest contacts based on donor name when PDF export dialog opens
+    *   Shows ContactMatchBanner for 80%+ confidence matches
+    *   One-click contact selection fills both donorName and donorAddress
+    *   Users can ignore suggestions and manually override at any time
+*   **Enhanced Custom Fields Dialog**:
+    *   Added lookup icon buttons next to donorName and donorAddress fields
+    *   Intelligent matching automatically suggests contacts
+    *   Apply/Ignore buttons for quick selection
+    *   Seamless integration with existing custom fields workflow
+*   **Contact Management**:
+    *   View all loaded contacts in sortable table format
+    *   Delete selected contacts individually or in bulk
+    *   Delete all contacts option with confirmation dialog
+    *   Export contacts to CSV for backup or sharing
+*   **Bilingual Support**:
+    *   Full UI translations for contacts feature in English and Korean
+    *   All dialog titles, buttons, and messages localized
+*   **Technical Improvements**:
+    *   New TypeScript types: ContactRecord, ContactsState, ColumnMapping, MatchResult
+    *   Utility functions: normalizeString, calculateSimilarity, findMatchingContacts, detectColumns
+    *   51 new tests added (38 for contactMatcher, 13 for ContactMatchBanner)
+    *   Total: 538 tests passing
+*   **Bug Fixes**:
+    *   Fixed ContactMatchBanner tests to work with i18n translated text
+
 ### v1.9.1 (2026-02-22)
 *   **Bug Fixes**:
     *   Fixed: Second selected name not displayed when both "Auto-deselect empty/zero-value rows" and "Hide deselected" are enabled
