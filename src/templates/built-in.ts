@@ -248,6 +248,16 @@ export const BUILT_IN_TEMPLATES: PDFTemplate[] = [
         bold: true,
         fontSize: 10,
       },
+      // Pastor signature image
+      {
+        type: 'signatureImage',
+        fieldName: 'pastorSignature',  // References customFields.pastorSignature or can be treasurerSignature
+        x: 130,
+        y: 230,
+        width: 54,
+        height: 25,
+        // rotation: 45,  // Rotate 45 degrees clockwise
+      },
       // Divider line 3
       {
         type: 'divider',
@@ -368,6 +378,20 @@ export const BUILT_IN_TEMPLATES: PDFTemplate[] = [
           cellPadding: 3,
         },
         substituteVariables: true,
+      },
+      // Spacer after table
+      {
+        type: 'spacer',
+        height: 20,
+      },
+      // Pastor signature image (positioned after table to avoid overlap)
+      {
+        type: 'signatureImage',
+        fieldName: 'pastorSignature',  // References customFields.pastorSignature
+        x: 130,
+        y: 210,
+        width: 54,
+        height: 25,
       }
     ],
   },

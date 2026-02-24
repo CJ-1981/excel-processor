@@ -67,7 +67,8 @@ export type TemplateSection =
   | PageBreakSection
   | SpacerSection
   | DividerSection
-  | CustomDataTableSection;
+  | CustomDataTableSection
+  | SignatureImageSection;
 
 export interface HeaderSection {
   type: 'header';
@@ -386,4 +387,17 @@ export interface MatchResult {
   contact: ContactRecord;        // Matched contact
   confidence: number;            // Confidence score 0-100
   matchType: 'exact' | 'fuzzy' | 'partial'; // Type of match
+}
+
+// Signature image section for PDF templates
+export interface SignatureImageSection {
+  type: 'signatureImage';
+  x: number;              // X coordinate from left margin
+  y: number;              // Y coordinate from top margin
+  width?: number;         // Image width (default: 50)
+  height?: number;        // Image height (default: 30)
+  fieldName?: string;     // Custom field name (default: 'signatureImage')
+  maintainAspectRatio?: boolean;  // Preserve aspect ratio (default: true)
+  rotation?: number;      // Rotation angle in degrees (default: 0, positive = clockwise)
+  imageData?: string;     // Base64 image data (optional, provided at runtime)
 }

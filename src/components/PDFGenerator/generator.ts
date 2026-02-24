@@ -16,6 +16,7 @@ import type {
   BoxSection,
   DividerSection,
   CustomDataTableSection,
+  SignatureImageSection,
 } from '../../types';
 
 export async function generatePDF(
@@ -86,6 +87,10 @@ export async function generatePDF(
       // Divider line
       case 'divider':
         renderDivider(doc, section as DividerSection);
+        break;
+      // Signature image
+      case 'signatureImage':
+        renderSignatureImage(doc, section as SignatureImageSection, context);
         break;
     }
   }
@@ -680,5 +685,59 @@ function renderFooter(
       setFontForText(doc, rightText, false);
       doc.text(rightText, doc.internal.pageSize.getWidth() - 10, footerY, { align: 'right' });
     }
+  }
+}
+
+/**
+ * Render signature image on PDF
+ * @param doc - jsPDF instance
+ * @param section - SignatureImageSection configuration
+ * @param context - PDF generation context containing custom fields
+ */
+export function renderSignatureImage(
+  doc: jsPDF,
+  section: SignatureImageSection,
+  context: PDFGenerationContext
+): void {
+  // Get image data from section or custom fields
+  const fieldName = section.fieldName ?? 'signatureImage';
+  let imageData = section.imageData ?? (context.customFields?.[fieldName] as string);
+
+  // Handle variable substitution in imageData
+  if (imageData && typeof imageData === 'string') {
+    imageData = substituteVariables(imageData, context);
+  }
+
+  // Skip if no image data
+  if (!imageData) {
+    console.warn(`No image data found for signature field: ${fieldName}`);
+    return;
+  }
+
+  try {
+    // For Data URL, use empty string to let jsPDF auto-detect the format
+    // Data URLs already contain the format prefix (e.g., "data:image/png;base64,")
+    const format = imageData.startsWith('data:image/') ? '' : 'PNG';
+
+    // Convert rotation angle from degrees to radians
+    // jsPDF expects rotation in radians, positive = clockwise
+    const rotationRadians = (section.rotation ?? 0) * (Math.PI / 180);
+
+    // Add image to PDF at specified position with optional rotation
+    // Note: PNG transparency support in jsPDF is limited
+    // For better transparency, consider using images with white backgrounds
+    doc.addImage(
+      imageData,
+      format,
+      section.x,
+      section.y,
+      section.width ?? 50,
+      section.height ?? 30,
+      undefined,  // alias
+      undefined,  // compression
+      rotationRadians  // rotation in radians
+    );
+  } catch (error) {
+    console.error(`Failed to render signature image for field ${fieldName}:`, error);
   }
 }
