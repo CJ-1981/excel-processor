@@ -20,8 +20,8 @@ export default function SectionCard({ children, sx, elevation = 2, variant = 'el
       elevation={elevation}
       variant={variant}
       sx={{
-        p: 3,
-        borderRadius: 2,
+        p: { xs: 2, sm: 2.5, md: 3 },
+        borderRadius: { xs: 1, sm: 1.5, md: 2 },
         transition: 'box-shadow 0.3s ease-in-out',
         '&:hover': elevation > 0 ? {
           boxShadow: (theme) => theme.shadows[elevation + 2]

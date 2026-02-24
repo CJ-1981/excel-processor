@@ -165,9 +165,11 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
   }
 
   return (
-    <Box sx={{ mt: 3, width: '100%' }}>
-      <Typography variant="h6" gutterBottom>{t('columnSelector.title')}</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+    <Box sx={{ mt: { xs: 2, sm: 2.5, md: 3 }, width: '100%' }}>
+      <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+        {t('columnSelector.title')}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 1, sm: 1.5 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
         {t('columnSelector.subtitle')}
       </Typography>
       <FormControl fullWidth>
@@ -181,19 +183,19 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
           MenuProps={{
             PaperProps: {
               sx: {
-                maxHeight: 600,
+                maxHeight: { xs: 400, sm: 500, md: 600 },
               }
             }
           }}
         >
           {Object.entries(groupedColumns).flatMap(([rowNum, cols]) => [
-            <ListSubheader key={`header-${rowNum}`} sx={{ bgcolor: 'grey.100', fontWeight: 'bold' }}>
+            <ListSubheader key={`header-${rowNum}`} sx={{ bgcolor: 'grey.100', fontWeight: 'bold', fontSize: { xs: '0.85rem', sm: '0.9rem' } }}>
               {t('columnSelector.row', { number: rowNum })}
             </ListSubheader>,
             ...cols.map((column) => (
               <MenuItem key={`${column.rowIndex}-${column.original}`} value={`${column.rowIndex}-${column.original}`}>
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: column.value !== '(empty)' ? 'bold' : 'normal' }}>
+                  <Typography variant="body2" sx={{ fontWeight: column.value !== '(empty)' ? 'bold' : 'normal', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                     {column.display}
                   </Typography>
                 </Box>

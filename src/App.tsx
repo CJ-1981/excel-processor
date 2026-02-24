@@ -399,14 +399,24 @@ function App() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          mb: 4
+          mb: { xs: 2, sm: 3, md: 4 },
+          px: { xs: 1, sm: 0 }
         }}
       >
-        <Typography component="h1" variant="h3" gutterBottom fontWeight="bold">
+        <Typography
+          component="h1"
+          variant="h3"
+          gutterBottom
+          fontWeight="bold"
+          sx={{
+            fontSize: { xs: '1.75rem', sm: '2.125rem', md: '2.5rem' },
+            textAlign: 'center'
+          }}
+        >
           {t('app.title')}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, mb: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             {t('app.version')} {APP_VERSION} • {t('app.lastUpdated')}: {__BUILD_TIME__}
           </Typography>
           <LanguageSwitcher />
@@ -437,10 +447,12 @@ function App() {
         )}
 
         {status === 'data_merged' && mergedData.length > 0 && (
-          <Box sx={{ mt: 3, width: '100%' }}>
-            <SectionCard sx={{ mb: 3 }}>
-              <Typography variant="h5" gutterBottom>{t('mergedData.title')}</Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          <Box sx={{ mt: { xs: 2, sm: 2.5, md: 3 }, width: '100%' }}>
+            <SectionCard sx={{ mb: { xs: 2, sm: 2.5, md: 3 } }}>
+              <Typography variant="h5" gutterBottom sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                {t('mergedData.title')}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: { xs: 2, sm: 2.5, md: 3 }, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                 {t('mergedData.rowsCombined', { count: mergedData.length })}
               </Typography>
               <ColumnSelector data={mergedData} onColumnSelect={handleColumnSelect} />
@@ -448,7 +460,7 @@ function App() {
 
             {selectedNameColumn && (
               <>
-                <SectionCard sx={{ mb: 3 }}>
+                <SectionCard sx={{ mb: { xs: 2, sm: 2.5, md: 3 } }}>
                   <UniqueNameList
                     data={mergedData}
                     nameColumn={selectedNameColumn}
@@ -459,7 +471,7 @@ function App() {
                 </SectionCard>
 
                 {/* Name Merging Panel */}
-                <SectionCard sx={{ mb: 3 }}>
+                <SectionCard sx={{ mb: { xs: 2, sm: 2.5, md: 3 } }}>
                   <NameMergingPanel
                     availableNames={availableUniqueNames}
                     mergeState={nameMergeState}
@@ -482,22 +494,22 @@ function App() {
           open={isDetailedViewFullScreen}
           onClose={handleToggleDetailedViewFullScreen}
         >
-          <DialogTitle sx={{ m: 0, p: 2 }}>
+          <DialogTitle sx={{ m: 0, p: { xs: 1.5, sm: 2 } }}>
             {t('detailedView.fullScreen')}
             <IconButton
               aria-label={t('detailedView.close')}
               onClick={handleToggleDetailedViewFullScreen}
               sx={{
                 position: 'absolute',
-                right: 8,
-                top: 8,
+                right: { xs: 4, sm: 8 },
+                top: { xs: 4, sm: 8 },
                 color: (theme) => theme.palette.grey[500],
               }}
             >
               <CloseIcon />
             </IconButton>
           </DialogTitle>
-          <Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
+          <Box sx={{ p: { xs: 1, sm: 2 }, flexGrow: 1, overflow: 'auto' }}>
              {/* Render DetailedDataView inside the dialog */}
             {detailedViewContent}
           </Box>

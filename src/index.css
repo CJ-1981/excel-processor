@@ -5,6 +5,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Mobile responsive base font size */
+  font-size: 16px;
 }
 
 code {
@@ -28,6 +30,28 @@ input {
   min-height: 44px;
 }
 
+/* Ensure all interactive elements meet touch target size */
+.MuiChip-deleteIcon,
+.MuiChip-deleteIcon {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.MuiMenuItem-root {
+  min-height: 44px;
+}
+
+/* Enhanced touch targets for clickable elements */
+a,
+[role="button"],
+[onclick] {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Prevent text selection during touch interactions */
 .noselect {
   -webkit-user-select: none;
@@ -41,4 +65,28 @@ input {
 
 .chart-controls * {
   pointer-events: auto !important;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Increase touch target spacing on mobile */
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .MuiChip-root {
+    margin: 4px;
+  }
+
+  /* Optimize form inputs for mobile */
+  .MuiFormControl-root {
+    margin-bottom: 12px;
+  }
+
+  /* Improve readability on mobile */
+  .MuiTypography-root {
+    line-height: 1.5;
+  }
 }

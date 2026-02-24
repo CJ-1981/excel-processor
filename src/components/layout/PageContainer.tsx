@@ -19,7 +19,8 @@ export default function PageContainer({ children, maxWidth = 'lg', sx }: PageCon
       maxWidth={maxWidth}
       sx={{
         minHeight: '100vh',
-        py: 4,
+        py: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 1, sm: 2, md: 3 },
         display: 'flex',
         flexDirection: 'column',
         ...sx

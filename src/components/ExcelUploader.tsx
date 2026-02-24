@@ -164,14 +164,14 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: { xs: 1.5, sm: 2 }, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
         {t('uploader.title')}
       </Typography>
 
       <Paper
         elevation={isDragging ? 8 : 2}
         sx={{
-          p: 4,
+          p: { xs: 2.5, sm: 3, md: 4 },
           border: '2px dashed',
           borderColor: isDragging ? 'primary.main' : 'divider',
           bgcolor: isDragging ? 'action.hover' : 'background.paper',
@@ -196,23 +196,23 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
           disabled={disabled}
           ref={fileInputRef}
         />
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
           <CloudUploadOutlined
             sx={{
-              fontSize: 64,
+              fontSize: { xs: 48, sm: 56, md: 64 },
               color: isDragging ? 'primary.main' : 'text.secondary',
               transition: 'color 0.3s ease'
             }}
           />
           <Box>
-            <Typography variant="h6" color="text.primary">
+            <Typography variant="h6" color="text.primary" sx={{ fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
               {isDragging ? t('uploader.dropFiles') : t('uploader.dragDrop')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               {t('uploader.orClick')}
             </Typography>
           </Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
             {t('uploader.supportedFormats')}
           </Typography>
         </Box>
@@ -225,11 +225,11 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
       )}
 
       {selectedFiles.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        <Box sx={{ mt: { xs: 2, sm: 3 } }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
             {t('uploader.selectedFiles', { count: selectedFiles.length })}
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 0.75, sm: 1 } }}>
             {selectedFiles.map((file, index) => (
               <Chip
                 key={index}
@@ -239,6 +239,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
                 deleteIcon={<Delete />}
                 variant="outlined"
                 size="medium"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' } }}
               />
             ))}
           </Box>

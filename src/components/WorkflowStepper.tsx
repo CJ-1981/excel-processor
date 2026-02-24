@@ -38,11 +38,13 @@ export default function WorkflowStepper({ currentStep, sx }: WorkflowStepperProp
   const activeStep = getStepIndex(currentStep);
 
   return (
-    <Box sx={{ width: '100%', mb: 4, ...sx }}>
+    <Box sx={{ width: '100%', mb: { xs: 2, sm: 3, md: 4 }, ...sx }}>
       <Stepper activeStep={activeStep} alternativeLabel>
         {steps.map((label) => (
           <Step key={label}>
-            <StepLabel>{label}</StepLabel>
+            <StepLabel sx={{ '& .MuiStepLabel-label': { fontSize: { xs: '0.75rem', sm: '0.875rem' } } }}>
+              {label}
+            </StepLabel>
           </Step>
         ))}
       </Stepper>
