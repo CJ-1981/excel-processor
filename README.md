@@ -53,10 +53,11 @@ This is a client-side web application built with React, TypeScript, and Vite, de
 
 *   **Frontend:** React 18 with TypeScript
 *   **Build Tool:** Vite
-*   **UI Framework:** Material-UI v5
+*   **UI Framework:** Material-UI v7
 *   **Excel Parsing:** SheetJS (`xlsx`)
 *   **PDF Generation:** jsPDF with AutoTable plugin
 *   **Number Formatting:** number-to-words (for German amount conversion)
+*   **Internationalization:** react-i18next (English/Korean support)
 
 ## Setup and Running the Project
 
@@ -139,6 +140,39 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
   - The Detailed Data View toolbar is mobile-aware and now stacks/wraps controls on small screens while keeping desktop layout unchanged.
 
 ## Version History
+
+### v1.11.0 (2026-02-24)
+*   **PDF Signature Image Support**:
+    *   New `signatureImage` section type for PDF templates
+    *   Properties: type, x, y, width?, height?, fieldName?, maintainAspectRatio?, rotation?, imageData?
+    *   Supports Base64 image data (Data URL format)
+    *   Variable substitution for custom fields ({{customFields.signatureImage}})
+    *   Default dimensions: width=50, height=30 (when not specified)
+    *   Graceful error handling for missing/invalid image data
+    *   **Rotation Support**: Add `rotation` property to rotate signature images in degrees
+    *   Implemented `renderSignatureImage()` function in generator.ts
+    *   Renders signature images at absolute coordinates with optional rotation
+    *   Supports PNG/JPG formats via jsPDF addImage() method
+*   **Signature Upload UI**:
+    *   Signature upload buttons for Pastor and Treasurer signatures
+    *   File type validation (PNG/JPG only, max 2MB)
+    *   Image preview dialog with filename display
+    *   Upload/Remove/Change handlers for signature management
+    *   Signature images persist in localStorage across browser sessions
+*   **Contacts UX Improvements**:
+    *   Moved all contacts controls to donor name field in Custom Fields dialog
+    *   Upload, manage (with badge count), and contacts count chip next to donor name
+    *   Cleaner main PDF Export dialog with fewer buttons
+*   **Contact Match Fix**:
+    *   Apply now replaces Korean name with English name from matched contact
+    *   Previously only filled address field
+*   **Internationalization**:
+    *   English and Korean translations for all signature-related UI elements
+    *   Translation keys: uploadButton, previewTitle, removeButton, changeButton, invalidFile, noSignature, pastorSignature, treasurerSignature
+*   **Technical Improvements**:
+    *   New TypeScript types: SignatureImageSection, SignaturesState, SignatureRecord
+    *   Test Coverage: 16 tests for renderSignatureImage, 7 tests for signature handlers
+    *   Total: 563 tests passing
 
 ### v1.10.0 (2026-02-23)
 *   **Contacts List Feature**:
