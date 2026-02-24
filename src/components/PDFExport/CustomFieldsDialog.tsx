@@ -23,6 +23,8 @@ import { useTranslation } from 'react-i18next';
 import ColorizeIcon from '@mui/icons-material/Colorize';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SearchIcon from '@mui/icons-material/Search';
+import DrawIcon from '@mui/icons-material/Draw';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { FormField } from './FormField';
 import { ContactMatchBanner } from './ContactMatchBanner';
 import { ContactsLookupDialog } from './ContactsLookupDialog';
@@ -76,6 +78,12 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [taxDate2, setTaxDate2] = useState('29.04.2011');
   const [taxValidFrom, setTaxValidFrom] = useState('27.12.2016');
   const [notMembership, setNotMembership] = useState(true);
+
+  // Signature state
+  const [signatures, setSignatures] = useState<Record<string, string>>({});
+  const [showSignaturePreview, setShowSignaturePreview] = useState(false);
+  const [activeSignatureField, setActiveSignatureField] = useState<string>('signatureImage');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Contacts lookup state
   const [showLookupDialog, setShowLookupDialog] = useState(false);
@@ -361,6 +369,66 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     }
   };
 
+  // Signature upload handlers
+  const handleSignatureUpload = (fieldName: string, file: File) => {
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      alert(t('pdfExport.signature.invalidFile'));
+      return;
+    }
+
+    // Check file size (2MB limit)
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeInMB = (file.size / 1024 / 1024).toFixed(2);
+      const shouldContinue = confirm(t('pdfExport.signature.fileTooLarge', { size: sizeInMB }));
+      if (!shouldContinue) {
+        return;
+      }
+    }
+
+    // Convert file to Base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setSignatures(prev => ({ ...prev, [fieldName]: base64 }));
+      setActiveSignatureField(fieldName);
+      setShowSignaturePreview(true);
+    };
+    reader.onerror = () => {
+      alert(t('pdfExport.signature.uploadFailed'));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSignatureRemove = (fieldName: string) => {
+    setSignatures(prev => {
+      const updated = { ...prev };
+      delete updated[fieldName];
+      return updated;
+    });
+    if (activeSignatureField === fieldName) {
+      setShowSignaturePreview(false);
+    }
+  };
+
+  const triggerFileInput = (fieldName: string) => {
+    setActiveSignatureField(fieldName);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleSignatureUpload(activeSignatureField, file);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // Handle confirm
   const handleConfirm = () => {
     const customFields: Record<string, string | number | boolean> = {
@@ -382,6 +450,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       taxValidFrom,
       notMembership: String(notMembership),
       ...monthlyAmounts,
+      // Merge in all signatures
+      ...signatures,
     };
 
     // Save current values to localStorage for next time
@@ -797,6 +867,67 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             sx={{ mb: 0 }}
             textColor={textColor}
           />
+          <Divider sx={{ my: 2 }} />
+          {/* Signature Upload Buttons */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+              {t('pdfExport.signature.selectSignature')}
+            </Typography>
+            {/* Pastor Signature */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" sx={{ minWidth: 120 }}>
+                {t('pdfExport.signature.pastorSignature')}:
+              </Typography>
+              <Button
+                size="small"
+                variant={signatures.pastorSignature ? 'contained' : 'outlined'}
+                startIcon={<DrawIcon />}
+                onClick={() => triggerFileInput('pastorSignature')}
+                sx={{ flexGrow: 1 }}
+              >
+                {signatures.pastorSignature
+                  ? t('pdfExport.signature.changeButton')
+                  : t('pdfExport.signature.uploadButton')}
+              </Button>
+              {signatures.pastorSignature && (
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleSignatureRemove('pastorSignature')}
+                  title={t('pdfExport.signature.removeButton')}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
+            {/* Treasurer Signature */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" sx={{ minWidth: 120 }}>
+                {t('pdfExport.signature.treasurerSignature')}:
+              </Typography>
+              <Button
+                size="small"
+                variant={signatures.treasurerSignature ? 'contained' : 'outlined'}
+                startIcon={<DrawIcon />}
+                onClick={() => triggerFileInput('treasurerSignature')}
+                sx={{ flexGrow: 1 }}
+              >
+                {signatures.treasurerSignature
+                  ? t('pdfExport.signature.changeButton')
+                  : t('pdfExport.signature.uploadButton')}
+              </Button>
+              {signatures.treasurerSignature && (
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleSignatureRemove('treasurerSignature')}
+                  title={t('pdfExport.signature.removeButton')}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
+          </Box>
         </Paper>
       </DialogContent>
 
@@ -806,6 +937,56 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           {t('pdfExport.exportPdf')}
         </Button>
       </DialogActions>
+
+      {/* Hidden file input for signature upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg"
+        style={{ display: 'none' }}
+        onChange={handleFileInputChange}
+      />
+
+      {/* Signature Preview Dialog */}
+      <Dialog
+        open={showSignaturePreview}
+        onClose={() => setShowSignaturePreview(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('pdfExport.signature.previewTitle')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            {signatures[activeSignatureField] && (
+              <img
+                src={signatures[activeSignatureField]}
+                alt={t('pdfExport.signature.previewTitle')}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '150px',
+                  objectFit: 'contain',
+                }}
+              />
+            )}
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              {activeSignatureField === 'pastorSignature'
+                ? t('pdfExport.signature.pastorSignature')
+                : t('pdfExport.signature.treasurerSignature')}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="error"
+            onClick={() => handleSignatureRemove(activeSignatureField)}
+          >
+            {t('pdfExport.signature.removeButton')}
+          </Button>
+          <Button onClick={() => setShowSignaturePreview(false)}>
+            {t('common.close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Contacts Lookup Dialog */}
       <ContactsLookupDialog

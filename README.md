@@ -32,14 +32,20 @@ This is a client-side web application built with React, TypeScript, and Vite, de
         *   Donor information (name, address)
         *   Monthly breakdown of donations (Jan-Dec)
         *   Tax exemption options (Steuerbegünstigung)
-        *   Signature section
+        *   Signature section with image support
         *   Legal notices and disclaimers
+    *   **Signature Images:** Upload and embed signature images directly on PDF
+        *   Support for multiple signatures (e.g., pastor, treasurer)
+        *   PNG/JPG image upload with preview
+        *   Absolute positioning and sizing control
+        *   Variable substitution for dynamic signature binding
     *   **Custom Fields Dialog:** Auto-fills data from Excel export including:
         *   Donor names (dropdown for multiple selections)
         *   Monthly amounts aggregated by date from filenames
         *   Total amount and amount in words (German format)
         *   Date range and issue dates
         *   Tax information and checkboxes
+        *   Signature image uploads and management
     *   **Color Picker:** Customize text color for custom field values (default: red)
 *   **Full-Screen Mode:** Expand the detailed data table to full-screen mode for better focus and readability.
 

@@ -242,6 +242,20 @@
         "apply": "Apply",
         "ignore": "Ignore"
       }
+    },
+    "signature": {
+      "uploadButton": "Upload Signature",
+      "previewTitle": "Signature Preview",
+      "removeButton": "Remove",
+      "changeButton": "Change",
+      "invalidFile": "Invalid image file. Please upload PNG or JPG.",
+      "noSignature": "No signature uploaded",
+      "pastorSignature": "Pastor Signature",
+      "treasurerSignature": "Treasurer Signature",
+      "selectSignature": "Select Signature Type",
+      "fileTooLarge": "File size ({{size}}MB) exceeds maximum (2MB). Continue anyway?",
+      "uploadSuccess": "Signature uploaded successfully",
+      "uploadFailed": "Failed to upload signature"
     }
   },
   "mergedData": {
