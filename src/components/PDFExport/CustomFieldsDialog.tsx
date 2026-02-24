@@ -17,6 +17,8 @@ import {
   Box,
   IconButton,
   InputAdornment,
+  Badge,
+  Chip,
   type SelectChangeEvent,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +27,8 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SearchIcon from '@mui/icons-material/Search';
 import DrawIcon from '@mui/icons-material/Draw';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UploadIcon from '@mui/icons-material/Upload';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import { FormField } from './FormField';
 import { ContactMatchBanner } from './ContactMatchBanner';
 import { ContactsLookupDialog } from './ContactsLookupDialog';
@@ -34,7 +38,7 @@ import {
   formatTodayDateGerman,
   formatAmountInGermanWords,
 } from '../../utils/germanFormatter';
-import type { PDFGenerationContext, ContactRecord, MatchResult } from '../../types';
+import type { PDFGenerationContext, ContactRecord, MatchResult, SignaturesState } from '../../types';
 import type { PDFTemplate } from '../../types';
 
 interface CustomFieldsDialogProps {
@@ -44,6 +48,8 @@ interface CustomFieldsDialogProps {
   context: PDFGenerationContext;
   template: PDFTemplate;
   contacts?: ContactRecord[];
+  onContactsUploadClick?: () => void;  // Trigger contacts upload dialog
+  onContactsManageClick?: () => void;  // Trigger contacts manage dialog
 }
 
 export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
@@ -53,6 +59,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   context,
   template,
   contacts = [],
+  onContactsUploadClick,
+  onContactsManageClick,
 }) => {
   const { t } = useTranslation();
   // State for form fields
@@ -127,6 +135,14 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setSuggestedContact(null);
     }
   }, [donorName, contacts]);
+
+  // Load signatures from localStorage on mount (once)
+  useEffect(() => {
+    const storedSignatures = loadSignaturesFromStorage();
+    if (storedSignatures && Object.keys(storedSignatures).length > 0) {
+      setSignatures(storedSignatures);
+    }
+  }, []);
 
   // Initialize data when dialog opens
   useEffect(() => {
@@ -319,6 +335,30 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
   // Helper functions for localStorage persistence
   const STORAGE_KEY = 'pdfExportDefaults';
+  const SIGNATURES_STORAGE_KEY = 'excel-processor-signatures';
+
+  // Signature persistence functions
+  const saveSignaturesToStorage = (currentSignatures: Record<string, string>) => {
+    const state: SignaturesState = {
+      signatures: currentSignatures,
+      updatedAt: Date.now(),
+      version: '1.0',
+    };
+    localStorage.setItem(SIGNATURES_STORAGE_KEY, JSON.stringify(state));
+  };
+
+  const loadSignaturesFromStorage = (): Record<string, string> | null => {
+    try {
+      const stored = localStorage.getItem(SIGNATURES_STORAGE_KEY);
+      if (stored) {
+        const state: SignaturesState = JSON.parse(stored);
+        return state.signatures;
+      }
+    } catch (error) {
+      console.warn('Failed to load signatures from storage:', error);
+    }
+    return null;
+  };
 
   const saveDefaultsToStorage = () => {
     const defaults = {
@@ -392,7 +432,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
-      setSignatures(prev => ({ ...prev, [fieldName]: base64 }));
+      const updatedSignatures = { ...signatures, [fieldName]: base64 };
+      setSignatures(updatedSignatures);
+      saveSignaturesToStorage(updatedSignatures);
       setActiveSignatureField(fieldName);
       setShowSignaturePreview(true);
     };
@@ -403,11 +445,10 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   };
 
   const handleSignatureRemove = (fieldName: string) => {
-    setSignatures(prev => {
-      const updated = { ...prev };
-      delete updated[fieldName];
-      return updated;
-    });
+    const updatedSignatures = { ...signatures };
+    delete updatedSignatures[fieldName];
+    setSignatures(updatedSignatures);
+    saveSignaturesToStorage(updatedSignatures);
     if (activeSignatureField === fieldName) {
       setShowSignaturePreview(false);
     }
@@ -566,6 +607,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           <ContactMatchBanner
             match={suggestedContact}
             onApply={() => {
+              setDonorName(suggestedContact.contact.englishName);
               setDonorAddress(suggestedContact.contact.address);
               setSuggestedContact(null);
             }}
@@ -598,21 +640,54 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                     endAdornment: (
                       <>
                         {params.InputProps.endAdornment}
-                        {(contacts && contacts.length > 0) && (
-                          <InputAdornment position="end">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setLookupField('donorName');
-                                setShowLookupDialog(true);
-                              }}
-                              edge="end"
-                              title={t('pdfExport.contacts.lookupButton')}
-                            >
-                              <SearchIcon />
-                            </IconButton>
-                          </InputAdornment>
-                        )}
+                        <InputAdornment position="end">
+                          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                            {onContactsUploadClick && (
+                              <IconButton
+                                size="small"
+                                onClick={onContactsUploadClick}
+                                edge="end"
+                                title={t('pdfExport.contacts.uploadButton')}
+                              >
+                                <UploadIcon />
+                              </IconButton>
+                            )}
+                            {onContactsManageClick && contacts && contacts.length > 0 && (
+                              <Badge badgeContent={contacts.length} color="primary">
+                                <IconButton
+                                  size="small"
+                                  onClick={onContactsManageClick}
+                                  edge="end"
+                                  title={t('pdfExport.contacts.manageButton')}
+                                >
+                                  <ManageAccountsIcon />
+                                </IconButton>
+                              </Badge>
+                            )}
+                            {contacts && contacts.length > 0 && (
+                              <Chip
+                                size="small"
+                                label={t('pdfExport.contacts.contactsCount', { count: contacts.length })}
+                                color="success"
+                                variant="outlined"
+                                sx={{ height: 24, fontSize: '0.7rem' }}
+                              />
+                            )}
+                            {(contacts && contacts.length > 0) && (
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setLookupField('donorName');
+                                  setShowLookupDialog(true);
+                                }}
+                                edge="end"
+                                title={t('pdfExport.contacts.lookupButton')}
+                              >
+                                <SearchIcon />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </InputAdornment>
                       </>
                     ),
                   }}
@@ -629,19 +704,54 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               sx={{ mb: 2 }}
               InputProps={{
                 style: textColor ? { color: textColor } : undefined,
-                endAdornment: (contacts && contacts.length > 0) && (
+                endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setLookupField('donorName');
-                        setShowLookupDialog(true);
-                      }}
-                      edge="end"
-                      title={t('pdfExport.contacts.lookupButton')}
-                    >
-                      <SearchIcon />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      {onContactsUploadClick && (
+                        <IconButton
+                          size="small"
+                          onClick={onContactsUploadClick}
+                          edge="end"
+                          title={t('pdfExport.contacts.uploadButton')}
+                        >
+                          <UploadIcon />
+                        </IconButton>
+                      )}
+                      {onContactsManageClick && contacts && contacts.length > 0 && (
+                        <Badge badgeContent={contacts.length} color="primary">
+                          <IconButton
+                            size="small"
+                            onClick={onContactsManageClick}
+                            edge="end"
+                            title={t('pdfExport.contacts.manageButton')}
+                          >
+                            <ManageAccountsIcon />
+                          </IconButton>
+                        </Badge>
+                      )}
+                      {contacts && contacts.length > 0 && (
+                        <Chip
+                          size="small"
+                          label={t('pdfExport.contacts.contactsCount', { count: contacts.length })}
+                          color="success"
+                          variant="outlined"
+                          sx={{ height: 24, fontSize: '0.7rem' }}
+                        />
+                      )}
+                      {(contacts && contacts.length > 0) && (
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setLookupField('donorName');
+                            setShowLookupDialog(true);
+                          }}
+                          edge="end"
+                          title={t('pdfExport.contacts.lookupButton')}
+                        >
+                          <SearchIcon />
+                        </IconButton>
+                      )}
+                    </Box>
                   </InputAdornment>
                 ),
               }}

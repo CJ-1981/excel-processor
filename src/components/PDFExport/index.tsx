@@ -6,15 +6,8 @@ import {
   DialogActions,
   Button,
   Typography,
-  Box,
-  IconButton,
-  Tooltip,
-  Chip,
-  Badge,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import UploadIcon from '@mui/icons-material/Upload';
-import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import { TemplateSelector } from './TemplateSelector';
 import { CustomFieldsDialog } from './CustomFieldsDialog';
 import { ContactsUploader } from './ContactsUploader';
@@ -130,40 +123,6 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
           />
         </DialogContent>
         <DialogActions>
-          {/* Contacts management buttons */}
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 'auto' }}>
-            <Tooltip title={t('pdfExport.contacts.uploadButton')}>
-              <IconButton
-                onClick={() => setShowContactsUploader(true)}
-                disabled={isGenerating}
-                color="primary"
-              >
-                <UploadIcon />
-              </IconButton>
-            </Tooltip>
-            {contacts.length > 0 && (
-              <Badge badgeContent={contacts.length} color="primary">
-                <Tooltip title={t('pdfExport.contacts.manageButton')}>
-                  <IconButton
-                    onClick={() => setShowContactsManage(true)}
-                    disabled={isGenerating}
-                    color="primary"
-                  >
-                    <ManageAccountsIcon />
-                  </IconButton>
-                </Tooltip>
-              </Badge>
-            )}
-            {contacts.length > 0 && (
-              <Chip
-                size="small"
-                label={t('pdfExport.contacts.contactsCount', { count: contacts.length })}
-                color="success"
-                variant="outlined"
-              />
-            )}
-          </Box>
-
           <Button onClick={onClose} disabled={isGenerating}>
             {t('pdfExport.cancel')}
           </Button>
@@ -185,6 +144,8 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
         context={context}
         template={selectedTemplate}
         contacts={contacts}
+        onContactsUploadClick={() => setShowContactsUploader(true)}
+        onContactsManageClick={() => setShowContactsManage(true)}
       />
 
       {/* Contacts Upload Dialog */}

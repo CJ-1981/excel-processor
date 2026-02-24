@@ -377,6 +377,19 @@ export interface ContactsState {
   version: string;               // Data structure version for migration
 }
 
+// Signature image state for persistence
+export interface SignatureRecord {
+  fieldName: string;             // e.g., 'pastorSignature', 'treasurerSignature'
+  imageData: string;             // Base64 data URL
+  updatedAt: number;             // Timestamp of last update
+}
+
+export interface SignaturesState {
+  signatures: Record<string, string>;  // fieldName -> imageData mapping
+  updatedAt?: number;                  // Last update timestamp
+  version: string;                     // Data structure version for migration
+}
+
 export interface ColumnMapping {
   koreanName?: string;           // Column index or name for Korean name
   englishName: string;           // Column index or name for English name (required)
