@@ -234,6 +234,35 @@ describe('contactMatcher', () => {
       });
     });
 
+    it('should detect bilingual Korean/English headers', () => {
+      // Common format: "Korean / English" bilingual headers
+      const headers = [
+        '한글 성명 / Korean Name',
+        '영문 성명 / Full Name in English',
+        '영문 주소 / Home Address in English',
+        '이메일 주소 / Email Address'
+      ];
+      const result = detectColumns(headers);
+
+      expect(result).not.toBeNull();
+      expect(result?.koreanName).toBe('한글 성명 / Korean Name');
+      expect(result?.englishName).toBe('영문 성명 / Full Name in English');
+      expect(result?.address).toBe('영문 주소 / Home Address in English');
+    });
+
+    it('should exclude email address from being detected as address', () => {
+      // Email address column should not be detected as physical address
+      const headers = [
+        'Name',
+        'Email Address',
+        'Home Address'
+      ];
+      const result = detectColumns(headers);
+
+      expect(result).not.toBeNull();
+      expect(result?.address).toBe('Home Address');
+    });
+
     it('should require confidence >= 70%', () => {
       const headers = ['random1', 'random2', 'random3'];
       const result = detectColumns(headers);

@@ -123,23 +123,54 @@ export function findMatchingContacts(
 
 /**
  * Pattern arrays for column detection
+ * Includes common bilingual header patterns (Korean / English)
  */
-const KOREAN_NAME_PATTERNS = ['한글이름', 'korean name', 'korean_name', '이름', 'name'];
-const ENGLISH_NAME_PATTERNS = ['영문이름', 'english name', 'english_name', 'name'];
-const ADDRESS_PATTERNS = ['주소', 'address', 'addr'];
+const KOREAN_NAME_PATTERNS = [
+  '한글이름', '한글 성명', '한글성명',
+  '한글이름 / korean name', '한글 성명 / korean name', '한글성명/koreanname',
+  'korean name', 'korean_name', '이름', '성명', 'name'
+];
+const ENGLISH_NAME_PATTERNS = [
+  '영문이름', '영문 성명', '영문성명', '영문 이름',
+  'full name in english',
+  '영문이름 / english name', '영문 성명 / full name in english', '영문성명/fullnameinenglish',
+  'english name', 'english_name', 'name'
+];
+const ADDRESS_PATTERNS = [
+  '주소', '영문 주소', 'home address in english',
+  '영문 주소 / home address in english',
+  'address', 'addr'
+];
+
+// Patterns that should NOT be matched as address (exclusion list)
+const ADDRESS_EXCLUSIONS = [
+  '이메일', 'email', '메일', 'mail'
+];
 
 /**
  * Finds the best matching column index for a given pattern list
+ * @param exclusions - Optional list of patterns that should exclude a header from matching
  */
 function findBestMatch(
   headers: string[],
-  patterns: string[]
+  patterns: string[],
+  exclusions?: string[]
 ): { index: number; confidence: number } | null {
   for (const pattern of patterns) {
     const normalizedPattern = pattern.toLowerCase();
 
     for (let i = 0; i < headers.length; i++) {
       const header = headers[i].toLowerCase().trim();
+
+      // Skip if header contains any exclusion pattern
+      if (exclusions) {
+        const hasExclusion = exclusions.some(excl =>
+          header.includes(excl.toLowerCase()) || excl.toLowerCase().includes(header)
+        );
+        if (hasExclusion) {
+          continue;
+        }
+      }
 
       // Exact match
       if (header === normalizedPattern) {
@@ -167,7 +198,8 @@ export function detectColumns(headers: string[]): ColumnMapping | null {
   // Find matches with confidence scoring
   const koreanNameCol = findBestMatch(headers, KOREAN_NAME_PATTERNS);
   const englishNameCol = findBestMatch(headers, ENGLISH_NAME_PATTERNS);
-  const addressCol = findBestMatch(headers, ADDRESS_PATTERNS);
+  // Address matching excludes email-related columns
+  const addressCol = findBestMatch(headers, ADDRESS_PATTERNS, ADDRESS_EXCLUSIONS);
 
   // Validate required columns found
   if (!englishNameCol || !addressCol) {
