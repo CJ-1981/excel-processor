@@ -18,7 +18,6 @@ import {
   IconButton,
   InputAdornment,
   Badge,
-  Chip,
   type SelectChangeEvent,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -512,9 +511,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   ];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
       <DialogTitle>
-        <Box sx={{ position: 'relative', pr: 20 }}>
+        <Box sx={{ position: 'relative', pr: { xs: 8, sm: 12, md: 20 } }}>
           {t('pdfExport.customFields.title')}
           {/* Compact color picker in top right */}
           <Box
@@ -616,9 +615,33 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         )}
 
         {/* Section 1: Donor Information */}
-        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-          {t('pdfExport.customFields.donorName')}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2, mb: 1 }}>
+          <Typography variant="h6">
+            {t('pdfExport.customFields.donorName')}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {onContactsUploadClick && (
+              <IconButton
+                size="small"
+                onClick={onContactsUploadClick}
+                title={t('pdfExport.contacts.uploadButton')}
+              >
+                <UploadIcon />
+              </IconButton>
+            )}
+            {onContactsManageClick && contacts && contacts.length > 0 && (
+              <Badge badgeContent={contacts.length} color="primary">
+                <IconButton
+                  size="small"
+                  onClick={onContactsManageClick}
+                  title={t('pdfExport.contacts.manageButton')}
+                >
+                  <ManageAccountsIcon />
+                </IconButton>
+              </Badge>
+            )}
+          </Box>
+        </Box>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           {context.selectedNames.length > 1 ? (
             <Autocomplete
@@ -641,52 +664,19 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                       <>
                         {params.InputProps.endAdornment}
                         <InputAdornment position="end">
-                          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                            {onContactsUploadClick && (
-                              <IconButton
-                                size="small"
-                                onClick={onContactsUploadClick}
-                                edge="end"
-                                title={t('pdfExport.contacts.uploadButton')}
-                              >
-                                <UploadIcon />
-                              </IconButton>
-                            )}
-                            {onContactsManageClick && contacts && contacts.length > 0 && (
-                              <Badge badgeContent={contacts.length} color="primary">
-                                <IconButton
-                                  size="small"
-                                  onClick={onContactsManageClick}
-                                  edge="end"
-                                  title={t('pdfExport.contacts.manageButton')}
-                                >
-                                  <ManageAccountsIcon />
-                                </IconButton>
-                              </Badge>
-                            )}
-                            {contacts && contacts.length > 0 && (
-                              <Chip
-                                size="small"
-                                label={t('pdfExport.contacts.contactsCount', { count: contacts.length })}
-                                color="success"
-                                variant="outlined"
-                                sx={{ height: 24, fontSize: '0.7rem' }}
-                              />
-                            )}
-                            {(contacts && contacts.length > 0) && (
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setLookupField('donorName');
-                                  setShowLookupDialog(true);
-                                }}
-                                edge="end"
-                                title={t('pdfExport.contacts.lookupButton')}
-                              >
-                                <SearchIcon />
-                              </IconButton>
-                            )}
-                          </Box>
+                          {(contacts && contacts.length > 0) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setLookupField('donorName');
+                                setShowLookupDialog(true);
+                              }}
+                              edge="end"
+                              title={t('pdfExport.contacts.lookupButton')}
+                            >
+                              <SearchIcon />
+                            </IconButton>
+                          )}
                         </InputAdornment>
                       </>
                     ),
@@ -706,52 +696,19 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                 style: textColor ? { color: textColor } : undefined,
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                      {onContactsUploadClick && (
-                        <IconButton
-                          size="small"
-                          onClick={onContactsUploadClick}
-                          edge="end"
-                          title={t('pdfExport.contacts.uploadButton')}
-                        >
-                          <UploadIcon />
-                        </IconButton>
-                      )}
-                      {onContactsManageClick && contacts && contacts.length > 0 && (
-                        <Badge badgeContent={contacts.length} color="primary">
-                          <IconButton
-                            size="small"
-                            onClick={onContactsManageClick}
-                            edge="end"
-                            title={t('pdfExport.contacts.manageButton')}
-                          >
-                            <ManageAccountsIcon />
-                          </IconButton>
-                        </Badge>
-                      )}
-                      {contacts && contacts.length > 0 && (
-                        <Chip
-                          size="small"
-                          label={t('pdfExport.contacts.contactsCount', { count: contacts.length })}
-                          color="success"
-                          variant="outlined"
-                          sx={{ height: 24, fontSize: '0.7rem' }}
-                        />
-                      )}
-                      {(contacts && contacts.length > 0) && (
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setLookupField('donorName');
-                            setShowLookupDialog(true);
-                          }}
-                          edge="end"
-                          title={t('pdfExport.contacts.lookupButton')}
-                        >
-                          <SearchIcon />
-                        </IconButton>
-                      )}
-                    </Box>
+                    {(contacts && contacts.length > 0) && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setLookupField('donorName');
+                          setShowLookupDialog(true);
+                        }}
+                        edge="end"
+                        title={t('pdfExport.contacts.lookupButton')}
+                      >
+                        <SearchIcon />
+                      </IconButton>
+                    )}
                   </InputAdornment>
                 ),
               }}
