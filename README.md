@@ -141,6 +141,33 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.12.0 (2026-02-25)
+*   **Email Integration for PDF Export**:
+    *   Email sending via client-side mailto: protocol (no backend required)
+    *   CC/BCC support with localStorage persistence across sessions
+    *   Email validation with regex pattern matching
+    *   Custom email subject line with {{period}} placeholder support
+    *   Contacts table updated to display email column
+    *   Auto-detect email columns from Excel uploads (patterns: email, 이메일, e-mail, mail, @)
+    *   Email preview with spacing fix for better readability
+*   **Intelligent Amount Column Auto-Selection**:
+    *   Keyword-based detection for amount columns (amount, 금액, betrag, donation, 기부)
+    *   Automatic selection when generating PDF export
+    *   Reduces manual column selection steps
+*   **CSV Export Improvements**:
+    *   Fixed Korean character encoding with UTF-8 BOM
+    *   Proper display in Excel when opening exported contacts CSV
+*   **Mobile Layout Enhancements**:
+    *   Responsive design improvements for PDF export dialogs
+    *   Better button spacing and layout on small screens
+*   **Contact Matching Improvements**:
+    *   Enhanced normalizeString matching logic
+    *   Added bilingual email column pattern detection
+    *   Partial name matching with startsWith (85% confidence threshold)
+*   **Code Cleanup**:
+    *   Removed unused theme file (src/theme/index.tsx)
+    *   Removed EmailJS-related types (no longer needed with mailto: approach)
+
 ### v1.11.0 (2026-02-24)
 *   **PDF Signature Image Support**:
     *   New `signatureImage` section type for PDF templates
