@@ -6,6 +6,8 @@ import {
   DialogActions,
   Button,
   Typography,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { TemplateSelector } from './TemplateSelector';
@@ -35,6 +37,7 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState(BUILT_IN_TEMPLATES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCustomFields, setShowCustomFields] = useState(false);
+  const [pdfSuccessOpen, setPdfSuccessOpen] = useState(false);
 
   // Contacts state management
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
@@ -90,15 +93,38 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
   const handleCustomFieldsConfirm = async (customFields: Record<string, string | number>, textColor: string) => {
     // Add customFields and textColor to context
     const contextWithFields = { ...context, customFields, textColor };
-    await generatePDFInternal(selectedTemplate, contextWithFields);
+    setIsGenerating(true);
+    try {
+      await generatePDF(selectedTemplate, contextWithFields);
+      // Show success message
+      setPdfSuccessOpen(true);
+      // Check if email is filled (could be donorEmail or email key)
+      const hasEmail = (customFields.donorEmail || customFields.email) && String(customFields.donorEmail || customFields.email).trim() !== '';
+      if (!hasEmail) {
+        // No email filled, close custom fields dialog and go back to template selection
+        setShowCustomFields(false);
+      }
+      // If email is filled, keep custom fields dialog open so user can click "Send Email"
+    } catch (error) {
+      warn('PDFExport', 'PDF generation failed:', error);
+      alert(t('pdfExport.failed'));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Callback when email is sent - close all dialogs
+  const handleEmailSent = () => {
     setShowCustomFields(false);
+    onClose();
   };
 
   const generatePDFInternal = async (template: typeof selectedTemplate, ctx: PDFGenerationContext) => {
     setIsGenerating(true);
     try {
       await generatePDF(template, ctx);
-      onClose();
+      // Show success message
+      setPdfSuccessOpen(true);
     } catch (error) {
       warn('PDFExport', 'PDF generation failed:', error);
       alert(t('pdfExport.failed'));
@@ -146,6 +172,7 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
         contacts={contacts}
         onContactsUploadClick={() => setShowContactsUploader(true)}
         onContactsManageClick={() => setShowContactsManage(true)}
+        onEmailSent={handleEmailSent}
       />
 
       {/* Contacts Upload Dialog */}
@@ -162,6 +189,18 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
         contacts={contacts}
         onUpdateContacts={(updated) => setContacts(updated)}
       />
+
+      {/* PDF Success Message */}
+      <Snackbar
+        open={pdfSuccessOpen}
+        autoHideDuration={3000}
+        onClose={() => setPdfSuccessOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setPdfSuccessOpen(false)}>
+          {t('pdfExport.success')}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

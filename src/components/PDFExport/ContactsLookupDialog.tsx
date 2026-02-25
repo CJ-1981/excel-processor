@@ -142,7 +142,7 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          height: ITEM_HEIGHT - 8,
+          height: contact.email ? ITEM_HEIGHT : ITEM_HEIGHT - 8,
           boxSizing: 'border-box',
         }}
         onClick={() => handleSelect(contact)}
@@ -160,6 +160,11 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
           <Typography variant="caption" color="text.secondary" noWrap display="block">
             {contact.address}
           </Typography>
+          {contact.email && (
+            <Typography variant="caption" color="primary" noWrap display="block">
+              {contact.email}
+            </Typography>
+          )}
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
           {searchTerm && confidence < 100 && (

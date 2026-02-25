@@ -51,6 +51,7 @@
       "koreanName": "Korean Name",
       "englishName": "English Name",
       "address": "Address",
+      "email": "Email",
       "source": "Source File",
       "deleteSelectedTitle": "Delete Selected Contacts",
       "deleteAllTitle": "Delete All Contacts",
@@ -189,12 +190,15 @@
     "generating": "Generating...",
     "next": "Next",
     "exportPdf": "EXPORT PDF",
+    "sendEmail": "Send Email",
+    "success": "PDF generated successfully! You can now send it via email.",
     "failed": "Failed to generate PDF. Please try again.",
     "resetDefaults": "Reset to template defaults",
     "customFields": {
       "title": "PDF Export - Custom Fields",
       "donorName": "Donor Name",
       "address": "Address",
+      "email": "Email Address",
       "amountColumn": "Amount Column",
       "amountColumnHint": "Select the column containing donation amounts",
       "monthlyAmounts": "Monthly Amounts (EUR)",
@@ -237,6 +241,7 @@
       "lookupButton": "Lookup Contact",
       "noContacts": "No contacts loaded",
       "contactsCount": "{{count}} contacts",
+      "emailColumn": "Email",
       "matchBanner": {
         "suggestion": "Found matching contact: {{name}} ({{confidence}}% match)",
         "apply": "Apply",
@@ -257,6 +262,25 @@
       "uploadSuccess": "Signature uploaded successfully",
       "uploadFailed": "Failed to upload signature"
     }
+  },
+  "emailDialog": {
+    "title": "Send Donation Receipt by Email",
+    "selectTemplate": "Select Email Template",
+    "recipientEmail": "Recipient Email",
+    "preview": "Email Preview",
+    "subject": "Subject",
+    "body": "Message",
+    "send": "Send Email",
+    "sending": "Sending...",
+    "invalidEmail": "Please enter a valid email address",
+    "invalidEmailFormat": "Invalid email format",
+    "openEmailClient": "Open Email Client",
+    "mailtoOpened": "Opened email client. Please attach the PDF manually.",
+    "donationReceiptSubject": "[Uri] Donation Receipt for {{period}}",
+    "donationReceiptBody": "Dear {{donorName}},\n\nPlease find the donation receipt for {{period}} attached.\n\nKoreanische Kirchengemeinde Uri e.V."
+  },
+  "email": {
+    "openEmailClient": "Open in Email Client"
   },
   "mergedData": {
     "title": "Merged Data",

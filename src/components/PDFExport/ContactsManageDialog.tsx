@@ -64,7 +64,8 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
       contact =>
         contact.englishName.toLowerCase().includes(term) ||
         (contact.koreanName && contact.koreanName.toLowerCase().includes(term)) ||
-        contact.address.toLowerCase().includes(term)
+        contact.address.toLowerCase().includes(term) ||
+        (contact.email && contact.email.toLowerCase().includes(term))
     );
   }, [contacts, searchTerm]);
 
@@ -125,11 +126,12 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
   const handleExportCSV = useCallback(() => {
     if (contacts.length === 0) return;
 
-    const headers = ['Korean Name', 'English Name', 'Address', 'Source File'];
+    const headers = ['Korean Name', 'English Name', 'Address', 'Email', 'Source File'];
     const rows = contacts.map(c => [
       c.koreanName || '',
       c.englishName,
       c.address,
+      c.email || '',
       c.sourceFile || '',
     ]);
 
@@ -138,7 +140,9 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
       ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add UTF-8 BOM for Excel to properly detect encoding for Korean characters
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
 
@@ -229,13 +233,14 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
                   <TableCell>{t('contacts.manage.koreanName')}</TableCell>
                   <TableCell>{t('contacts.manage.englishName')}</TableCell>
                   <TableCell>{t('contacts.manage.address')}</TableCell>
+                  <TableCell>{t('contacts.manage.email')}</TableCell>
                   <TableCell>{t('contacts.manage.source')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">
                         {searchTerm ? t('contacts.manage.noSearchResults') : t('contacts.manage.noContacts')}
                       </Typography>
@@ -269,6 +274,16 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
                           title={contact.address}
                         >
                           {contact.address}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{ maxWidth: 200 }}
+                          title={contact.email || ''}
+                        >
+                          {contact.email || '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>

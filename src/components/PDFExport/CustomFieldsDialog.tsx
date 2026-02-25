@@ -28,6 +28,7 @@ import DrawIcon from '@mui/icons-material/Draw';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadIcon from '@mui/icons-material/Upload';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import EmailIcon from '@mui/icons-material/Email';
 import { FormField } from './FormField';
 import { ContactMatchBanner } from './ContactMatchBanner';
 import { ContactsLookupDialog } from './ContactsLookupDialog';
@@ -49,6 +50,7 @@ interface CustomFieldsDialogProps {
   contacts?: ContactRecord[];
   onContactsUploadClick?: () => void;  // Trigger contacts upload dialog
   onContactsManageClick?: () => void;  // Trigger contacts manage dialog
+  onEmailSent?: () => void;  // Callback when email is sent (to close all dialogs)
 }
 
 export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
@@ -60,6 +62,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   contacts = [],
   onContactsUploadClick,
   onContactsManageClick,
+  onEmailSent,
 }) => {
   const { t } = useTranslation();
   // State for form fields
@@ -94,8 +97,13 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
   // Contacts lookup state
   const [showLookupDialog, setShowLookupDialog] = useState(false);
-  const [lookupField, setLookupField] = useState<'donorName' | 'donorAddress'>('donorName');
+  const [lookupField, setLookupField] = useState<'donorName' | 'donorAddress' | 'donorEmail'>('donorName');
   const [suggestedContact, setSuggestedContact] = useState<MatchResult | null>(null);
+
+  // Email state
+  const [donorEmail, setDonorEmail] = useState('');
+  const [ccEmail, setCcEmail] = useState('');
+  const [bccEmail, setBccEmail] = useState('');
 
   // Text color for PDF
   const [textColor, setTextColor] = useState('#FF0000'); // Default: red
@@ -120,18 +128,27 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     if (donorName) {
       const matches = findMatchingContacts(donorName, contacts || []);
       const bestMatch = matches[0];
-      if (bestMatch && bestMatch.confidence >= 80) {
+      // Lower confidence threshold to 50% for email auto-population
+      if (bestMatch && bestMatch.confidence >= 50) {
         // Only suggest if address is different
         if (bestMatch.contact.address !== donorAddress) {
           setSuggestedContact(bestMatch);
         } else {
           setSuggestedContact(null);
         }
+        // Auto-populate email if available and different (lower threshold)
+        if (bestMatch.contact.email) {
+          setDonorEmail(bestMatch.contact.email);
+        }
       } else {
         setSuggestedContact(null);
       }
     } else {
       setSuggestedContact(null);
+      // Clear email when donor name is cleared
+      if (!donorName) {
+        setDonorEmail('');
+      }
     }
   }, [donorName, contacts]);
 
@@ -142,6 +159,28 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       setSignatures(storedSignatures);
     }
   }, []);
+
+  // Load CC/BCC from localStorage on mount (once)
+  useEffect(() => {
+    const savedCc = localStorage.getItem('excel-processor-email-cc');
+    const savedBcc = localStorage.getItem('excel-processor-email-bcc');
+    if (savedCc !== null) setCcEmail(savedCc);
+    if (savedBcc !== null) setBccEmail(savedBcc);
+  }, []);
+
+  // Save CC to localStorage when it changes
+  useEffect(() => {
+    if (ccEmail) {
+      localStorage.setItem('excel-processor-email-cc', ccEmail);
+    }
+  }, [ccEmail]);
+
+  // Save BCC to localStorage when it changes
+  useEffect(() => {
+    if (bccEmail) {
+      localStorage.setItem('excel-processor-email-bcc', bccEmail);
+    }
+  }, [bccEmail]);
 
   // Initialize data when dialog opens
   useEffect(() => {
@@ -174,15 +213,35 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
       setNumericColumns(numericCols);
 
-      // Auto-select first numeric column (only if not already set)
+      // Intelligent auto-select: look for keywords like 'total', 'sum', '총액', '합산'
+      const amountKeywords = ['total', 'sum', '총액', '합산', 'Total', 'Sum', 'TOTAL', 'SUM'];
+      let autoSelectedColumn: string | null = null;
+
+      if (numericCols.length > 0) {
+        // First, try to find a column with amount keywords
+        for (const col of numericCols) {
+          const lowerLabel = col.label.toLowerCase();
+          if (amountKeywords.some(keyword => lowerLabel.includes(keyword.toLowerCase()))) {
+            autoSelectedColumn = col.id;
+            break;
+          }
+        }
+
+        // Fall back to first numeric column if no keywords found
+        if (!autoSelectedColumn) {
+          autoSelectedColumn = numericCols[0].id;
+        }
+      }
+
+      // Set amount column (only if not already set or if current selection is invalid)
       if (numericCols.length > 0 && !amountColumn) {
-        setAmountColumn(numericCols[0].id);
+        setAmountColumn(autoSelectedColumn!);
       } else if (numericCols.length > 0 && amountColumn) {
         // Verify that the current amountColumn is still in the numeric columns
         const isValid = numericCols.some(col => col.id === amountColumn);
         if (!isValid) {
-          // Current selection is no longer valid, reset to first numeric column
-          setAmountColumn(numericCols[0].id);
+          // Current selection is no longer valid, reset to auto-selected column
+          setAmountColumn(autoSelectedColumn!);
         }
       }
 
@@ -474,6 +533,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     const customFields: Record<string, string | number | boolean> = {
       donorName,
       donorAddress,
+      donorEmail,
       amount: totalAmount.toFixed(2),
       amountInWords,
       donationPeriod,
@@ -720,7 +780,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             value={donorAddress}
             onChange={(e) => setDonorAddress(e.target.value)}
             size="small"
-            sx={{ mb: 0 }}
+            sx={{ mb: 2 }}
             InputProps={{
               style: textColor ? { color: textColor } : undefined,
               endAdornment: (contacts && contacts.length > 0) && (
@@ -738,6 +798,59 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                   </IconButton>
                 </InputAdornment>
               ),
+            }}
+          />
+          {/* Email Field */}
+          <TextField
+            fullWidth
+            label={t('pdfExport.customFields.email')}
+            value={donorEmail}
+            onChange={(e) => setDonorEmail(e.target.value)}
+            size="small"
+            sx={{ mb: 2 }}
+            InputProps={{
+              style: textColor ? { color: textColor } : undefined,
+              endAdornment: (contacts && contacts.length > 0) && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setLookupField('donorEmail');
+                      setShowLookupDialog(true);
+                    }}
+                    edge="end"
+                    title={t('pdfExport.contacts.lookupButton')}
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          {/* CC Email Field */}
+          <TextField
+            fullWidth
+            label="CC"
+            value={ccEmail}
+            onChange={(e) => setCcEmail(e.target.value)}
+            size="small"
+            sx={{ mb: 2 }}
+            placeholder="cc@example.com, cc2@example.com"
+            InputProps={{
+              style: textColor ? { color: textColor } : undefined,
+            }}
+          />
+          {/* BCC Email Field */}
+          <TextField
+            fullWidth
+            label="BCC"
+            value={bccEmail}
+            onChange={(e) => setBccEmail(e.target.value)}
+            size="small"
+            sx={{ mb: 0 }}
+            placeholder="bcc@example.com, bcc2@example.com"
+            InputProps={{
+              style: textColor ? { color: textColor } : undefined,
             }}
           />
         </Paper>
@@ -1000,6 +1113,35 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
       <DialogActions>
         <Button onClick={onClose}>{t('pdfExport.cancel')}</Button>
+        <Button
+          variant="outlined"
+          startIcon={<EmailIcon />}
+          onClick={() => {
+            if (!donorEmail) return;
+            const year = donationPeriod.split(' - ')[1] || new Date().getFullYear().toString();
+            const subject = encodeURIComponent(t('emailDialog.donationReceiptSubject', { period: donationPeriod, year }));
+            const body = encodeURIComponent(t('emailDialog.donationReceiptBody', {
+              donorName,
+              amount: totalAmount.toFixed(2),
+              period: donationPeriod,
+              year,
+            }));
+            // Build mailto link with CC and BCC
+            let mailtoLink = `mailto:${donorEmail}?subject=${subject}&body=${body}`;
+            if (ccEmail) {
+              mailtoLink += `&cc=${encodeURIComponent(ccEmail)}`;
+            }
+            if (bccEmail) {
+              mailtoLink += `&bcc=${encodeURIComponent(bccEmail)}`;
+            }
+            window.open(mailtoLink, '_blank');
+            // Close all dialogs after opening email client
+            onEmailSent?.();
+          }}
+          disabled={!donorEmail}
+        >
+          {t('pdfExport.sendEmail')}
+        </Button>
         <Button variant="contained" onClick={handleConfirm}>
           {t('pdfExport.exportPdf')}
         </Button>
@@ -1063,13 +1205,20 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           if (lookupField === 'donorName') {
             setDonorName(contact.englishName);
             setDonorAddress(contact.address);
-          } else {
+            if (contact.email) {
+              setDonorEmail(contact.email);
+            }
+          } else if (lookupField === 'donorAddress') {
             setDonorAddress(contact.address);
+          } else if (lookupField === 'donorEmail') {
+            if (contact.email) {
+              setDonorEmail(contact.email);
+            }
           }
           setShowLookupDialog(false);
         }}
         contacts={contacts || []}
-        initialSearchTerm={lookupField === 'donorName' ? donorName : donorAddress}
+        initialSearchTerm={lookupField === 'donorName' ? donorName : lookupField === 'donorAddress' ? donorAddress : donorEmail}
       />
     </Dialog>
   );

@@ -123,6 +123,9 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
     const contacts: ContactRecord[] = [];
     const now = Date.now();
 
+    // Basic email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     for (const row of data) {
       const rowData = row as any[];
 
@@ -132,15 +135,28 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
         : undefined;
       const englishName = rowData[headers.indexOf(mapping.englishName)];
       const address = rowData[headers.indexOf(mapping.address)];
+      const rawEmail = mapping.email
+        ? rowData[headers.indexOf(mapping.email)]
+        : undefined;
 
       // Skip rows without required fields
       if (!englishName || !address) continue;
+
+      // Validate and clean email
+      let email: string | undefined = undefined;
+      if (rawEmail && typeof rawEmail === 'string' && rawEmail.trim()) {
+        const trimmed = rawEmail.trim();
+        if (emailRegex.test(trimmed)) {
+          email = trimmed;
+        }
+      }
 
       contacts.push({
         id: crypto.randomUUID(),
         koreanName: koreanName || undefined,
         englishName: String(englishName).trim(),
         address: String(address).trim(),
+        email,
         sourceFile: file.name,
         createdAt: now,
       });
@@ -317,6 +333,11 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
                   <Typography variant="caption" color="text.secondary">
                     {contact.address}
                   </Typography>
+                  {contact.email && (
+                    <Typography variant="caption" color="primary.main" display="block">
+                      {contact.email}
+                    </Typography>
+                  )}
                 </Box>
               ))}
               {parsedContacts.length > 5 && (

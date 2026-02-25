@@ -367,6 +367,7 @@ export interface ContactRecord {
   koreanName?: string;           // Korean name (optional)
   englishName: string;           // English name (required, primary match field)
   address: string;               // Full address
+  email?: string;                // Email address (optional)
   sourceFile?: string;           // Source filename for debugging
   createdAt: number;             // Timestamp of import
 }
@@ -394,6 +395,7 @@ export interface ColumnMapping {
   koreanName?: string;           // Column index or name for Korean name
   englishName: string;           // Column index or name for English name (required)
   address: string;               // Column index or name for address (required)
+  email?: string;                // Column index or name for email address (optional)
 }
 
 export interface MatchResult {

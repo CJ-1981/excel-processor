@@ -98,6 +98,12 @@ export function findMatchingContacts(
       confidence = 95;
       matchType = 'exact';
     }
+    // Starts with match (partial match at beginning of name) - high confidence
+    else if (normalizeString(contact.englishName).startsWith(normalizedSearch) ||
+      (contact.koreanName && normalizeString(contact.koreanName).startsWith(normalizedSearch))) {
+      confidence = 85;
+      matchType = 'partial';
+    }
     // Fuzzy English name match
     else {
       const englishSimilarity = calculateSimilarity(
@@ -142,6 +148,14 @@ const ADDRESS_PATTERNS = [
   'address', 'addr'
 ];
 
+const EMAIL_PATTERNS = [
+  '이메일 주소 / Email Address', '이메일 주소/ Email Address',
+  '이메일 주소 / email address', '이메일 주소/email address',
+  '이메일 주소', 'email address',
+  '이메일', 'email', '메일', 'mail',
+  'email_address', 'e-mail', 'e mail'
+];
+
 // Patterns that should NOT be matched as address (exclusion list)
 const ADDRESS_EXCLUSIONS = [
   '이메일', 'email', '메일', 'mail'
@@ -157,29 +171,30 @@ function findBestMatch(
   exclusions?: string[]
 ): { index: number; confidence: number } | null {
   for (const pattern of patterns) {
-    const normalizedPattern = pattern.toLowerCase();
+    const normalizedPattern = normalizeString(pattern);
 
     for (let i = 0; i < headers.length; i++) {
-      const header = headers[i].toLowerCase().trim();
+      const normalizedHeader = normalizeString(headers[i]);
 
       // Skip if header contains any exclusion pattern
       if (exclusions) {
-        const hasExclusion = exclusions.some(excl =>
-          header.includes(excl.toLowerCase()) || excl.toLowerCase().includes(header)
-        );
+        const hasExclusion = exclusions.some(excl => {
+          const normalizedExcl = normalizeString(excl);
+          return normalizedHeader.includes(normalizedExcl) || normalizedExcl.includes(normalizedHeader);
+        });
         if (hasExclusion) {
           continue;
         }
       }
 
-      // Exact match
-      if (header === normalizedPattern) {
+      // Exact match (after normalization)
+      if (normalizedHeader === normalizedPattern) {
         return { index: i, confidence: 1.0 };
       }
 
-      // Contains match
-      if (header.includes(normalizedPattern) || normalizedPattern.includes(header)) {
-        const similarity = calculateSimilarity(header, normalizedPattern);
+      // Contains match (after normalization)
+      if (normalizedHeader.includes(normalizedPattern) || normalizedPattern.includes(normalizedHeader)) {
+        const similarity = calculateSimilarity(headers[i], pattern);
         if (similarity >= 0.6) {
           return { index: i, confidence: similarity };
         }
@@ -191,7 +206,7 @@ function findBestMatch(
 }
 
 /**
- * Detects column mappings for Korean name, English name, and address
+ * Detects column mappings for Korean name, English name, address, and email
  * Returns null if confidence < 70% or required columns missing
  */
 export function detectColumns(headers: string[]): ColumnMapping | null {
@@ -200,6 +215,7 @@ export function detectColumns(headers: string[]): ColumnMapping | null {
   const englishNameCol = findBestMatch(headers, ENGLISH_NAME_PATTERNS);
   // Address matching excludes email-related columns
   const addressCol = findBestMatch(headers, ADDRESS_PATTERNS, ADDRESS_EXCLUSIONS);
+  const emailCol = findBestMatch(headers, EMAIL_PATTERNS);
 
   // Validate required columns found
   if (!englishNameCol || !addressCol) {
@@ -217,6 +233,7 @@ export function detectColumns(headers: string[]): ColumnMapping | null {
   return avgConfidence >= 0.65 ? {
     koreanName: koreanNameCol ? headers[koreanNameCol.index] : undefined,
     englishName: headers[englishNameCol.index],
-    address: headers[addressCol.index]
+    address: headers[addressCol.index],
+    email: emailCol ? headers[emailCol.index] : undefined
   } : null;
 }
