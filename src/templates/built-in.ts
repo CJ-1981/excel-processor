@@ -253,7 +253,7 @@ export const BUILT_IN_TEMPLATES: PDFTemplate[] = [
         type: 'signatureImage',
         fieldName: 'pastorSignature',  // References customFields.pastorSignature or can be treasurerSignature
         x: 130,
-        y: 220,
+        y: 223,
         width: 54,
         height: 25,
         // rotation: 45,  // Rotate 45 degrees clockwise
