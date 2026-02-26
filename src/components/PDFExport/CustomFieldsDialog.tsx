@@ -224,8 +224,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
       setNumericColumns(numericCols);
 
-      // Intelligent auto-select: look for keywords like 'total', 'sum', '총액', '합산'
-      const amountKeywords = ['total', 'sum', '총액', '합산', 'Total', 'Sum', 'TOTAL', 'SUM'];
+      // Intelligent auto-select: look for keywords like 'total', 'sum', '총액', '합산', '총계', '합계'
+      const amountKeywords = ['total', 'sum', '총액', '합산', '총계', '합계', 'Total', 'Sum', 'TOTAL', 'SUM'];
       let autoSelectedColumn: string | null = null;
 
       if (numericCols.length > 0) {
