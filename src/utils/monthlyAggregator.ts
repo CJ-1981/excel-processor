@@ -1,5 +1,3 @@
-import { getGermanMonthName } from './germanFormatter';
-
 export interface MonthlyAggregation {
   jan: number;
   feb: number;
@@ -14,7 +12,7 @@ export interface MonthlyAggregation {
   nov: number;
   dec: number;
   total: number;
-  dateRange: string; // "Jan. - Dez. 2025"
+  dateRange: string; // e.g., "2025"
   year: number;
 }
 
@@ -169,16 +167,14 @@ export function aggregateByMonth(
   // Calculate total
   const total = monthlyTotals.reduce((sum, val) => sum + val, 0);
 
-  // Generate date range string
+  // Generate date range string (year only)
   let dateRange = '';
-  if (minDate && maxDate && year !== null) {
-    const startMonth = getGermanMonthName(minDate.getMonth());
-    const endMonth = getGermanMonthName(maxDate.getMonth());
-    dateRange = `${startMonth} - ${endMonth} ${year}`;
+  if (year !== null) {
+    dateRange = `${year}`;
   } else {
     // Fallback to current year if no dates found
-    year = year !== null ? year : new Date().getFullYear();
-    dateRange = `Jan. - Dez. ${year}`;
+    year = new Date().getFullYear();
+    dateRange = `${year}`;
   }
 
   return {
