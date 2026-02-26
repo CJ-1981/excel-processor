@@ -110,7 +110,7 @@ export const BUILT_IN_TEMPLATES: PDFTemplate[] = [
           [
             'EUR {{customFields.amount}}',
             '{{customFields.amountInWords}}',
-            '{{customFields.donationPeriod}}'
+            'Jan. - Dez. {{customFields.year}}'
           ],
         ],
         options: {
@@ -504,7 +504,7 @@ export const BUILT_IN_TEMPLATES: PDFTemplate[] = [
           [
             'EUR {{customFields.amount}}',
             '{{customFields.amountInWords}}',
-            '{{customFields.donationPeriod}}'
+            'Jan. - Dez. {{customFields.year}}'
           ],
         ],
         options: {

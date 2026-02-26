@@ -77,6 +77,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [totalAmount, setTotalAmount] = useState(0);
   const [amountInWords, setAmountInWords] = useState('');
   const [donationPeriod, setDonationPeriod] = useState('');
+  const [donationYear, setDonationYear] = useState<number>(new Date().getFullYear());
   const [issueDate, setIssueDate] = useState('');
   const [signatureLocation, setSignatureLocation] = useState('Kelsterbach');
   // Waiver: 'yes' or 'no' (string for radio button group)
@@ -377,6 +378,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       const total = Object.values(roundedAmounts).reduce((sum, val) => sum + val, 0);
       setTotalAmount(Math.round(total * 100) / 100);
       setDonationPeriod(aggregation.dateRange);
+      setDonationYear(aggregation.year);
     }
   }, [amountColumn, context.data, context.includedIndices, context.visibleHeaders, context.sourceFiles]);
 
@@ -548,6 +550,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       amount: totalAmount.toFixed(2),
       amountInWords,
       donationPeriod,
+      year: donationYear,
       issueDate,
       signatureLocation,
       // Convert radio choice to boolean flags for PDF generation
