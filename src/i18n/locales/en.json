@@ -199,6 +199,10 @@
       "donorName": "Donor Name",
       "address": "Address",
       "email": "Email Address",
+      "ccLabel": "CC",
+      "ccPlaceholder": "cc@example.com, cc2@example.com",
+      "bccLabel": "BCC",
+      "bccPlaceholder": "bcc@example.com, bcc2@example.com",
       "amountColumn": "Amount Column",
       "amountColumnHint": "Select the column containing donation amounts",
       "monthlyAmounts": "Monthly Amounts (EUR)",
@@ -274,13 +278,9 @@
     "sending": "Sending...",
     "invalidEmail": "Please enter a valid email address",
     "invalidEmailFormat": "Invalid email format",
-    "openEmailClient": "Open Email Client",
     "mailtoOpened": "Opened email client. Please attach the PDF manually.",
     "donationReceiptSubject": "[Uri] Donation Receipt for {{period}}",
     "donationReceiptBody": "Dear {{donorName}},\n\nPlease find the donation receipt for {{period}} attached.\n\nKoreanische Kirchengemeinde Uri e.V."
-  },
-  "email": {
-    "openEmailClient": "Open in Email Client"
   },
   "mergedData": {
     "title": "Merged Data",

@@ -149,9 +149,11 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
     *   Custom email subject line with {{period}} placeholder support
     *   Contacts table updated to display email column
     *   Auto-detect email columns from Excel uploads (patterns: email, 이메일, e-mail, mail, @)
+    *   Auto-populate donor email from contacts lookup using 50% confidence threshold
+    *   Modal lifecycle: PDF Export dialog stays open after export if email is filled, and only closes after email is sent
     *   Email preview with spacing fix for better readability
 *   **Intelligent Amount Column Auto-Selection**:
-    *   Keyword-based detection for amount columns (amount, 금액, betrag, donation, 기부)
+    *   Keyword-based detection for amount columns (total, sum, 총액, 합산)
     *   Automatic selection when generating PDF export
     *   Reduces manual column selection steps
 *   **CSV Export Improvements**:

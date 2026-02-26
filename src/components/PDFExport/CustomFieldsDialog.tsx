@@ -139,9 +139,14 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         // Auto-populate email if available and different (lower threshold)
         if (bestMatch.contact.email) {
           setDonorEmail(bestMatch.contact.email);
+        } else {
+          // Clear email if matched contact has no email
+          setDonorEmail('');
         }
       } else {
         setSuggestedContact(null);
+        // Clear email when no high-confidence match found
+        setDonorEmail('');
       }
     } else {
       setSuggestedContact(null);
@@ -172,6 +177,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   useEffect(() => {
     if (ccEmail) {
       localStorage.setItem('excel-processor-email-cc', ccEmail);
+    } else {
+      // Clear storage when field is empty
+      localStorage.removeItem('excel-processor-email-cc');
     }
   }, [ccEmail]);
 
@@ -179,6 +187,9 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   useEffect(() => {
     if (bccEmail) {
       localStorage.setItem('excel-processor-email-bcc', bccEmail);
+    } else {
+      // Clear storage when field is empty
+      localStorage.removeItem('excel-processor-email-bcc');
     }
   }, [bccEmail]);
 
@@ -830,12 +841,12 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           {/* CC Email Field */}
           <TextField
             fullWidth
-            label="CC"
+            label={t('pdfExport.customFields.ccLabel')}
             value={ccEmail}
             onChange={(e) => setCcEmail(e.target.value)}
             size="small"
             sx={{ mb: 2 }}
-            placeholder="cc@example.com, cc2@example.com"
+            placeholder={t('pdfExport.customFields.ccPlaceholder')}
             InputProps={{
               style: textColor ? { color: textColor } : undefined,
             }}
@@ -843,12 +854,12 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           {/* BCC Email Field */}
           <TextField
             fullWidth
-            label="BCC"
+            label={t('pdfExport.customFields.bccLabel')}
             value={bccEmail}
             onChange={(e) => setBccEmail(e.target.value)}
             size="small"
             sx={{ mb: 0 }}
-            placeholder="bcc@example.com, bcc2@example.com"
+            placeholder={t('pdfExport.customFields.bccPlaceholder')}
             InputProps={{
               style: textColor ? { color: textColor } : undefined,
             }}
@@ -1126,8 +1137,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               period: donationPeriod,
               year,
             }));
-            // Build mailto link with CC and BCC
-            let mailtoLink = `mailto:${donorEmail}?subject=${subject}&body=${body}`;
+            // Build mailto link with CC and BCC - all components URL-encoded
+            let mailtoLink = `mailto:${encodeURIComponent(donorEmail)}?subject=${subject}&body=${body}`;
             if (ccEmail) {
               mailtoLink += `&cc=${encodeURIComponent(ccEmail)}`;
             }

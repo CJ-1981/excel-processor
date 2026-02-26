@@ -126,7 +126,9 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
   // Render a single contact item
   const renderContactItem = useCallback((contact: ContactRecord, index: number, isSelected: boolean) => {
     const isBestMatch = index === 0 && searchTerm;
-    const confidence = searchTerm ? Math.round(findMatchingContacts(searchTerm, [contact])[0]?.confidence || 0) : 100;
+    // Get confidence from precomputed searchResults instead of recalculating
+    const searchResult = searchResults.find(r => r.contact.id === contact.id);
+    const confidence = searchResult ? searchResult.confidence : 100;
 
     return (
       <Paper

@@ -19,7 +19,7 @@ export function normalizeString(str: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '') // Remove whitespace
-    .replace(/[^\w\s가-힣]/g, ''); // Keep alphanumeric, Korean, whitespace
+    .replace(/[^\w가-힣]/g, ''); // Keep alphanumeric and Korean only (whitespace already removed)
 }
 
 /**
@@ -99,8 +99,10 @@ export function findMatchingContacts(
       matchType = 'exact';
     }
     // Starts with match (partial match at beginning of name) - high confidence
-    else if (normalizeString(contact.englishName).startsWith(normalizedSearch) ||
-      (contact.koreanName && normalizeString(contact.koreanName).startsWith(normalizedSearch))) {
+    // Guard against very short queries to avoid over-matching
+    else if (normalizedSearch.length >= 2 &&
+      (normalizeString(contact.englishName).startsWith(normalizedSearch) ||
+      (contact.koreanName && normalizeString(contact.koreanName).startsWith(normalizedSearch)))) {
       confidence = 85;
       matchType = 'partial';
     }
@@ -163,17 +165,26 @@ const ADDRESS_EXCLUSIONS = [
 
 /**
  * Finds the best matching column index for a given pattern list
- * @param exclusions - Optional list of patterns that should exclude a header from matching
+ * @param headers - Column headers to search
+ * @param patterns - Patterns to match against
+ * @param exclusions - Patterns that exclude a header from matching
+ * @param excludeIndices - Column indices to exclude from matching
  */
 function findBestMatch(
   headers: string[],
   patterns: string[],
-  exclusions?: string[]
+  exclusions?: string[],
+  excludeIndices?: Set<number>
 ): { index: number; confidence: number } | null {
   for (const pattern of patterns) {
     const normalizedPattern = normalizeString(pattern);
 
     for (let i = 0; i < headers.length; i++) {
+      // Skip if index is in exclusion set
+      if (excludeIndices?.has(i)) {
+        continue;
+      }
+
       const normalizedHeader = normalizeString(headers[i]);
 
       // Skip if header contains any exclusion pattern
@@ -208,19 +219,33 @@ function findBestMatch(
 /**
  * Detects column mappings for Korean name, English name, address, and email
  * Returns null if confidence < 70% or required columns missing
+ * Tracks used column indices to prevent duplicate matches
  */
 export function detectColumns(headers: string[]): ColumnMapping | null {
-  // Find matches with confidence scoring
-  const koreanNameCol = findBestMatch(headers, KOREAN_NAME_PATTERNS);
-  const englishNameCol = findBestMatch(headers, ENGLISH_NAME_PATTERNS);
-  // Address matching excludes email-related columns
-  const addressCol = findBestMatch(headers, ADDRESS_PATTERNS, ADDRESS_EXCLUSIONS);
-  const emailCol = findBestMatch(headers, EMAIL_PATTERNS);
+  const usedIndices = new Set<number>();
 
-  // Validate required columns found
-  if (!englishNameCol || !addressCol) {
-    return null;
+  // Find English name column first (required)
+  const englishNameCol = findBestMatch(headers, ENGLISH_NAME_PATTERNS, undefined, usedIndices);
+  if (!englishNameCol) {
+    return null; // English name is required
   }
+  usedIndices.add(englishNameCol.index);
+
+  // Find address column (required), excluding email-related patterns
+  const addressCol = findBestMatch(headers, ADDRESS_PATTERNS, ADDRESS_EXCLUSIONS, usedIndices);
+  if (!addressCol) {
+    return null; // Address is required
+  }
+  usedIndices.add(addressCol.index);
+
+  // Find Korean name column (optional)
+  const koreanNameCol = findBestMatch(headers, KOREAN_NAME_PATTERNS, undefined, usedIndices);
+  if (koreanNameCol) {
+    usedIndices.add(koreanNameCol.index);
+  }
+
+  // Find email column (optional)
+  const emailCol = findBestMatch(headers, EMAIL_PATTERNS, undefined, usedIndices);
 
   // Calculate overall confidence
   const confidenceScores = [

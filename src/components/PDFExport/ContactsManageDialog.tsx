@@ -137,7 +137,7 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     // Add UTF-8 BOM for Excel to properly detect encoding for Korean characters

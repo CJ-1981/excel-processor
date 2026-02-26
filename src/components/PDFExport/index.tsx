@@ -65,6 +65,9 @@ export const PDFExportDialog: React.FC<PDFExportDialogProps> = ({
         version: '1.0',
       };
       localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(data));
+    } else {
+      // Clear storage when contacts list is empty (e.g., after delete-all)
+      localStorage.removeItem(CONTACTS_STORAGE_KEY);
     }
   }, [contacts]);
 
