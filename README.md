@@ -47,6 +47,14 @@ This is a client-side web application built with React, TypeScript, and Vite, de
         *   Tax information and checkboxes
         *   Signature image uploads and management
     *   **Color Picker:** Customize text color for custom field values (default: red)
+*   **Dashboard Analytics:**
+    *   **Donor Category Bubble Chart:** Visualize donor distribution by category with proportional bubble sizing
+        *   Categories: 5K+, 2K-5K, 1K-2K, 500-1K, 100-500, <100 €
+        *   Y-axis shows average donation per category
+        *   Bubble size represents total donation amount
+        *   Interactive tooltips with donor count and percentages
+        *   Reference lines for overall mean and median
+        *   Export to PNG/JPG with legends included
 *   **Full-Screen Mode:** Expand the detailed data table to full-screen mode for better focus and readability.
 
 ## Technologies Used
@@ -89,7 +97,7 @@ This is a client-side web application built with React, TypeScript, and Vite, de
 
 *   `src/App.tsx`: Main application component managing overall state and workflow.
 *   `src/features/dashboard/`: Modular dashboard architecture with 20+ reusable components, hooks, and utilities (v1.6.0).
-    *   `charts/`: Six chart modules (TrendChart, TopDonorsChart, StatisticsTable, DistributionHistogram, ParetoChart, RangeDistributionCharts).
+    *   `charts/`: Seven chart modules (TrendChart, TopDonorsChart, StatisticsTable, DistributionHistogram, ParetoChart, RangeDistributionCharts, DonorCategoryBubbleChart).
     *   `components/`: Shared components (ChartExport, ColumnSelector, DashboardGrid).
     *   `hooks/`: Seven custom React hooks for data management and chart interactions.
     *   `utils/`: Four utility modules for calculations, colors, data analysis, and date extraction.
@@ -140,6 +148,29 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
   - The Detailed Data View toolbar is mobile-aware and now stacks/wraps controls on small screens while keeping desktop layout unchanged.
 
 ## Version History
+
+### v1.13.0 (2026-02-27)
+*   **Donor Category Bubble Chart**:
+    *   New bubble chart visualization for donor category analysis
+    *   X-axis: Donor categories (5K+, 2K-5K, 1K-2K, 500-1K, 100-500, <100 €)
+    *   Y-axis: Average donation amount per category
+    *   Bubble size: Proportional to total donation amount per category
+    *   Displays donor count and percentage per bubble
+    *   Interactive tooltips with detailed category statistics
+    *   Reference lines for overall mean and median donations
+    *   Uses unique donor counting (aggregated by donor name)
+    *   Theme-aware colors for dark mode support
+*   **Chart Export Improvements**:
+    *   Fixed chart export to include legends in PNG/JPG downloads
+    *   Generic content detection for charts with additional HTML elements
+    *   Works for all charts including bubble chart with category legends
+*   **Dark Mode Support**:
+    *   Bubble chart labels now use theme-aware colors
+    *   Proper text visibility in both light and dark themes
+*   **Dashboard Integration**:
+    *   Responsive placement across different breakpoints
+    *   Shown only when multiple donors are present
+    *   English/Korean translations for all UI elements
 
 ### v1.12.0 (2026-02-25)
 *   **Email Integration for PDF Export**:
