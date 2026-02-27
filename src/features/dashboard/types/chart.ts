@@ -49,6 +49,14 @@ export interface StatisticsData {
   count: number;
 }
 
+// Donor category data structure for bubble chart
+export interface DonorCategoryDataPoint {
+  category: string;
+  count: number;
+  total: number;
+  mean: number;
+}
+
 // Chart configuration interface
 export interface ChartConfig {
   title?: string;

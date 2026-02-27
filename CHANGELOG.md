@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-02-27
+
+### Added
+
+#### Donor Category Bubble Chart
+- **New Visualization Type**: Donor Category Bubble Chart for analyzing donation patterns across donor categories
+  - Displays donor categories on X-axis (5K+, 2K-5K, 1K-2K, 500-1K, 100-500, <100)
+  - Y-axis shows average donation amount per category
+  - Bubble size represents total donation amount per category
+  - Color-coded bubbles with distinct colors for each category (Red for 5K+, Orange for 2K-5K, Yellow/Gold for 1K-2K, Green for 500-1K, Blue for 100-500, Purple for <100)
+
+- **Interactive Labels**: Each bubble displays detailed information
+  - Category name at the top
+  - Donor count with percentage of total donors
+  - Total donation amount with percentage of overall total
+  - Average donation amount per donor in category
+
+- **Reference Lines**: Visual indicators for overall statistics
+  - Red dashed line for overall mean donation amount
+  - Blue dashed line for overall median donation amount
+  - Labels show exact values in German currency format (EUR)
+  - Legend below chart showing both reference values
+
+- **Tooltip Information**: Hover interactions show detailed breakdown
+  - Category name with color matching
+  - Donor count with count percentage
+  - Total amount with amount percentage
+  - Average donation amount
+
+- **Performance Optimization**
+  - React.memo implementation to prevent unnecessary re-renders
+  - Custom comparison function for props
+  - Memoized data calculations and formatting functions
+  - Memoized X-axis ticks and Z-axis range calculations
+
+- **Data Structure**: New TypeScript type definitions
+  - Added `DonorCategoryDataPoint` interface to chart types
+  - Includes category (string), count (number), total (number), mean (number)
+  - Integrates with existing dashboard data pipeline
+
+### Technical Details
+
+- **Files Modified**:
+  - `src/features/dashboard/types/chart.ts`: Added DonorCategoryDataPoint interface
+  - `src/features/dashboard/DashboardContainer.tsx`: Added lazy-loaded DonorCategoryBubbleChart component
+  - `src/components/DashboardView/index.tsx`: Integrated chart into dashboard grid
+  - `src/features/dashboard/charts/index.ts`: Added chart to barrel exports
+
+- **New Files**:
+  - `src/features/dashboard/charts/DonorCategoryBubbleChart/DonorCategoryBubbleChart.tsx`: Main component implementation (387 lines)
+  - `src/features/dashboard/charts/DonorCategoryBubbleChart/index.tsx`: Barrel export
+
+- **Internationalization**:
+  - English: "Donor Category Analysis" title, all chart labels and tooltips
+  - Korean: "기부자 카테고리 분석" title, all chart labels and tooltips translated
+
+### Integration
+- Chart is lazy-loaded for optimal bundle size
+- Added to dashboard chart registry with ID 'donor-category-bubble'
+- Scatter chart skeleton type for loading states
+- Uses existing ChartExport wrapper for download functionality
+
 ## [1.11.0] - 2026-02-24
 
 ### Added

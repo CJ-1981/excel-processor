@@ -29,6 +29,7 @@ import type { ChartType } from './components/ChartSkeleton';
  */
 const TrendChart = React.lazy(() => import('./charts/TrendChart'));
 const ParetoChart = React.lazy(() => import('./charts/ParetoChart'));
+const DonorCategoryBubbleChart = React.lazy(() => import('./charts/DonorCategoryBubbleChart'));
 const DistributionHistogram = React.lazy(() => import('./charts/DistributionHistogram'));
 const RangeDistributionCharts = React.lazy(() => import('./charts/RangeDistributionCharts'));
 const TopDonorsChart = React.lazy(() => import('./charts/TopDonorsChart'));
@@ -58,6 +59,11 @@ const CHART_CONFIG: ChartMetadata[] = [
     id: 'pareto',
     component: ParetoChart,
     skeletonType: 'pareto',
+  },
+  {
+    id: 'donor-category-bubble',
+    component: DonorCategoryBubbleChart,
+    skeletonType: 'scatter',
   },
   {
     id: 'histogram',

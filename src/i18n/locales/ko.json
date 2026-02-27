@@ -317,6 +317,7 @@
     "descriptiveStatistics": "통계",
     "distributionHistogram": "분포 히스토그램",
     "paretoAnalysis": "파레토 분석 (80/20 법칙)",
+    "donorCategoryBubble": "기부자 카테고리 분석",
     "rangeDistribution": "범위 분포",
     "period": "기간",
     "weekly": "주간",
@@ -359,6 +360,7 @@
     "byDonorCount": "기부자 수별",
     "byTotalValue": "전체 {{value}}별",
     "totalDonors": "총 {{count}}명 기부자",
+    "average": "평균",
     "rangeDistributionSummary": "범위 분포 요약",
     "donors": "기부자",
     "amount": "금액",
@@ -379,6 +381,10 @@
     "cumulativePercent": "누적 %",
     "percent80Threshold": "80% 임계값",
     "contributors80": "{{count}}명의 기부자가 전체 값의 약 80%를 차지함",
+    "averageDonation": "평균 기부금",
+    "totalAmount": "총액",
+    "donorCount": "기부자 수",
+    "bubbleSize": "버블 크기",
     "mean": "평균",
     "medianLabel": "중앙값"
   }
