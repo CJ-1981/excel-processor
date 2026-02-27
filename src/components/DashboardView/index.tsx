@@ -49,6 +49,7 @@ import { TopDonorsChart } from '../../features/dashboard/charts';
 import { StatisticsTable } from '../../features/dashboard/charts';
 import { DistributionHistogram } from '../../features/dashboard/charts';
 import { ParetoChart } from '../../features/dashboard/charts';
+import { DonorCategoryBubbleChart } from '../../features/dashboard/charts';
 import { RangeDistributionCharts } from '../../features/dashboard/charts';
 import {
   analyzeDataForDashboard,
@@ -115,7 +116,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
-  const LAYOUT_VERSION = 10; // Increment to invalidate saved layouts due to removing Box Plot panel
+  const LAYOUT_VERSION = 11; // Increment to invalidate saved layouts due to adding Donor Category Bubble Chart
   const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
   const COLS_BREAKPOINTS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
   const ROW_HEIGHT_KEY = 'excel-processor-dashboard-rowheight';
@@ -131,10 +132,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     const wrapper = document.querySelector(`[data-chart-id="${chartId}"]`) as HTMLElement | null;
     if (!wrapper) return;
 
-    // If this panel contains multiple charts (like Range Distribution's two pies),
-    // capture the entire wrapper via html2canvas so everything is included.
+    // Check if wrapper has additional HTML content (legends, captions, etc.) outside SVG
+    // or if this panel contains multiple charts (like Range Distribution's two pies)
     const svgAll = Array.from(wrapper.querySelectorAll('svg')) as SVGSVGElement[];
-    if (chartId === 'range-distribution' || chartId === 'pareto' || svgAll.length > 1) {
+    const hasLegendsOrExtraContent = wrapper.children.length > 1 ||
+      Array.from(wrapper.children).some(child =>
+        !child.querySelector('svg') && child.textContent?.trim()
+      );
+
+    if (chartId === 'range-distribution' || chartId === 'pareto' || hasLegendsOrExtraContent || svgAll.length > 1) {
       (async () => {
         try {
           const canvas = await html2canvas(wrapper, {
@@ -316,7 +322,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       { i: 'top-contributors', x: 0, y: 28, w: 12, h: 18, minW: 6, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 12, h: 16, minW: 6, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 12, h: 14, minW: 6, minH: 8 },
-      { i: 'range-distribution', x: 0, y: 76, w: 12, h: 18, minW: 6, minH: 10 },
+      { i: 'donor-category-bubble', x: 0, y: 76, w: 12, h: 18, minW: 6, minH: 10 },
+      { i: 'range-distribution', x: 0, y: 94, w: 12, h: 18, minW: 6, minH: 10 },
     ],
     md: [
       { i: 'trend-chart', x: 0, y: 0, w: 10, h: 16, minW: 5, minH: 10 },
@@ -324,7 +331,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       { i: 'top-contributors', x: 0, y: 28, w: 10, h: 18, minW: 5, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 10, h: 16, minW: 5, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 10, h: 14, minW: 5, minH: 8 },
-      { i: 'range-distribution', x: 0, y: 76, w: 10, h: 18, minW: 5, minH: 10 },
+      { i: 'donor-category-bubble', x: 0, y: 76, w: 10, h: 18, minW: 5, minH: 10 },
+      { i: 'range-distribution', x: 0, y: 94, w: 10, h: 18, minW: 5, minH: 10 },
     ],
     sm: [
       { i: 'trend-chart', x: 0, y: 0, w: 6, h: 16, minW: 3, minH: 10 },
@@ -332,7 +340,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       { i: 'top-contributors', x: 0, y: 28, w: 6, h: 18, minW: 3, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 6, h: 16, minW: 3, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 6, h: 14, minW: 3, minH: 8 },
-      { i: 'range-distribution', x: 0, y: 76, w: 6, h: 18, minW: 3, minH: 10 },
+      { i: 'donor-category-bubble', x: 0, y: 76, w: 6, h: 18, minW: 3, minH: 10 },
+      { i: 'range-distribution', x: 0, y: 94, w: 6, h: 18, minW: 3, minH: 10 },
     ],
     xs: [
       { i: 'trend-chart', x: 0, y: 0, w: 4, h: 16, minW: 2, minH: 10 },
@@ -340,7 +349,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       { i: 'top-contributors', x: 0, y: 28, w: 4, h: 18, minW: 2, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 4, h: 16, minW: 2, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 4, h: 14, minW: 2, minH: 8 },
-      { i: 'range-distribution', x: 0, y: 76, w: 4, h: 18, minW: 2, minH: 10 },
+      { i: 'donor-category-bubble', x: 0, y: 76, w: 4, h: 18, minW: 2, minH: 10 },
+      { i: 'range-distribution', x: 0, y: 94, w: 4, h: 18, minW: 2, minH: 10 },
     ],
     xxs: [
       { i: 'trend-chart', x: 0, y: 0, w: 2, h: 16, minW: 2, minH: 10 },
@@ -348,11 +358,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       { i: 'top-contributors', x: 0, y: 28, w: 2, h: 18, minW: 2, minH: 10 },
       { i: 'histogram', x: 0, y: 46, w: 2, h: 16, minW: 2, minH: 8 },
       { i: 'pareto', x: 0, y: 62, w: 2, h: 14, minW: 2, minH: 8 },
-      { i: 'range-distribution', x: 0, y: 76, w: 2, h: 18, minW: 2, minH: 10 },
+      { i: 'donor-category-bubble', x: 0, y: 76, w: 2, h: 18, minW: 2, minH: 10 },
+      { i: 'range-distribution', x: 0, y: 94, w: 2, h: 18, minW: 2, minH: 10 },
     ],
   } as const;
 
-  const ITEM_IDS = ['trend-chart', 'top-contributors', 'statistics-table', 'histogram', 'pareto', 'range-distribution'];
+  const ITEM_IDS = ['trend-chart', 'top-contributors', 'statistics-table', 'histogram', 'pareto', 'donor-category-bubble', 'range-distribution'];
 
   const sanitizeLayouts = (layoutsObj: any) => {
     const result: any = {};
@@ -481,7 +492,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
 
     // When only 1 unique contributor, filter the default layout to exclude hidden charts
     if (count <= 1) {
-      const HIDDEN_WHEN_SINGLE = ['top-contributors', 'histogram', 'pareto', 'range-distribution'];
+      const HIDDEN_WHEN_SINGLE = ['top-contributors', 'histogram', 'pareto', 'donor-category-bubble', 'range-distribution'];
       const filteredLayout: any = {};
       for (const bp of Object.keys(BREAKPOINTS)) {
         const items = (defaultLayout as any)[bp] || [];
@@ -781,6 +792,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     return calculateHistogram(filteredValues, histogramBins);
   }, [distributionValues, histogramBins, histogramZoomMin, histogramZoomMax]);
 
+  // Get overall statistics for all donors (aggregated by name)
+  const globalDonorStats = useMemo(() => {
+    if (distributionValues.length === 0) {
+      return { mean: 0, median: 0 };
+    }
+    const sorted = [...distributionValues].sort((a, b) => a - b);
+    const sum = sorted.reduce((acc, val) => acc + val, 0);
+    const mean = sum / sorted.length;
+
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    return { mean, median };
+  }, [distributionValues]);
+
   // Get overall min/max for zoom reset
   const distributionMinMax = useMemo(() => {
     if (distributionValues.length === 0) {
@@ -890,6 +918,44 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
     return calculatePareto(allContributorsData.slice(0, paretoDonorsCount));
   }, [allContributorsData, paretoDonorsCount]);
+
+  // Calculate donor category bubble chart data - use aggregated donor totals (unique names)
+  const donorCategoryData = useMemo(() => {
+    if (allContributorsData.length === 0) {
+      return [];
+    }
+
+    // Categorize donors based on their total contribution
+    const categorizeDonor = (amount: number): string => {
+      if (amount >= 5000) return '5K+ €';
+      if (amount >= 2000) return '2K-5K €';
+      if (amount >= 1000) return '1K-2K €';
+      if (amount >= 500) return '500-1K €';
+      if (amount >= 100) return '100-500 €';
+      return '<100 €';
+    };
+
+    // Group by category and calculate statistics
+    const categoryMap = new Map<string, { count: number; sum: number }>();
+    for (const donor of allContributorsData) {
+      const category = categorizeDonor(donor.value);
+      const current = categoryMap.get(category) || { count: 0, sum: 0 };
+      current.count += 1;
+      current.sum += donor.value;
+      categoryMap.set(category, current);
+    }
+
+    // Convert to array and sort by mean (descending)
+    const result = Array.from(categoryMap.entries()).map(([category, stats]) => ({
+      category,
+      count: stats.count,
+      total: stats.sum,
+      mean: stats.sum / stats.count,
+    }));
+
+    result.sort((a, b) => b.mean - a.mean);
+    return result;
+  }, [allContributorsData]);
 
   // Calculate range distribution
   const rangeDistributionData = useMemo(() => {
@@ -1540,6 +1606,46 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 valueLabel={seriesConfig[0]?.label || 'Value'}
                 showTop={paretoDonorsCount}
                 anonymize={anonymizeNames}
+              />
+            </Box>
+          </Paper>
+        )}
+
+        {/* Donor Category Bubble Chart - Hidden when only 1 unique contributor */}
+        {(selectedValueColumns || []).length > 0 && donorCategoryData.length > 0 && (
+          <Paper key="donor-category-bubble" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
+            <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, pb: 1 }}>
+              <Typography variant="subtitle1">
+                {t('dashboard.donorCategoryBubble')}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('donor-category-bubble', 'png', e as any)}
+                  title={t('dashboard.downloadAsPng')}
+                >
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onMouseDown={(e) => downloadChartAsImage('donor-category-bubble', 'jpg', e as any)}
+                  title={t('dashboard.downloadAsJpg')}
+                >
+                  <Download fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('donor-category-bubble', 2)} title={t('dashboard.taller')}>
+                  <UnfoldMore fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => handleAdjustWidgetHeight('donor-category-bubble', -2)} title={t('dashboard.shorter')}>
+                  <UnfoldLess fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 200, overflow: 'auto', width: '100%' }}>
+              <DonorCategoryBubbleChart
+                data={donorCategoryData}
+                overallMean={globalDonorStats.mean}
+                overallMedian={globalDonorStats.median}
               />
             </Box>
           </Paper>

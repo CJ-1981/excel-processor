@@ -317,6 +317,7 @@
     "descriptiveStatistics": "Descriptive Statistics",
     "distributionHistogram": "Distribution Histogram",
     "paretoAnalysis": "Pareto Analysis (80/20 Rule)",
+    "donorCategoryBubble": "Donor Category Analysis",
     "rangeDistribution": "Range Distribution",
     "period": "Period",
     "weekly": "Weekly",
@@ -359,6 +360,7 @@
     "byDonorCount": "By Donor Count",
     "byTotalValue": "By Total {{value}}",
     "totalDonors": "Total: {{count}} donors",
+    "average": "Avg",
     "rangeDistributionSummary": "Range Distribution Summary",
     "donors": "Donors",
     "amount": "Amount",
@@ -379,6 +381,10 @@
     "cumulativePercent": "Cumulative %",
     "percent80Threshold": "80% threshold",
     "contributors80": "{{count}} contributor(s) account for ~80% of total value",
+    "averageDonation": "Average Donation",
+    "totalAmount": "Total Amount",
+    "donorCount": "Donor Count",
+    "bubbleSize": "Bubble size represents",
     "mean": "Mean",
     "medianLabel": "Median"
   }

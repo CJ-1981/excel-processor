@@ -8,4 +8,5 @@ export * from './TopDonorsChart';
 export * from './StatisticsTable';
 export * from './DistributionHistogram';
 export * from './ParetoChart';
+export * from './DonorCategoryBubbleChart';
 export * from './RangeDistributionCharts';
