@@ -132,10 +132,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     const wrapper = document.querySelector(`[data-chart-id="${chartId}"]`) as HTMLElement | null;
     if (!wrapper) return;
 
-    // If this panel contains multiple charts (like Range Distribution's two pies),
-    // capture the entire wrapper via html2canvas so everything is included.
+    // Check if wrapper has additional HTML content (legends, captions, etc.) outside SVG
+    // or if this panel contains multiple charts (like Range Distribution's two pies)
     const svgAll = Array.from(wrapper.querySelectorAll('svg')) as SVGSVGElement[];
-    if (chartId === 'range-distribution' || chartId === 'pareto' || svgAll.length > 1) {
+    const hasLegendsOrExtraContent = wrapper.children.length > 1 ||
+      Array.from(wrapper.children).some(child =>
+        !child.querySelector('svg') && child.textContent?.trim()
+      );
+
+    if (chartId === 'range-distribution' || chartId === 'pareto' || hasLegendsOrExtraContent || svgAll.length > 1) {
       (async () => {
         try {
           const canvas = await html2canvas(wrapper, {
