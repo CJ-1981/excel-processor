@@ -41,6 +41,28 @@ export function useChartExport(): UseChartExportResult {
       return;
     }
 
+    // Check if wrapper has additional HTML content (like legends) outside SVG
+    // by looking for direct children that aren't just the chart container
+    const hasLegendsOrExtraContent = wrapper.children.length > 1 ||
+      Array.from(wrapper.children).some(child =>
+        !child.querySelector('svg') && child.textContent?.trim()
+      );
+
+    // If there's additional content (legends, captions, etc.), use html2canvas on wrapper
+    if (hasLegendsOrExtraContent) {
+      try {
+        const canvas = await html2canvas(wrapper, {
+          backgroundColor: '#ffffff',
+          scale: Math.max(1, Math.floor(window.devicePixelRatio || 1)),
+          useCORS: true,
+        });
+        downloadCanvas(canvas, chartId, format);
+        return;
+      } catch (error) {
+        console.error('Failed to export chart wrapper with legends:', error);
+      }
+    }
+
     // Pick the largest SVG inside the wrapper
     const svgEl = svgAll.length > 0
       ? svgAll.reduce((best, el) => {

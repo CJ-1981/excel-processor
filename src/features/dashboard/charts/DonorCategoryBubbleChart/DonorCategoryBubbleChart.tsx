@@ -122,6 +122,8 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
   }, [data]);
 
   // Custom shape function to render bubble with labels
+  // @MX:ANCHOR: Custom bubble renderer for scatter plot
+  // @MX:REASON: High fan_in component, critical for chart rendering, custom shape rendering pattern
   const renderBubble = useCallback((props: any) => {
     const { cx, cy, payload } = props;
     const { category, count, total } = payload;
@@ -130,12 +132,16 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
     const amountPercentage = totalAmount > 0 ? (total / totalAmount) * 100 : 0;
     const countPercentage = totalCount > 0 ? (count / totalCount) * 100 : 0;
 
+    // Calculate radius from raw total value for proportional bubble sizing
+    // Using sqrt makes area proportional to value rather than radius
+    const radius = payload.z ? Math.sqrt(payload.z) / 2 : 30;
+
     return (
       <g>
         <circle
           cx={cx}
           cy={cy}
-          r={payload.z ? Math.sqrt(payload.z) / 2 : 50}
+          r={radius}
           fill={categoryColors[category] || theme.palette.primary.main}
           fillOpacity={0.7}
           stroke={categoryColors[category] || theme.palette.primary.main}
@@ -148,7 +154,7 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
           textAnchor="middle"
           fontSize={15}
           fontWeight="bold"
-          fill="#000"
+          fill={theme.palette.text.primary}
         >
           {category}
         </text>
@@ -157,7 +163,7 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
           y={cy - 45}
           textAnchor="middle"
           fontSize={15}
-          fill="#000"
+          fill={theme.palette.text.primary}
         >
           {`${t('charts.donorCount')}: ${count} (${countPercentage.toFixed(1)}%)`}
         </text>
@@ -166,7 +172,7 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
           y={cy - 30}
           textAnchor="middle"
           fontSize={15}
-          fill="#333"
+          fill={theme.palette.text.secondary}
         >
           {`${t('charts.totalAmount')}: ${formatCurrencyGerman(total)} (${amountPercentage.toFixed(1)}%)`}
         </text>
@@ -175,17 +181,17 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
           y={cy - 15}
           textAnchor="middle"
           fontSize={15}
-          fill="#333"
+          fill={theme.palette.text.secondary}
         >
           {`${t('charts.averageDonation')}: ${formatCurrencyGerman(payload.mean)}`}
         </text>
       </g>
     );
-  }, [categoryColors, theme.palette.primary.main, totalAmount, totalCount, t]);
+  }, [categoryColors, theme.palette.primary.main, theme.palette.text.primary, theme.palette.text.secondary, totalAmount, totalCount, t]);
 
   // Memoize display data - use numerical x positions for scatter plot
   const displayData = useMemo(() => {
-    const result = data.map((item, index) => ({
+    return data.map((item, index) => ({
       x: index, // Numerical position for X-axis
       y: item.mean,
       z: item.total,
@@ -194,8 +200,6 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
       total: item.total,
       count: item.count,
     }));
-    console.log('DonorCategoryBubbleChart displayData:', result);
-    return result;
   }, [data]);
 
   // Calculate ZAxis range dynamically based on actual data
@@ -254,7 +258,7 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }} data-chart-id="donor-category-bubble">
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
-          <ScatterChart margin={{ top: 20, right: 40, left: 60, bottom: 80 }}>
+          <ScatterChart margin={{ top: 20, right: 40, left: 60, bottom: 30 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
             <XAxis
               type="number"
@@ -264,7 +268,7 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
               angle={-45}
               textAnchor="end"
               interval={0}
-              height={80}
+              height={50}
               ticks={xTicks}
               tickFormatter={formatXAxis}
               domain={[-0.5, displayData.length - 0.5]}
