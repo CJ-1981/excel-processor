@@ -149,6 +149,16 @@ Layout edits (drag, resize, Taller/Shorter) auto-save per breakpoint. If you nee
 
 ## Version History
 
+### v1.13.1 (2026-02-28)
+*   **Code Cleanup**:
+    *   Removed 175 lines of dead code with zero functional impact
+    *   Deleted unused duplicate file `src/utils/chartDataTransformers.ts` (128 lines)
+    *   Removed unused logger functions (`info()`, `time()`, `timeEnd()`)
+    *   Removed unused germanFormatter functions (`getGermanMonthName()`, `getGermanMonthNameFull()`, `formatNumberGerman()`)
+*   **Quality**:
+    *   All 429 tests passing
+    *   Build successful with no regressions
+
 ### v1.13.0 (2026-02-27)
 *   **Donor Category Bubble Chart**:
     *   New bubble chart visualization for donor category analysis
