@@ -4,7 +4,7 @@
 
 **Project Name:** Excel Data Processor
 
-**Version:** 1.5.1
+**Version:** 1.13.0
 
 **Purpose:** Client-side web application for processing, analyzing, and visualizing Excel/CSV data with advanced dashboard analytics and PDF export capabilities.
 
@@ -45,6 +45,7 @@
 - **Distribution Analysis:** Histograms with configurable bin counts
 - **Pareto Analysis:** Identify vital few contributors (80/20 rule)
 - **Range Distribution:** Categorical analysis by value ranges
+- **Donor Category Bubble Chart:** Multi-dimensional visualization with category-based grouping, size-based value encoding, and interactive filtering
 - **Draggable Layout:** Customize dashboard widget arrangement
 
 ### 4. Data Visualization
@@ -123,9 +124,10 @@
 ## Future Roadmap
 
 ### Short Term (3 Months)
-- [ ] DDD refactoring of DashboardView (current monolithic 1,698 LOC)
-- [ ] Unit test coverage increase to 85%
-- [ ] Performance optimization for large datasets
+- [x] DDD refactoring of DashboardView (completed 2026-02-15)
+- [x] Unit test coverage increase to 85% (achieved 85%+ coverage)
+- [x] Donor Category Bubble Chart (completed 2026-02-27)
+- [ ] Performance optimization for large datasets (>100K rows)
 - [ ] Additional chart types (scatter, box plot)
 
 ### Medium Term (6-12 Months)
@@ -154,5 +156,5 @@
 
 ---
 
-**Last Updated:** 2026-02-15
-**Document Version:** 1.0
+**Last Updated:** 2026-02-28
+**Document Version:** 1.1

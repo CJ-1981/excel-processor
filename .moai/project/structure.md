@@ -26,16 +26,18 @@ excel-processor/
 │   │   │   ├── RangeDistributionCharts.tsx
 │   │   │   ├── DraggableColumnSelector.tsx
 │   │   │   ├── DraggableColumnList.tsx
-│   │   │   └── KPICard.tsx
+│   │   │   ├── KPICard.tsx
+│   │   │   └── DonorCategoryBubbleChart.tsx
 │   ├── features/            # Feature-based modules (NEW - 2026-02-15)
 │   │   └── dashboard/       # Modular dashboard architecture
-│   │       ├── charts/      # 6 chart modules
+│   │       ├── charts/      # 7 chart modules
 │   │       │   ├── TrendChart/
 │   │       │   ├── TopDonorsChart/
 │   │       │   ├── StatisticsTable/
 │   │       │   ├── DistributionHistogram/
 │   │       │   ├── ParetoChart/
-│   │       │   └── RangeDistributionCharts/
+│   │       │   ├── RangeDistributionCharts/
+│   │       │   └── DonorCategoryBubbleChart/
 │   │       ├── components/  # 3 shared components
 │   │       │   ├── ChartExport/
 │   │       │   ├── ColumnSelector/
@@ -71,8 +73,15 @@ excel-processor/
 ├── public/                 # Static assets
 ├── .moai/                  # MoAI-ADK configuration
 │   ├── project/            # Project documentation (this file)
-│   └── config/             # MoAI settings
+│   ├── config/             # MoAI settings
+│   ├── docs/               # Framework documentation
+│   └── specs/              # SPEC documents
 ├── .claude/                # Claude Code configuration
+│   ├── agents/             # Agent definitions
+│   ├── skills/             # Workflow skills
+│   ├── rules/              # Execution rules
+│   ├── hooks/              # Lifecycle hooks (16 executable scripts)
+│   └── commands/           # Custom slash commands
 ├── dist/                   # Production build output
 ├── package.json            # Dependencies and scripts
 ├── vite.config.ts          # Vite build configuration
@@ -125,13 +134,14 @@ ParsedSheet {
 **Current Architecture (AFTER DDD Refactoring - 2026-02-15):**
 ```
 src/features/dashboard/ (modular feature-based architecture)
-├── charts/                    # Chart modules (6)
+├── charts/                    # Chart modules (7)
 │   ├── TrendChart/           # Time-series visualization
 │   ├── TopDonorsChart/       # Ranking bar chart
 │   ├── StatisticsTable/      # Descriptive statistics
 │   ├── DistributionHistogram/# Frequency distribution
 │   ├── ParetoChart/          # 80/20 analysis
-│   └── RangeDistributionCharts/ # Category distribution
+│   ├── RangeDistributionCharts/ # Category distribution
+│   └── DonorCategoryBubbleChart/ # Multi-dimensional bubble chart (NEW - 2026-02-27)
 ├── components/                # Shared components (3)
 │   ├── ChartExport/          # Image export functionality
 │   ├── ColumnSelector/       # Draggable column selection
@@ -155,11 +165,47 @@ src/features/dashboard/ (modular feature-based architecture)
 ```
 
 **Benefits of Modular Architecture:**
-- **Testability:** Each module has dedicated test files (214 tests, 100% passing)
+- **Testability:** Each module has dedicated test files (563 tests, 100% passing)
 - **Maintainability:** Clear separation of concerns, single responsibility per module
 - **Reusability:** Shared components and utilities prevent code duplication
 - **Type Safety:** Full TypeScript coverage with strict type checking
 - **Scalability:** Easy to add new chart types or features
+
+### Agent Teams Capability (NEW - 2026-02-28)
+
+**Purpose:** Enable parallel execution of specialized agents for complex multi-domain tasks
+
+**Activation:**
+- Environment: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+- Configuration: `workflow.team.enabled: true` in `.moai/config/sections/workflow.yaml`
+
+**Agent Types:**
+- **team-researcher:** Codebase exploration and research
+- **team-analyst:** Requirements analysis
+- **team-architect:** Technical design
+- **team-backend-dev:** Backend implementation (worktree isolated)
+- **team-frontend-dev:** Frontend implementation (worktree isolated)
+- **team-tester:** Test development (worktree isolated)
+- **team-quality:** Quality validation
+
+**Workflow Integration:**
+- Plan Phase: Parallel research (researcher + analyst + architect)
+- Run Phase: Parallel implementation (backend-dev + frontend-dev + tester)
+- Sync Phase: Single agent (manager-docs) for consistency
+
+### Hook System (NEW - 2026-02-28)
+
+**Purpose:** Extend Claude Code with custom behaviors at lifecycle events
+
+**Available Hooks (16 total):**
+- **Session Hooks:** SessionStart, SessionEnd
+- **Agent Hooks:** SubagentStart, SubagentStop, SubagentOutput
+- **Tool Hooks:** PreToolUse, PostToolUse
+- **Git Hooks:** PreCommit, PostCommit
+- **Worktree Hooks:** WorktreeCreate, WorktreeRemove
+- **Quality Hooks:** QualityGate, LSPDiagnostic
+
+**Location:** `.claude/hooks/moai/` (executable scripts)
 
 ### 3. Data Filtering & Selection
 
@@ -379,5 +425,5 @@ Source (TSX) → TypeScript Compiler → JavaScript
 
 ---
 
-**Last Updated:** 2026-02-15
-**Document Version:** 1.0
+**Last Updated:** 2026-02-28
+**Document Version:** 1.1
