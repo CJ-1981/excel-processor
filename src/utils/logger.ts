@@ -29,25 +29,6 @@ export const log = (level: LogLevel, prefix: string, ...args: unknown[]) => {
 };
 
 export const debug = (prefix: string, ...args: unknown[]) => log('debug', prefix, ...args);
-export const info = (prefix: string, ...args: unknown[]) => log('info', prefix, ...args);
 export const warn = (prefix: string, ...args: unknown[]) => log('warn', prefix, ...args);
 export const error = (prefix: string, ...args: unknown[]) => log('error', prefix, ...args);
-
-export const time = (label: string) => {
-  if (!isEnabled()) return;
-  try {
-    console.time(`[excel-processor] ${label}`);
-  } catch {
-    // console.time not available in this environment
-  }
-};
-
-export const timeEnd = (label: string) => {
-  if (!isEnabled()) return;
-  try {
-    console.timeEnd(`[excel-processor] ${label}`);
-  } catch {
-    // console.timeEnd not available in this environment
-  }
-};
 
