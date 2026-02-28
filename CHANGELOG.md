@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.12.0] - 2026-02-27
+## [1.13.0] - 2026-02-27
 
 ### Added
 
@@ -66,6 +66,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added to dashboard chart registry with ID 'donor-category-bubble'
 - Scatter chart skeleton type for loading states
 - Uses existing ChartExport wrapper for download functionality
+
+## [1.12.0] - 2026-02-25
+
+### Added
+
+#### Email Integration for PDF Export
+- **Email sending via client-side mailto: protocol** (no backend required)
+  - CC/BCC support with localStorage persistence across sessions
+  - Email validation with regex pattern matching
+  - Custom email subject line with {{period}} placeholder support
+  - Contacts table updated to display email column
+  - Auto-detect email columns from Excel uploads (patterns: email, 이메일, e-mail, mail, @)
+  - Auto-populate donor email from contacts lookup using 50% confidence threshold
+  - Modal lifecycle: PDF Export dialog stays open after export if email is filled, and only closes after email is sent
+  - Email preview with spacing fix for better readability
+
+#### Intelligent Amount Column Auto-Selection
+- Keyword-based detection for amount columns (total, sum, 총액, 합산)
+- Automatic selection when generating PDF export
+- Reduces manual column selection steps
+
+#### CSV Export Improvements
+- Fixed Korean character encoding with UTF-8 BOM
+- Proper display in Excel when opening exported contacts CSV
+
+#### Mobile Layout Enhancements
+- Responsive design improvements for PDF export dialogs
+- Better button spacing and layout on small screens
+
+#### Contact Matching Improvements
+- Enhanced normalizeString matching logic
+- Added bilingual email column pattern detection
+- Partial name matching with startsWith (85% confidence threshold)
+
+#### Code Cleanup
+- Removed unused theme file (src/theme/index.tsx)
+- Removed EmailJS-related types (no longer needed with mailto: approach)
 
 ## [1.11.0] - 2026-02-24
 
