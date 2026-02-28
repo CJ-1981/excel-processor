@@ -1,33 +1,3 @@
-const GERMAN_MONTH_NAMES = [
-  'Jan.',
-  'Feb.',
-  'Mär.',
-  'Apr.',
-  'Mai.',
-  'Jun.',
-  'Jul.',
-  'Aug.',
-  'Sep.',
-  'Okt.',
-  'Nov.',
-  'Dez.',
-];
-
-const GERMAN_MONTH_NAMES_FULL = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember',
-];
-
 const SMALL_NUMBER_WORDS = [
   'null',
   'eins',
@@ -63,26 +33,6 @@ const TENS_WORDS = [
   'achtzig',
   'neunzig',
 ];
-
-/**
- * Get German month name (abbreviated)
- */
-export function getGermanMonthName(monthIndex: number): string {
-  if (monthIndex < 0 || monthIndex > 11) {
-    throw new Error(`Invalid month index: ${monthIndex}`);
-  }
-  return GERMAN_MONTH_NAMES[monthIndex];
-}
-
-/**
- * Get full German month name
- */
-export function getGermanMonthNameFull(monthIndex: number): string {
-  if (monthIndex < 0 || monthIndex > 11) {
-    throw new Error(`Invalid month index: ${monthIndex}`);
-  }
-  return GERMAN_MONTH_NAMES_FULL[monthIndex];
-}
 
 /**
  * Format date in German format (DD.MM.YYYY)
@@ -122,16 +72,6 @@ export function formatPercentGerman(value: number): string {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }) + '%';
-}
-
-/**
- * Format a number with German locale (e.g., 1234.56 -> "1.234,56")
- */
-export function formatNumberGerman(value: number, decimals: number = 2): string {
-  return value.toLocaleString('de-DE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
 }
 
 /**
