@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-02-28
+
+### Removed
+- Unused duplicate file `src/utils/chartDataTransformers.ts` (128 lines) - all functions were duplicated in `chartCalculations.ts` and `colorUtils.ts`
+- Unused logger functions (`info()`, `time()`, `timeEnd()`) from `src/utils/logger.ts`
+- Unused germanFormatter functions (`getGermanMonthName()`, `getGermanMonthNameFull()`, `formatNumberGerman()`) from `src/utils/germanFormatter.ts`
+
+### Internal
+- Code cleanup: Removed 175 lines of dead code with zero impact on functionality
+- All 429 tests passing
+- Build successful with no regressions
+
 ## [1.13.0] - 2026-02-27
 
 ### Added
