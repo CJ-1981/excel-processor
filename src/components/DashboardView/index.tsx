@@ -113,6 +113,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // Box plot removed
   // Anonymize unique names on X-axis ticks - default true, no persistence
   const [anonymizeNames, setAnonymizeNames] = useState<boolean>(true);
+  const BUBBLE_LABELS_STORAGE_KEY = 'excel-processor-dashboard-bubble-labels';
+  const [showBubbleLabels, setShowBubbleLabels] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(BUBBLE_LABELS_STORAGE_KEY);
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(BUBBLE_LABELS_STORAGE_KEY, String(showBubbleLabels));
+    } catch { }
+  }, [showBubbleLabels]);
 
   // Grid layout state for draggable/resizable charts
   const LAYOUT_STORAGE_KEY = 'excel-processor-dashboard-layout';
@@ -1639,6 +1654,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 <IconButton size="small" onClick={() => handleAdjustWidgetHeight('donor-category-bubble', -2)} title={t('dashboard.shorter')}>
                   <UnfoldLess fontSize="small" />
                 </IconButton>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 20, my: 'auto' }} />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showBubbleLabels}
+                      onChange={(e) => setShowBubbleLabels(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="caption" sx={{ fontWeight: 'medium' }}>
+                      {t('dashboard.showLabels')}
+                    </Typography>
+                  }
+                  sx={{ ml: 0, mr: 0 }}
+                />
               </Box>
             </Box>
             <Box sx={{ flex: 1, minHeight: 200, overflow: 'auto', width: '100%' }}>
@@ -1646,6 +1678,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 data={donorCategoryData}
                 overallMean={globalDonorStats.mean}
                 overallMedian={globalDonorStats.median}
+                showLabels={showBubbleLabels}
               />
             </Box>
           </Paper>

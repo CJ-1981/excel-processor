@@ -31,6 +31,7 @@ export interface DonorCategoryBubbleChartProps {
   className?: string;
   overallMean?: number;
   overallMedian?: number;
+  showLabels?: boolean;
 }
 
 interface TooltipPayload {
@@ -96,6 +97,7 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
   error,
   overallMean,
   overallMedian,
+  showLabels = true,
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -147,47 +149,51 @@ const DonorCategoryBubbleChartInner: React.FC<DonorCategoryBubbleChartProps> = (
           stroke={categoryColors[category] || theme.palette.primary.main}
           strokeWidth={2}
         />
-        {/* add donation range text label */}
-        <text
-          x={cx}
-          y={cy - 70}
-          textAnchor="middle"
-          fontSize={15}
-          fontWeight="bold"
-          fill={theme.palette.text.primary}
-        >
-          {category}
-        </text>
-        <text
-          x={cx}
-          y={cy - 45}
-          textAnchor="middle"
-          fontSize={15}
-          fill={theme.palette.text.primary}
-        >
-          {`${t('charts.donorCount')}: ${count} (${countPercentage.toFixed(1)}%)`}
-        </text>
-        <text
-          x={cx}
-          y={cy - 30}
-          textAnchor="middle"
-          fontSize={15}
-          fill={theme.palette.text.secondary}
-        >
-          {`${t('charts.totalAmount')}: ${formatCurrencyGerman(total)} (${amountPercentage.toFixed(1)}%)`}
-        </text>
-        <text
-          x={cx}
-          y={cy - 15}
-          textAnchor="middle"
-          fontSize={15}
-          fill={theme.palette.text.secondary}
-        >
-          {`${t('charts.averageDonation')}: ${formatCurrencyGerman(payload.mean)}`}
-        </text>
+        {showLabels && (
+          <>
+            {/* add donation range text label */}
+            <text
+              x={cx}
+              y={cy - 70}
+              textAnchor="middle"
+              fontSize={15}
+              fontWeight="bold"
+              fill={theme.palette.text.primary}
+            >
+              {category}
+            </text>
+            <text
+              x={cx}
+              y={cy - 45}
+              textAnchor="middle"
+              fontSize={15}
+              fill={theme.palette.text.primary}
+            >
+              {`${t('charts.donorCount')}: ${count} (${countPercentage.toFixed(1)}%)`}
+            </text>
+            <text
+              x={cx}
+              y={cy - 30}
+              textAnchor="middle"
+              fontSize={15}
+              fill={theme.palette.text.secondary}
+            >
+              {`${t('charts.totalAmount')}: ${formatCurrencyGerman(total)} (${amountPercentage.toFixed(1)}%)`}
+            </text>
+            <text
+              x={cx}
+              y={cy - 15}
+              textAnchor="middle"
+              fontSize={15}
+              fill={theme.palette.text.secondary}
+            >
+              {`${t('charts.averageDonation')}: ${formatCurrencyGerman(payload.mean)}`}
+            </text>
+          </>
+        )}
       </g>
     );
-  }, [categoryColors, theme.palette.primary.main, theme.palette.text.primary, theme.palette.text.secondary, totalAmount, totalCount, t]);
+  }, [categoryColors, theme.palette.primary.main, theme.palette.text.primary, theme.palette.text.secondary, totalAmount, totalCount, t, showLabels]);
 
   // Memoize display data - use numerical x positions for scatter plot
   const displayData = useMemo(() => {
@@ -381,7 +387,8 @@ const DonorCategoryBubbleChart = memo(DonorCategoryBubbleChartInner, (prevProps,
     prevProps.isLoading === nextProps.isLoading &&
     prevProps.error === nextProps.error &&
     prevProps.overallMean === nextProps.overallMean &&
-    prevProps.overallMedian === nextProps.overallMedian
+    prevProps.overallMedian === nextProps.overallMedian &&
+    prevProps.showLabels === nextProps.showLabels
   );
 });
 

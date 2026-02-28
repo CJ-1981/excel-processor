@@ -343,7 +343,8 @@
     "enableFilenameDates": "Enable \"Use filename dates\" or select a date column above.",
     "noTrendData": "No trend data available for the selected columns.",
     "all": "All {{count}}",
-    "bins": "{{count}} bins"
+    "bins": "{{count}} bins",
+    "showLabels": "Show Labels"
   },
   "charts": {
     "loadingData": "Loading chart data...",
