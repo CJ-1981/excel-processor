@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,11 +18,13 @@ import {
   TextField,
   Chip,
   Alert,
+  InputAdornment,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import DownloadIcon from '@mui/icons-material/Download';
+import SearchIcon from '@mui/icons-material/Search';
 import type { ContactRecord } from '../../types';
 
 interface ContactsManageDialogProps {
@@ -46,12 +48,24 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteAllMode, setDeleteAllMode] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset selection when dialog opens
-  React.useEffect(() => {
+  // Reset selection and focus when dialog opens
+  useEffect(() => {
     if (open) {
       setSelectedIds(new Set());
       setSearchTerm('');
+      
+      // Auto-focus search input with a small delay to ensure dialog is fully rendered
+      const timer = setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Force a cursor placement at the end
+          const len = searchInputRef.current.value.length;
+          searchInputRef.current.setSelectionRange(len, len);
+        }
+      }, 150);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
@@ -186,10 +200,25 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
           <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
             <TextField
               fullWidth
+              autoFocus
+              inputRef={searchInputRef}
               placeholder={t('contacts.manage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ 
+                '& .MuiInputBase-input': {
+                  caretColor: 'auto !important',
+                  color: 'inherit',
+                }
+              }}
             />
             {selectedIds.size > 0 && (
               <Button

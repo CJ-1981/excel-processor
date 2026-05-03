@@ -105,6 +105,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   const [donorEmail, setDonorEmail] = useState('');
   const [ccEmail, setCcEmail] = useState('');
   const [bccEmail, setBccEmail] = useState('');
+  const isEmailManuallyEdited = React.useRef(false);
 
   // Text color for PDF
   const [textColor, setTextColor] = useState('#FF0000'); // Default: red
@@ -129,34 +130,35 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     if (donorName) {
       const matches = findMatchingContacts(donorName, contacts || []);
       const bestMatch = matches[0];
-      // Lower confidence threshold to 50% for email auto-population
+      
+      // We found a potential match with reasonable confidence
       if (bestMatch && bestMatch.confidence >= 50) {
         // Only suggest if address is different
         if (bestMatch.contact.address !== donorAddress) {
           setSuggestedContact(bestMatch);
+          // IMPORTANT: Do NOT auto-update email while showing a suggestion banner.
+          // This allows the user to "Ignore" the suggestion without their email being overwritten.
         } else {
+          // Address already matches, so this is very likely the correct contact
           setSuggestedContact(null);
-        }
-        // Auto-populate email if available and different (lower threshold)
-        if (bestMatch.contact.email) {
-          setDonorEmail(bestMatch.contact.email);
-        } else {
-          // Clear email if matched contact has no email
-          setDonorEmail('');
+          
+          // Auto-populate email ONLY IF it is currently empty and wasn't manually edited.
+          // This preserves manual input while still providing helpful defaults for new entries.
+          if (bestMatch.contact.email && !donorEmail && !isEmailManuallyEdited.current) {
+            setDonorEmail(bestMatch.contact.email);
+          }
         }
       } else {
+        // No high-confidence match found
         setSuggestedContact(null);
-        // Clear email when no high-confidence match found
-        setDonorEmail('');
       }
     } else {
+      // Name is empty
       setSuggestedContact(null);
-      // Clear email when donor name is cleared
-      if (!donorName) {
-        setDonorEmail('');
-      }
+      // We no longer clear the email field when the name is cleared,
+      // as the user may have manually entered an email they wish to keep.
     }
-  }, [donorName, contacts]);
+  }, [donorName, contacts, donorAddress, donorEmail]);
 
   // Load signatures from localStorage on mount (once)
   useEffect(() => {
@@ -682,6 +684,10 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             onApply={() => {
               setDonorName(suggestedContact.contact.englishName);
               setDonorAddress(suggestedContact.contact.address);
+              if (suggestedContact.contact.email) {
+                setDonorEmail(suggestedContact.contact.email);
+                isEmailManuallyEdited.current = false; // Reset on explicit application of a full contact
+              }
               setSuggestedContact(null);
             }}
             onIgnore={() => setSuggestedContact(null)}
@@ -819,7 +825,10 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             fullWidth
             label={t('pdfExport.customFields.email')}
             value={donorEmail}
-            onChange={(e) => setDonorEmail(e.target.value)}
+            onChange={(e) => {
+              setDonorEmail(e.target.value);
+              isEmailManuallyEdited.current = true;
+            }}
             size="small"
             sx={{ mb: 2 }}
             InputProps={{

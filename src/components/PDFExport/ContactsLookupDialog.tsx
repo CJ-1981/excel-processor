@@ -190,7 +190,7 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
 
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
         <TextField
-          ref={searchInputRef}
+          inputRef={searchInputRef}
           fullWidth
           placeholder={t('contacts.lookup.searchPlaceholder')}
           value={searchTerm}
