@@ -206,6 +206,7 @@
       "amountColumn": "금액 열",
       "amountColumnHint": "기부금이 포함된 열을 선택하세요",
       "monthlyAmounts": "월별 기부금액 (EUR)",
+      "totalSum": "합계",
       "totalAmount": "총 금액 (EUR)",
       "amountInWords": "금액(문자)",
       "period": "기간",

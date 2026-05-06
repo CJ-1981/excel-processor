@@ -19,11 +19,9 @@ interface ExcelUploaderProps {
   disabled: boolean;
 }
 
-interface FileInfo {
-  name: string;
-  size: number;
-  type: string;
-}
+// Store actual File objects instead of just metadata
+// to preserve file data for removal and re-upload scenarios
+type FileInfo = File;
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
@@ -81,22 +79,12 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
     }
 
     if (valid.length > 0) {
-      const fileInfo: FileInfo[] = valid.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      }));
-      setSelectedFiles(fileInfo);
+      // Store actual File objects to preserve file data
+      setSelectedFiles(valid);
 
-      // Convert back to FileList-like structure for the callback
-      const fileList = valid.reduce((acc, file) => {
-        acc.push(file);
-        return acc;
-      }, [] as File[]);
-
-      // Create a new FileList-like object
+      // Create a new FileList-like object for the callback
       const dataTransfer = new DataTransfer();
-      fileList.forEach(file => dataTransfer.items.add(file));
+      valid.forEach(file => dataTransfer.items.add(file));
       onFilesUpload(dataTransfer.files);
     }
   }, [onFilesUpload]);
@@ -137,6 +125,10 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
   };
 
   const handleButtonClick = () => {
+    // Reset file input value to ensure change event fires even if same file is selected
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     fileInputRef.current?.click();
   };
 
@@ -146,20 +138,10 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
     newFiles.splice(index, 1);
     setSelectedFiles(newFiles);
 
-    // Update the parent component with remaining files
-    if (newFiles.length > 0) {
-      const dataTransfer = new DataTransfer();
-      newFiles.forEach(fileInfo => {
-        // Create a new File object from the stored info
-        const file = new File([], fileInfo.name, { type: fileInfo.type });
-        dataTransfer.items.add(file);
-      });
-      onFilesUpload(dataTransfer.files);
-    } else {
-      // Send empty FileList
-      const dataTransfer = new DataTransfer();
-      onFilesUpload(dataTransfer.files);
-    }
+    // Update the parent component with remaining files (actual File objects)
+    const dataTransfer = new DataTransfer();
+    newFiles.forEach(file => dataTransfer.items.add(file));
+    onFilesUpload(dataTransfer.files);
   };
 
   return (

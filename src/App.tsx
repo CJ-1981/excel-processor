@@ -105,6 +105,16 @@ function App() {
    * Processes files in batches of 3 to prevent memory overload and maintain UI responsiveness.
    */
   const handleFilesUpload = async (files: FileList) => {
+    // If no files, reset to ready state and hide SheetSelector
+    if (files.length === 0) {
+      setParsedFiles([]);
+      setMergedData([]);
+      setSelectedNameColumn(null);
+      setBaseSelectedNames([]);
+      setStatus('ready');
+      return;
+    }
+
     setStatus('parsing');
     const fileArray = Array.from(files);
 

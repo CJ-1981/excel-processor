@@ -206,6 +206,7 @@
       "amountColumn": "Amount Column",
       "amountColumnHint": "Select the column containing donation amounts",
       "monthlyAmounts": "Monthly Amounts (EUR)",
+      "totalSum": "Total Sum",
       "totalAmount": "Total Amount (EUR)",
       "amountInWords": "Amount in Words",
       "period": "Period",

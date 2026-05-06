@@ -922,6 +922,11 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               </Box>
             ))}
           </Box>
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('pdfExport.customFields.totalSum')}: <strong>{totalAmount.toFixed(2)}</strong> €
+            </Typography>
+          </Box>
         </Paper>
 
         {/* Section 4: Totals */}
