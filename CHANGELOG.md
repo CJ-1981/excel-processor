@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] - 2026-05-07
+
+### Fixed
+- **Security**: Fixed XSS vulnerability in ExcelUploader file name rendering - implemented HTML escaping using DOM API
+- **Type Safety**: Added runtime type validation for localStorage data in CustomFieldsDialog to prevent access without validation
+- **Memory Leak**: Fixed memory leak risk in CustomFieldsDialog by adding isMounted cleanup pattern in useEffect
+- **Material-UI Migration**: Migrated 6 deprecated InputProps to slotProps API for Material-UI v6+ compatibility
+- **TypeScript Compilation**: Fixed type errors in DetailedDataView getComparator function and ColumnSelector setState patterns
+- **ESLint Quality**: Resolved function declaration order issues and reduced ESLint errors by 84% (from 170 to 28)
+- **Test Coverage**: Expanded ExcelUploader test suite from 1 to 33 comprehensive tests including XSS prevention tests
+
+### Changed
+- Improved code review workflow with automated ESLint auto-fix integration
+- Enhanced type safety with Zod-style runtime validation patterns
+
 ## [1.13.1] - 2026-02-28
 
 ### Removed
