@@ -9,7 +9,7 @@ export interface BatchProcessOptions {
   /** Number of items to process concurrently (default: 3) */
   concurrency?: number;
   /** Callback for progress updates */
-  onProgress?: (completed: number, total: number) => void;
+  onProgress?: (_completed: number, _total: number) => void;
 }
 
 export interface BatchResult<T, E = unknown> {
@@ -48,7 +48,7 @@ export interface BatchError<E = unknown> {
  */
 export async function processInBatches<T, R>(
   items: T[],
-  processor: (item: T) => Promise<R>,
+  processor: (_item: T) => Promise<R>,
   options: BatchProcessOptions = {}
 ): Promise<R[]> {
   const { concurrency = 3, onProgress } = options;
@@ -120,7 +120,7 @@ export async function processInBatches<T, R>(
  */
 export async function processInBatchesWithErrors<T, R>(
   items: T[],
-  processor: (item: T) => Promise<R>,
+  processor: (_item: T) => Promise<R>,
   options: BatchProcessOptions = {}
 ): Promise<BatchResult<R>> {
   const { concurrency = 3, onProgress } = options;

@@ -67,17 +67,14 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
 function getComparator<Key extends string>(
   order: Order,
   orderBy: Key,
-): (
-  a: { [key in Key]: any },
-  b: { [key in Key]: any },
-) => number {
+): (a: { [key: string]: any }, b: { [key: string]: any }) => number {
   return order === 'desc'
     ? (a, b) => descendingComparator(a, b, orderBy)
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
 // This function is for sorting an array stably
-function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) {
+function stableSort<T>(array: readonly T[], comparator: (_a: T, _b: T) => number) {
   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -293,7 +290,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     }
 
     return dynamicHeaders;
-  }, [filteredData, columnOrder, columnMapping]);
+  }, [filteredData, columnOrder, columnMapping, t]);
 
   // Initialize column visibility when headers change (only if not already set)
   useEffect(() => {
@@ -304,6 +301,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       });
       setColumnVisibility(initialVisibility);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allAvailableHeaders, setColumnVisibility]);
 
   // Persist auto-deselect zeros preference to localStorage
@@ -317,6 +315,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
 
   // Reset column filters when selected names change (to avoid filtering out new names' data)
   useEffect(() => {
+    // Reset filters synchronously to ensure fresh state for new selection
     setColumnFilters({});
     debug('[DetailedDataView] Column filters reset due to selectedUniqueNames change', {
       selectedUniqueNames,
@@ -330,10 +329,12 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
       try {
         // Immediate and delayed resize events to catch post-transition layout
         window.dispatchEvent(new Event('resize'));
-        const t1 = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 80);
-        const t2 = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 200);
+        const t1 = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch { /* ignore */ } }, 80);
+        const t2 = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch { /* ignore */ } }, 200);
         return () => { clearTimeout(t1); clearTimeout(t2); };
-      } catch {}
+      } catch {
+        // Ignore resize event errors
+      }
     }
   }, [showDashboardDialog]);
 

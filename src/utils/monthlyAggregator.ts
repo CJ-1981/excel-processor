@@ -34,7 +34,7 @@ function parseDateFromString(s: string): Date | null {
   if (!str) return null;
 
   // Try ISO-like YYYY-MM-DD or YYYY/MM/DD
-  let m = str.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  let m = str.match(/(\d{4})[-/./](\d{1,2})[-/./](\d{1,2})/);
   if (m) {
     const y = parseInt(m[1], 10);
     const mo = parseInt(m[2], 10) - 1;
@@ -44,7 +44,7 @@ function parseDateFromString(s: string): Date | null {
   }
 
   // Try German dd.mm.yyyy or dd/mm/yyyy
-  m = str.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+  m = str.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
   if (m) {
     const d = parseInt(m[1], 10);
     const mo = parseInt(m[2], 10) - 1;

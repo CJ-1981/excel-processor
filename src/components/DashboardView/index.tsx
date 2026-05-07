@@ -126,7 +126,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   useEffect(() => {
     try {
       localStorage.setItem(BUBBLE_LABELS_STORAGE_KEY, String(showBubbleLabels));
-    } catch { }
+    } catch {
+      // Ignore localStorage errors
+    }
   }, [showBubbleLabels]);
 
   // Grid layout state for draggable/resizable charts
@@ -175,7 +177,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
           }, mime, 0.92);
-        } catch { }
+        } catch {
+          // Ignore canvas conversion errors
+        }
       })();
       return;
     }
@@ -213,7 +217,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
           }, mime, 0.92);
-        } catch { }
+        } catch {
+          // Ignore canvas conversion errors
+        }
       })();
       return;
     }
@@ -238,7 +244,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             displayWidth = bbox.width;
             displayHeight = bbox.height;
           }
-        } catch { }
+        } catch {
+          // Ignore getBBox errors
+        }
       }
       if (!displayWidth || !displayHeight) {
         displayWidth = wrapper.offsetWidth || 800;
@@ -1902,7 +1910,7 @@ function aggregateByTimeMultiple(
   // Convert to arrays and sort by date
   const sortByDate = (
     map: Map<string, { date: Date; values: Record<string, number>; count: number }>,
-    labelFormatter?: (key: string, d: { date: Date }) => string
+    labelFormatter?: (_key: string, _d: { date: Date }) => string
   ) =>
     Array.from(map.entries())
       .map(([key, d]) => ({
@@ -2037,7 +2045,7 @@ function aggregateByFilenameDateMultiple(
   // Convert to arrays and sort by date
   const sortByDate = (
     map: Map<string, { date: Date; values: Record<string, number>; count: number }>,
-    labelFormatter?: (key: string, d: { date: Date }) => string
+    labelFormatter?: (_key: string, _d: { date: Date }) => string
   ) =>
     Array.from(map.entries())
       .map(([key, d]) => ({

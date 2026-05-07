@@ -34,7 +34,7 @@ function isChunkLoadError(error: Error | null): boolean {
 /**
  * Normalizes various error types into Error objects
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 function normalizeError(error: unknown): Error {
   if (error instanceof Error) {
     return error;

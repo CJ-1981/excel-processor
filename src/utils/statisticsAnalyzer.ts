@@ -168,6 +168,7 @@ export function detectDateColumns(data: Record<string, unknown>[]): string[] {
   const checkedColumns = new Set<string>();
 
   // Common date patterns
+  // eslint-disable-next-line no-useless-escape
   const datePatterns = [
     /^\d{4}-\d{1,2}-\d{1,2}$/, // YYYY-M-D or YYYY-MM-DD
     /^\d{1,2}\/\d{1,2}\/\d{2,4}$/, // M/D/YYYY or D/M/YYYY

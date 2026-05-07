@@ -16,7 +16,14 @@ export default defineConfig([
     },
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        React: 'readonly',
+        __BUILD_TIME__: 'readonly',
+        __APP_VERSION__: 'readonly',
+        NodeListOf: 'readonly',
+      },
       parser: tseslint.parser,
       parserOptions: {
         ecmaVersion: 2020,
@@ -32,10 +39,16 @@ export default defineConfig([
       ...reactHooks.configs.flat.recommended.rules,
       ...reactRefresh.configs.vite.rules,
       'no-unused-expressions': 'off',
+      'no-unused-vars': 'off', // Disable base rule, use TypeScript version instead
       '@typescript-eslint/no-unused-expressions': ['error', {
         allowShortCircuit: true,
         allowTernary: true,
         allowTaggedTemplates: true,
+      }],
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_', // Ignore unused arguments that start with underscore
+        varsIgnorePattern: '^_', // Ignore unused variables that start with underscore
+        caughtErrorsIgnorePattern: '^_', // Ignore unused catch parameters that start with underscore
       }],
     },
   },

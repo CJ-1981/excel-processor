@@ -23,6 +23,16 @@ interface ExcelUploaderProps {
 // to preserve file data for removal and re-upload scenarios
 type FileInfo = File;
 
+/**
+ * Escape HTML special characters to prevent XSS attacks.
+ * This sanitizes user input before rendering in the UI.
+ */
+const escapeHtml = (text: string): string => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -216,7 +226,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
               <Chip
                 key={index}
                 icon={getFileIcon(file.name)}
-                label={`${file.name} (${formatFileSize(file.size)})`}
+                label={`${escapeHtml(file.name)} (${formatFileSize(file.size)})`}
                 onDelete={(e) => handleRemoveFile(index, e)}
                 deleteIcon={<Delete />}
                 variant="outlined"

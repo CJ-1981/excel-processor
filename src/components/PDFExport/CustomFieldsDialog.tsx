@@ -44,7 +44,7 @@ import type { PDFTemplate } from '../../types';
 interface CustomFieldsDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (customFields: Record<string, string | number>, textColor: string) => void;
+  onConfirm: (_customFields: Record<string, string | number>, _textColor: string) => void;
   context: PDFGenerationContext;
   template: PDFTemplate;
   contacts?: ContactRecord[];
@@ -126,39 +126,69 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
   ];
 
   // Auto-match contacts based on donorName
+  // NOTE: Cleanup function prevents memory leaks and state updates on unmounted components
   useEffect(() => {
+    let isMounted = true;
+
     if (donorName) {
       const matches = findMatchingContacts(donorName, contacts || []);
       const bestMatch = matches[0];
-      
+
       // We found a potential match with reasonable confidence
       if (bestMatch && bestMatch.confidence >= 50) {
         // Only suggest if address is different
         if (bestMatch.contact.address !== donorAddress) {
-          setSuggestedContact(bestMatch);
+          // Only update state if component is still mounted
+          if (isMounted) {
+            setSuggestedContact(bestMatch);
+          }
           // IMPORTANT: Do NOT auto-update email while showing a suggestion banner.
           // This allows the user to "Ignore" the suggestion without their email being overwritten.
         } else {
           // Address already matches, so this is very likely the correct contact
-          setSuggestedContact(null);
-          
-          // Auto-populate email ONLY IF it is currently empty and wasn't manually edited.
-          // This preserves manual input while still providing helpful defaults for new entries.
-          if (bestMatch.contact.email && !donorEmail && !isEmailManuallyEdited.current) {
-            setDonorEmail(bestMatch.contact.email);
+          if (isMounted) {
+            setSuggestedContact(null);
+
+            // Auto-populate email ONLY IF it is currently empty and wasn't manually edited.
+            // This preserves manual input while still providing helpful defaults for new entries.
+            if (bestMatch.contact.email && !donorEmail && !isEmailManuallyEdited.current) {
+              setDonorEmail(bestMatch.contact.email);
+            }
           }
         }
       } else {
         // No high-confidence match found
-        setSuggestedContact(null);
+        if (isMounted) {
+          setSuggestedContact(null);
+        }
       }
     } else {
       // Name is empty
-      setSuggestedContact(null);
+      if (isMounted) {
+        setSuggestedContact(null);
+      }
       // We no longer clear the email field when the name is cleared,
       // as the user may have manually entered an email they wish to keep.
     }
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [donorName, contacts, donorAddress, donorEmail]);
+
+  const loadSignaturesFromStorage = (): Record<string, string> | null => {
+    try {
+      const stored = localStorage.getItem(SIGNATURES_STORAGE_KEY);
+      if (stored) {
+        const state: SignaturesState = JSON.parse(stored);
+        return state.signatures;
+      }
+    } catch (error) {
+      console.warn('Failed to load signatures from storage:', error);
+    }
+    return null;
+  };
 
   // Load signatures from localStorage on mount (once)
   useEffect(() => {
@@ -297,7 +327,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           const setter = setterMap[key];
           if (setter) {
             // Use localStorage value if available, otherwise use template default
-            const finalValue = storedDefaults?.[key] ?? value;
+            // Type assertion: key is validated to be a valid key of storedDefaults
+            const finalValue = storedDefaults?.[key as keyof typeof storedDefaults] ?? value;
             if (finalValue !== undefined && finalValue !== null) {
               setter(finalValue);
             }
@@ -420,19 +451,6 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     localStorage.setItem(SIGNATURES_STORAGE_KEY, JSON.stringify(state));
   };
 
-  const loadSignaturesFromStorage = (): Record<string, string> | null => {
-    try {
-      const stored = localStorage.getItem(SIGNATURES_STORAGE_KEY);
-      if (stored) {
-        const state: SignaturesState = JSON.parse(stored);
-        return state.signatures;
-      }
-    } catch (error) {
-      console.warn('Failed to load signatures from storage:', error);
-    }
-    return null;
-  };
-
   const saveDefaultsToStorage = () => {
     const defaults = {
       signatureLocation,
@@ -446,11 +464,53 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
   };
 
+  /**
+   * Runtime type validation for localStorage data.
+   * Prevents type coercion and ensures data integrity.
+   */
+  const validateStoredDefaults = (data: unknown): {
+    signatureLocation?: string;
+    taxExemptionOption?: string;
+    taxNumber1?: string;
+    taxDate1?: string;
+    taxNumber2?: string;
+    taxDate2?: string;
+    taxValidFrom?: string;
+  } | null => {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+
+    const obj = data as Record<string, unknown>;
+
+    // Validate that stored values are strings if present
+    const result: Record<string, string> = {};
+
+    const stringFields = [
+      'signatureLocation',
+      'taxExemptionOption',
+      'taxNumber1',
+      'taxDate1',
+      'taxNumber2',
+      'taxDate2',
+      'taxValidFrom'
+    ];
+
+    for (const field of stringFields) {
+      if (field in obj && typeof obj[field] === 'string') {
+        result[field] = obj[field] as string;
+      }
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
+  };
+
   const loadDefaultsFromStorage = () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        return validateStoredDefaults(parsed);
       }
     } catch (error) {
       console.warn('Failed to load PDF export defaults from storage:', error);
@@ -737,29 +797,31 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
                   label={t('pdfExport.customFields.donorName')}
                   size="small"
                   sx={{ mb: 2 }}
-                  InputProps={{
-                    ...params.InputProps,
-                    style: textColor ? { color: textColor } : undefined,
-                    endAdornment: (
-                      <>
-                        {params.InputProps.endAdornment}
-                        <InputAdornment position="end">
-                          {(contacts && contacts.length > 0) && (
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setLookupField('donorName');
-                                setShowLookupDialog(true);
-                              }}
-                              edge="end"
-                              title={t('pdfExport.contacts.lookupButton')}
-                            >
-                              <SearchIcon />
-                            </IconButton>
-                          )}
-                        </InputAdornment>
-                      </>
-                    ),
+                  slotProps={{
+                    input: {
+                      ...params.InputProps,
+                      style: textColor ? { color: textColor } : undefined,
+                      endAdornment: (
+                        <>
+                          {params.InputProps.endAdornment}
+                          <InputAdornment position="end">
+                            {(contacts && contacts.length > 0) && (
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setLookupField('donorName');
+                                  setShowLookupDialog(true);
+                                }}
+                                edge="end"
+                                title={t('pdfExport.contacts.lookupButton')}
+                              >
+                                <SearchIcon />
+                              </IconButton>
+                            )}
+                          </InputAdornment>
+                        </>
+                      ),
+                    },
                   }}
                 />
               )}
@@ -772,25 +834,27 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               onChange={(e) => setDonorName(e.target.value)}
               size="small"
               sx={{ mb: 2 }}
-              InputProps={{
-                style: textColor ? { color: textColor } : undefined,
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {(contacts && contacts.length > 0) && (
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setLookupField('donorName');
-                          setShowLookupDialog(true);
-                        }}
-                        edge="end"
-                        title={t('pdfExport.contacts.lookupButton')}
-                      >
-                        <SearchIcon />
-                      </IconButton>
-                    )}
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  style: textColor ? { color: textColor } : undefined,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {(contacts && contacts.length > 0) && (
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setLookupField('donorName');
+                            setShowLookupDialog(true);
+                          }}
+                          edge="end"
+                          title={t('pdfExport.contacts.lookupButton')}
+                        >
+                          <SearchIcon />
+                        </IconButton>
+                      )}
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
           )}
@@ -801,23 +865,25 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             onChange={(e) => setDonorAddress(e.target.value)}
             size="small"
             sx={{ mb: 2 }}
-            InputProps={{
-              style: textColor ? { color: textColor } : undefined,
-              endAdornment: (contacts && contacts.length > 0) && (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setLookupField('donorAddress');
-                      setShowLookupDialog(true);
-                    }}
-                    edge="end"
-                    title={t('pdfExport.contacts.lookupButton')}
-                  >
-                    <SearchIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                style: textColor ? { color: textColor } : undefined,
+                endAdornment: (contacts && contacts.length > 0) && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setLookupField('donorAddress');
+                        setShowLookupDialog(true);
+                      }}
+                      edge="end"
+                      title={t('pdfExport.contacts.lookupButton')}
+                    >
+                      <SearchIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
             }}
           />
           {/* Email Field */}
@@ -831,23 +897,25 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             }}
             size="small"
             sx={{ mb: 2 }}
-            InputProps={{
-              style: textColor ? { color: textColor } : undefined,
-              endAdornment: (contacts && contacts.length > 0) && (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setLookupField('donorEmail');
-                      setShowLookupDialog(true);
-                    }}
-                    edge="end"
-                    title={t('pdfExport.contacts.lookupButton')}
-                  >
-                    <SearchIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                style: textColor ? { color: textColor } : undefined,
+                endAdornment: (contacts && contacts.length > 0) && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setLookupField('donorEmail');
+                        setShowLookupDialog(true);
+                      }}
+                      edge="end"
+                      title={t('pdfExport.contacts.lookupButton')}
+                    >
+                      <SearchIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
             }}
           />
           {/* CC Email Field */}
@@ -859,8 +927,10 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             size="small"
             sx={{ mb: 2 }}
             placeholder={t('pdfExport.customFields.ccPlaceholder')}
-            InputProps={{
-              style: textColor ? { color: textColor } : undefined,
+            slotProps={{
+              input: {
+                style: textColor ? { color: textColor } : undefined,
+              },
             }}
           />
           {/* BCC Email Field */}
@@ -872,8 +942,10 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
             size="small"
             sx={{ mb: 0 }}
             placeholder={t('pdfExport.customFields.bccPlaceholder')}
-            InputProps={{
-              style: textColor ? { color: textColor } : undefined,
+            slotProps={{
+              input: {
+                style: textColor ? { color: textColor } : undefined,
+              },
             }}
           />
         </Paper>
