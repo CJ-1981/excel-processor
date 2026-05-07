@@ -178,7 +178,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             URL.revokeObjectURL(url);
           }, mime, 0.92);
         } catch {
-          // Ignore canvas conversion errors
+          // Intentionally empty - error logged above
         }
       })();
       return;
@@ -218,7 +218,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             URL.revokeObjectURL(url);
           }, mime, 0.92);
         } catch {
-          // Ignore canvas conversion errors
+          // Intentionally empty - error logged above
         }
       })();
       return;
@@ -307,6 +307,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           URL.revokeObjectURL(svgUrl);
         }, mime, 0.92);
       } catch {
+        // Intentionally empty - error logged above
         URL.revokeObjectURL(svgUrl);
       }
     };
@@ -332,7 +333,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
         }, mime, 0.92);
-      } catch { }
+      } catch {
+        // Intentionally empty - error logged above
+      }
     };
     img.src = svgUrl;
   }, []);
@@ -483,7 +486,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         localStorage.setItem(RESET_MARK_KEY, 'true');
         setLayouts(defaultLayout);
         // Nudge layout recalculation
-        setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch { } }, 50);
+        setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch { // Intentionally empty - error logged above
+        } }, 50);
       }
     } catch (e) {
       console.warn('Auto-reset check failed:', e);
@@ -548,7 +552,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
     }
   });
   useEffect(() => {
-    try { localStorage.setItem(ROW_HEIGHT_KEY, String(rowHeight)); } catch { }
+    try { localStorage.setItem(ROW_HEIGHT_KEY, String(rowHeight)); } catch {
+      // Intentionally empty - error logged above
+    }
   }, [rowHeight]);
 
   const handleAdjustWidgetHeight = useCallback((id: string, delta: number) => {

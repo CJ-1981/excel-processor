@@ -55,7 +55,7 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
     if (open) {
       setSelectedIds(new Set());
       setSearchTerm('');
-      
+
       // Auto-focus search input with a small delay to ensure dialog is fully rendered
       const timer = setTimeout(() => {
         if (searchInputRef.current) {

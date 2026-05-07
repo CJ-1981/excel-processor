@@ -654,7 +654,7 @@ describe('ExcelUploader', () => {
       expect(secondCallFiles.length).toBe(2);
 
       // Simulate removing the first file by clicking delete button
-      const deleteButtons = container.querySelectorAll('[aria-label="Delete"]') as NodeListOf<HTMLElement>;
+      const deleteButtons = container.querySelectorAll<HTMLElement>('[aria-label="Delete"]');
       if (deleteButtons.length > 0) {
         fireEvent.click(deleteButtons[0]);
 
@@ -682,22 +682,21 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [file1] } });
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
 
-      // Remove file
-      const deleteButtons = container.querySelectorAll('[aria-label="Delete"]') as NodeListOf<HTMLElement>;
-      if (deleteButtons.length > 0) {
-        fireEvent.click(deleteButtons[0]);
+      // Remove file - fail fast if delete button is missing
+      const deleteButtons = container.querySelectorAll<HTMLElement>('[aria-label="Delete"]');
+      expect(deleteButtons.length).toBeGreaterThan(0);
+      fireEvent.click(deleteButtons[0]!);
 
-        // Verify empty FileList was sent
-        const afterRemoveFiles = onFilesUpload.mock.calls[1][0] as FileList;
-        expect(afterRemoveFiles.length).toBe(0);
-      }
+      // Verify empty FileList was sent (second call)
+      const afterRemoveFiles = onFilesUpload.mock.calls[1][0] as FileList;
+      expect(afterRemoveFiles.length).toBe(0);
 
       // Upload new file - this should work correctly now
       const file2 = new File([fileContent], 'test2.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       fireEvent.change(input, { target: { files: [file2] } });
 
-      expect(onFilesUpload).toHaveBeenCalledTimes(2);
-      const newUploadFiles = onFilesUpload.mock.calls[1][0] as FileList;
+      expect(onFilesUpload).toHaveBeenCalledTimes(3); // Initial upload, delete (empty), re-upload
+      const newUploadFiles = onFilesUpload.mock.calls[2][0] as FileList;
       expect(newUploadFiles.length).toBe(1);
       expect(newUploadFiles[0].name).toBe('test2.xlsx');
       expect(newUploadFiles[0].size).toBe(fileContent.length);
@@ -803,7 +802,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [file] } });
 
       // Verify delete button has proper aria-label
-      const deleteButtons = container.querySelectorAll('[aria-label="Delete"]') as NodeListOf<HTMLElement>;
+      const deleteButtons = container.querySelectorAll<HTMLElement>('[aria-label="Delete"]');
       await waitFor(() => {
         expect(deleteButtons.length).toBeGreaterThan(0);
       });

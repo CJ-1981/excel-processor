@@ -59,9 +59,10 @@ export async function generatePDF(
           yPosition = await renderCustomDataTable(doc, dataTable, context, yPosition);
         }
         break;
-      case 'footer':
+      case 'footer': {
         renderFooter(doc, section as FooterSection, context);
         break;
+      }
       // NEW: absolute positioned sections (don't affect yPosition)
       case 'labeledField':
         renderLabeledField(doc, section as LabeledFieldSection, context);

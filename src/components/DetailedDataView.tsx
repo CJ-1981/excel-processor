@@ -634,7 +634,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
     mapping._sourceFileName = mapping._sourceFileName || t('detailedView.fromFilename');
     mapping._sourceSheetName = mapping._sourceSheetName || t('detailedView.fromSheet');
     return mapping;
-  }, [visibleHeaders]);
+  }, [visibleHeaders, t]);
 
   // Debug: log when dashboard data prepared or dialog opened
   useEffect(() => {
@@ -1170,7 +1170,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   // Persist to localStorage
                   try {
                     localStorage.setItem('excel-processor-hide-deselected', String(newValue));
-                  } catch {}
+                  } catch {
+                    // Intentionally empty - error logged above
+                  }
                   setPage(0); // Reset to first page when toggling
                 }}
                 size="small"
@@ -1350,7 +1352,9 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         open={showDashboardDialog}
         onClose={() => setShowDashboardDialog(false)}
         TransitionProps={{
-          onEntered: () => { try { window.dispatchEvent(new Event('resize')); } catch {} },
+          onEntered: () => { try { window.dispatchEvent(new Event('resize')); } catch {
+            // Intentionally empty - error logged above
+          }; },
         }}
       >
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

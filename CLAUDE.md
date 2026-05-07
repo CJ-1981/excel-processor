@@ -10,14 +10,14 @@ MoAI is the Strategic Orchestrator for Claude Code. All tasks must be delegated 
 - [HARD] Parallel Execution: Execute all independent tool calls in parallel when no dependencies exist
 - [HARD] No XML in User Responses: Never display XML tags in user-facing responses
 - [HARD] Markdown Output: Use Markdown for all user-facing communication
+- [HARD] AskUserQuestion-Only Interaction: ALL questions directed at the user MUST go through AskUserQuestion (See Section 8)
+- [HARD] Context-First Discovery: Conduct Socratic interview via AskUserQuestion when context is insufficient before executing non-trivial tasks (See Section 7)
 - [HARD] Approach-First Development: Explain approach and get approval before writing code (See Section 7)
 - [HARD] Multi-File Decomposition: Split work when modifying 3+ files (See Section 7)
 - [HARD] Post-Implementation Review: List potential issues and suggest tests after coding (See Section 7)
 - [HARD] Reproduction-First Bug Fix: Write reproduction test before fixing bugs (See Section 7)
-- [HARD] No Refusal: Never refuse explicit user requests or argue bugs are "by design" (See Section 7)
-- [HARD] No Autonomous Work: Do not start unrequested analysis, optimization, or refactoring (See Section 7)
 
-Core principles (1-4) are defined in .claude/rules/moai/core/moai-constitution.md. Development safeguards (5-10) are detailed in Section 7.
+Core principles (1-4) and six Agent Core Behaviors (consolidated cross-cutting rules) are defined in .claude/rules/moai/core/moai-constitution.md. Development safeguards (5-9) are detailed in Section 7.
 
 ### Recommendations
 
@@ -39,7 +39,7 @@ Analyze user request to determine routing:
 
 Core Skills (load when needed):
 
-- Skill("moai-foundation-claude") for orchestration patterns
+- Skill("moai-foundation-cc") for orchestration patterns
 - Skill("moai-foundation-core") for SPEC system and workflows
 - Skill("moai-workflow-project") for project management
 
@@ -76,10 +76,19 @@ Integrate and report results:
 
 Definition: Single entry point for all MoAI development workflows.
 
-Subcommands: plan, run, sync, project, fix, loop, mx, feedback, review, clean, codemaps, coverage, e2e
+Subcommands: plan, run, sync, design, db, project, fix, loop, mx, feedback, review, clean, codemaps, coverage, e2e
 Default (natural language): Routes to autonomous workflow (plan -> run -> sync pipeline)
 
-Allowed Tools: Full access (Task, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet, Bash, Read, Write, Edit, Glob, Grep)
+Allowed Tools: Full access (Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet, Bash, Read, Write, Edit, Glob, Grep)
+
+### Unified Skill: /moai design
+
+Definition: Hybrid design workflow — Claude Design (path A) or code-based brand design (path B).
+
+Subcommands: design (unified entry point)
+Default (natural language): Routes to /moai design with AskUserQuestion path selection (Claude Design vs code-based)
+
+For detailed design rules, see .claude/rules/moai/design/constitution.md
 
 ---
 
@@ -97,19 +106,31 @@ Allowed Tools: Full access (Task, AskUserQuestion, TaskCreate, TaskUpdate, TaskL
 
 spec, ddd, tdd, docs, quality, project, strategy, git
 
-### Expert Agents (9)
+### Expert Agents (8)
 
-backend, frontend, security, devops, performance, debug, testing, refactoring, chrome-extension
+backend, frontend, security, devops, performance, debug, testing, refactoring
 
 ### Builder Agents (3)
 
 agent, skill, plugin
 
-### Team Agents (8) - Experimental
+### Evaluator Agents (2)
 
-researcher, analyst, architect, designer, backend-dev, frontend-dev, tester, quality (requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+evaluator-active (independent skeptical quality assessment, 4-dimension scoring)
+plan-auditor (independent plan-phase document audit, bias prevention, EARS compliance)
 
-Both `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var AND `workflow.team.enabled: true` in `.moai/config/sections/workflow.yaml` are required.
+### Agency Agents (2) — copywriter and designer retained as fallback path B skills
+
+copywriter (absorbed into moai-domain-copywriting skill), designer (absorbed into moai-domain-brand-design skill)
+planner, builder, evaluator, learner removed in SPEC-AGENCY-ABSORB-001 M5
+
+### Dynamic Team Generation (Experimental)
+
+Agent Teams teammates are spawned dynamically using `Agent(subagent_type: "general-purpose")` with runtime parameter overrides from `workflow.yaml` role profiles. No static team agent definitions are used.
+
+Role profiles (in `workflow.yaml`): researcher, analyst, architect, implementer, tester, designer, reviewer. Each profile specifies mode, model, and isolation.
+
+Requires: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var AND `workflow.team.enabled: true` in workflow.yaml.
 
 For detailed agent descriptions, see the Agent Catalog section above. For agent creation guidelines, use the builder-agent subagent or see `.claude/rules/moai/development/agent-authoring.md`.
 
@@ -152,13 +173,25 @@ MX Tag Types:
 
 For MX protocol details, see .claude/rules/moai/workflow/mx-tag-protocol.md
 
-For team-based parallel execution of these phases, see @.claude/skills/moai/team/plan.md and @.claude/skills/moai/team/run.md.
+For team-based parallel execution of these phases, see .claude/skills/moai/team/plan.md and .claude/skills/moai/team/run.md.
 
 ---
 
 ## 6. Quality Gates
 
 For TRUST 5 framework details, see .claude/rules/moai/core/moai-constitution.md
+
+### Harness-Based Quality Routing
+
+MoAI-ADK uses a 3-level harness system for adaptive quality depth:
+
+- **minimal**: Fast validation for simple changes
+- **standard**: Default quality checks for most work
+- **thorough**: Full evaluator-active + TRUST 5 validation for complex SPECs
+
+Harness level is auto-determined by the Complexity Estimator based on SPEC scope. evaluator-active provides independent skeptical assessment with 4-dimension scoring (Functionality/Security/Craft/Consistency).
+
+**Configuration:** .moai/config/sections/harness.yaml, .moai/config/evaluator-profiles/
 
 ### LSP Quality Gates
 
@@ -169,15 +202,15 @@ MoAI-ADK implements LSP-based quality gates:
 - **run**: Zero errors, zero type errors, zero lint errors required
 - **sync**: Zero errors, max 10 warnings, clean LSP required
 
-**Configuration:** @.moai/config/sections/quality.yaml
+**Configuration:** .moai/config/sections/quality.yaml
 
 ---
 
 ## 7. Safe Development Protocol
 
-### Development Safeguards (6 HARD Rules)
+### Development Safeguards (5 HARD Rules)
 
-These rules ensure code quality, prevent regressions, and maintain predictable AI behavior.
+These rules ensure code quality and prevent regressions in the project codebase.
 
 **Rule 1: Approach-First Development**
 
@@ -211,33 +244,104 @@ When fixing bugs:
 - Fix the bug with minimal code changes
 - Verify the reproduction test passes after the fix
 
-**Rule 5: No Refusal of Explicit Requests**
+**Rule 5: Context-First Discovery**
 
-When the user reports a bug or requests a specific fix:
-- Make the requested change first
-- Explain concerns or alternatives separately after the fix
-- Never argue that a reported bug is "by design"
-- Never refuse an explicit implementation request
+When user intent is unclear, conduct Socratic interview before execution.
 
-**Rule 6: No Autonomous Work Without Request**
+Trigger conditions (any one activates discovery mode):
+- Ambiguous pronouns or demonstratives without clear referent (this, that, it, the previous one)
+- Multi-interpretable action verbs without specified scope (clean up, process, improve, fix)
+- Unclear boundaries (how far, how much, which files, where to stop)
+- Potential conflict with existing state (uncommitted changes, in-progress branches, code patterns)
 
-- Do NOT start autonomous work (analysis, optimization, refactoring) unless explicitly requested
-- Wait for user instructions before acting
-- After /clear or session resume, do NOT analyze or optimize anything autonomously
-- Exceptions: Quality gate enforcement, hook-triggered validation
+Discovery process:
+- Detect insufficient context via trigger conditions above
+- Conduct Socratic interview via AskUserQuestion (max 4 questions per round)
+- Repeat rounds with new questions based on previous answers
+- Continue until 100% intent clarity is achieved
+- Consolidate findings into a structured report
+- Present report and obtain explicit final confirmation
+- Build execution plan from confirmed intent
+- Delegate to sequential or parallel agents per plan
+
+Exceptions (no interview needed):
+- Single-line typos or formatting fixes
+- Bug fixes with explicit reproduction provided
+- Direct file reads when path is specified
+- Command invocations with all required arguments
+- Continuation of previously confirmed work in the same session
+
+Constraints:
+- Maximum 4 questions per AskUserQuestion call (Claude Code limit)
+- All questions in user's conversation_language
+- Each new round must build on previous answers
+- Final confirmation MUST be explicit before execution begins
+
+Rule sequencing:
+- Rule 5 (Discovery) executes BEFORE Rule 1 (Approach-First) chronologically
+- Rule 5 establishes WHAT the user wants
+- Rule 1 explains HOW it will be implemented
+
+### Language-Specific Guidelines
+
+The quality gate auto-detects the project language and runs the appropriate toolchain:
+- **Go**: `go vet` → `golangci-lint` → `go test`
+- **Node.js**: `eslint` → `npm test`
+- **Python**: `ruff` → `pytest`
+- **Rust**: `cargo clippy` → `cargo test`
+
+Tools that are not installed are skipped gracefully. Projects with no recognized language marker pass the gate silently.
 
 ---
 
 ## 8. User Interaction Architecture
 
+### AskUserQuestion is the ONLY User Question Channel [HARD]
+
+[HARD] Every question directed at the user MUST be asked via AskUserQuestion. Free-form prose questions in regular response text are prohibited.
+
+Applies to:
+- Clarification questions when intent is ambiguous
+- Preference/decision questions ("Which approach?", "Continue or abort?")
+- Socratic interview rounds during Context-First Discovery (Section 7 Rule 5)
+- Branch/workflow selection
+- Conflict resolution (merge strategy, rollback confirmation, etc.)
+
+Rationale:
+- Structured options are faster and less error-prone than free-form answers
+- AskUserQuestion is the only interaction channel subagents cannot use, keeping MoAI's orchestrator responsibility explicit
+- Users get consistent UX with selectable choices + automatic "Other" fallback
+
+Exceptions (free-form text questions permitted ONLY when):
+- AskUserQuestion is technically unavailable (e.g., inside a subagent — should not happen since subagents must not ask users)
+- The question is actually a statement of status, not a question
+
+### Socratic Interview via AskUserQuestion [HARD]
+
+When context is insufficient (see Section 7 Rule 5 triggers), MoAI conducts a Socratic interview using AskUserQuestion rounds.
+
+Interview rules:
+- Each round: single AskUserQuestion call with up to 4 questions, each with up to 4 options
+- All question text and option labels MUST be in user's conversation_language
+- No emoji in question text, headers, or option labels
+- Each subsequent round MUST build on previous answers, narrowing ambiguity
+- Continue rounds until intent clarity is 100%
+- Consolidate findings into a brief report BEFORE execution
+- Obtain explicit final confirmation via AskUserQuestion before irreversible actions
+
+Bias prevention:
+- The first option MUST be the recommended choice, marked "(권장)" or "(Recommended)"
+- Every option MUST include a detailed description explaining implications
+- Never phrase questions to push the user toward a specific answer
+
 ### Critical Constraint
 
-Subagents invoked via Task() operate in isolated, stateless contexts and cannot interact with users directly.
+Subagents invoked via Agent() operate in isolated, stateless contexts and CANNOT interact with users directly. They must never prompt the user — they must either succeed with provided context or return with a blocker report.
 
 ### Correct Workflow Pattern
 
 - Step 1: MoAI uses AskUserQuestion to collect user preferences
-- Step 2: MoAI invokes Task() with user choices in the prompt
+- Step 2: MoAI invokes Agent() with user choices in the prompt
 - Step 3: Subagent executes based on provided parameters
 - Step 4: Subagent returns structured response
 - Step 5: MoAI uses AskUserQuestion for next decision
@@ -253,9 +357,28 @@ In team mode, MoAI bridges user interaction and teammate coordination:
 
 ### AskUserQuestion Constraints
 
+- Maximum 4 questions per single AskUserQuestion call
 - Maximum 4 options per question
 - No emoji characters in question text, headers, or option labels
-- Questions must be in user's conversation_language
+- Questions and options must be in user's conversation_language
+- Recommended option placed first with "(권장)/(Recommended)" suffix
+- Each option MUST include a detailed description
+
+### Ambiguity Triggers — When to Invoke the Socratic Interview
+
+Any one of these triggers activates discovery mode (from Section 7 Rule 5):
+- Ambiguous pronouns or demonstratives without clear referent ("this", "that", "it", "the previous one")
+- Multi-interpretable action verbs without specified scope ("clean up", "process", "improve", "fix")
+- Unclear boundaries (how far, how much, which files, where to stop)
+- Potential conflict with existing state (uncommitted changes, in-progress branches, overlapping work)
+- Destructive/irreversible operation (force-push, reset --hard, file deletion) without explicit prior authorization
+
+Exceptions (no interview needed):
+- Single-line typos or formatting fixes
+- Bug fixes with explicit reproduction provided
+- Direct file reads when path is specified
+- Command invocations with all required arguments
+- Continuation of previously confirmed work in the same session
 
 ---
 
@@ -274,6 +397,18 @@ MoAI-ADK uses Claude Code's official rules system at `.claude/rules/moai/`:
 - **Workflow rules**: Progressive disclosure, token budget, workflow modes
 - **Development rules**: Skill frontmatter schema, tool permissions
 - **Language rules**: Path-specific rules for 16 programming languages
+- **Design rules**: Design system constitution (.claude/rules/moai/design/constitution.md)
+
+### Design System Configuration (absorbed from agency, SPEC-AGENCY-ABSORB-001)
+
+- `.moai/config/sections/design.yaml`: Design pipeline settings, GAN loop parameters, sprint contract, evolution thresholds
+- `.moai/project/brand/`: Brand voice (brand-voice.md), visual identity (visual-identity.md), target audience (target-audience.md)
+- `.claude/rules/moai/design/constitution.md`: FROZEN/EVOLVABLE zone definitions, safety architecture
+- `.moai/config/sections/constitution.yaml`: Project technical constraints (machine-readable)
+- `.moai/config/sections/harness.yaml`: Quality depth routing (minimal/standard/thorough)
+- `.moai/config/evaluator-profiles/`: Evaluator scoring profiles (default, strict, lenient, frontend)
+
+Legacy .agency/ directories are archived via `moai migrate agency` command.
 
 ### Language Rules
 
@@ -320,13 +455,15 @@ Resume interrupted agent work using agentId:
 
 ---
 
-## 12. MCP Servers & UltraThink
+## 12. MCP Servers & Deep Analysis Modes
 
 MoAI-ADK integrates multiple MCP servers for specialized capabilities:
 
-- **Sequential Thinking**: Complex problem analysis, architecture decisions, technology trade-offs. Activate with `--ultrathink` flag. See Skill("moai-workflow-thinking").
+- **Sequential Thinking** (`--deepthink` flag): MCP tool for structured step-by-step analysis. Generates `server_tool_use` content — NOT compatible with GLM API. See Skill("moai-workflow-thinking").
+- **UltraThink** (`ultrathink` keyword): Sets `effort: max` in Claude Code v2.1.110+. For claude-opus-4-7, this triggers Adaptive Thinking (dynamically allocated reasoning tokens, no fixed budget_tokens). For older models, maps to extended thinking with high budget. No MCP dependency — compatible with all APIs. Do NOT confuse with `--deepthink`.
+- **Adaptive Thinking** (claude-opus-4-7 only): Opus 4.7's thinking mode. Unlike earlier models that use `budget_tokens`, Adaptive Thinking dynamically allocates reasoning based on task complexity. Triggered via `effort` level (high/xhigh/max) — not by `budget_tokens`. See Skill("moai-workflow-thinking").
 - **Context7**: Up-to-date library documentation lookup via resolve-library-id and get-library-docs.
-- **Pencil**: UI/UX design editing for .pen files (used by expert-frontend and team-designer agents).
+- **Pencil**: UI/UX design editing for .pen files (used by expert-frontend and designer teammates).
 - **claude-in-chrome**: Browser automation for web-based tasks.
 
 For MCP configuration and usage patterns, see .claude/rules/moai/core/settings-management.md.
@@ -358,11 +495,12 @@ For core parallel execution principles, see .claude/rules/moai/core/moai-constit
 - **Loop Prevention**: Maximum 3 retries per operation with failure pattern detection and user intervention
 - **Platform Compatibility**: Always prefer Edit tool over sed/awk
 - **Team File Ownership**: In team mode, each teammate owns specific file patterns to prevent write conflicts
+- **Background Agent Write Restriction**: [HARD] Background subagents (`run_in_background: true`) auto-deny Write/Edit operations. Use `run_in_background: false` for agents that modify files. Read-only agents (research, analysis) can safely run in background.
 
 ### Worktree Isolation Rules [HARD]
 
-- [HARD] Implementation agents in team mode (team-backend-dev, team-frontend-dev, team-tester, team-designer) MUST use `isolation: "worktree"` when spawned via Task()
-- [HARD] Read-only agents (team-researcher, team-analyst, team-architect, team-quality) MUST NOT use `isolation: "worktree"`
+- [HARD] Implementation teammates in team mode (role_profiles: implementer, tester, designer) MUST use `isolation: "worktree"` when spawned via Agent()
+- [HARD] Read-only teammates (role_profiles: researcher, analyst, reviewer) MUST NOT use `isolation: "worktree"`
 - [HARD] One-shot sub-agents making cross-file changes SHOULD use `isolation: "worktree"`
 - [HARD] GitHub workflow fixer agents MUST use `isolation: "worktree"` for branch isolation
 
@@ -376,7 +514,7 @@ MoAI supports optional Agent Teams mode for parallel phase execution.
 
 ### Activation
 
-- Claude Code v2.1.32 or later
+- Claude Code v2.1.50 or later
 - Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings.json env
 - Set `workflow.team.enabled: true` in `.moai/config/sections/workflow.yaml`
 
@@ -396,7 +534,11 @@ Call TeamDelete only after all teammates have shut down to release team resource
 
 TeammateIdle (exit 2 = keep working), TaskCompleted (exit 2 = reject completion)
 
-For complete Agent Teams documentation including team API reference, agent roster, file ownership strategy, team workflows, and configuration, see .claude/rules/moai/workflow/spec-workflow.md and @.moai/config/sections/workflow.yaml.
+### Dynamic Team Generation
+
+Teammates are spawned dynamically using `Agent(subagent_type: "general-purpose")` with runtime parameter overrides. Role profiles in `workflow.yaml` define mode, model, and isolation per role type. No static team agent definition files are used.
+
+For complete Agent Teams documentation including team API reference, role profiles, file ownership strategy, team workflows, and configuration, see .claude/rules/moai/workflow/spec-workflow.md and .moai/config/sections/workflow.yaml.
 
 ### CG Mode (Claude + GLM Cost Optimization)
 
@@ -434,45 +576,54 @@ MoAI-ADK supports CG Mode for 60-70% cost reduction on implementation-heavy task
 
 ---
 
-## 16. Session Continuity
+## 16. Context Search Protocol
 
-When resuming work from a previous session, provide structured context to avoid re-exploration.
+MoAI searches previous Claude Code sessions when context is needed to continue work on existing tasks or discussions.
 
-### Resume Prompt Pattern
+### When to Search
 
-Include the following in your first message when continuing previous work:
+Search previous sessions when:
+- User references past work without sufficient context in current session
+- User mentions a SPEC-ID that is not loaded in current context
+- User asks to continue previous work or resume interrupted tasks
+- User explicitly requests to find previous discussions
 
-```
-Continuing [SPEC-ID or task description].
-Previous session completed: [what was done]
-Remaining work: [what needs to be done]
-Modified files: [list of files changed]
-Start from: [specific starting point]
-```
+### When NOT to Search
 
-### When to Use
+Skip context search when:
+- Relevant SPEC document is already loaded in current context
+- Related documents or code are already present in conversation
+- User references content that exists in current session
+- Context duplication would provide no additional value
 
-- Continuing a SPEC implementation across multiple sessions
-- Resuming after rate limit interruption
-- Picking up after /clear was executed between phases
+### Search Process
 
-### Context Sources
-
-When context is needed from previous sessions:
-1. Check SPEC document at `.moai/specs/SPEC-XXX/spec.md` for requirements
-2. Check git log for recent changes: `git log --oneline -20`
-3. Check MX scan progress: `.moai/cache/mx-scan-progress.json`
-4. Read task list if team mode was active
+1. Check if relevant context already exists in current session (skip if found)
+2. Ask user confirmation before searching (via AskUserQuestion)
+3. Use Grep to search session index and transcript files in ~/.claude/projects/
+4. Limit search to recent sessions (configurable, default 30 days)
+5. Summarize findings and present for user approval
+6. Inject approved context into current conversation (avoid duplicates)
 
 ### Token Budget
 
-- Maximum 5,000 tokens for injected context
-- Summarize lengthy previous work into key decisions and outcomes
-- Prefer referencing files over copying content
+- Maximum 5,000 tokens per injection
+- Skip search if current token usage exceeds 150,000
+- Summarize lengthy conversations to stay within budget
+
+### Manual Trigger
+
+User can explicitly request context search at any time during conversation.
+
+### Integration Notes
+
+- Complements @MX TAG system for code context
+- Automatically triggered when SPEC reference lacks context
+- Available in both solo and team modes
 
 ---
 
-## Troubleshooting
+## 17. Troubleshooting
 
 ### Debugging MoAI Sessions
 
@@ -513,9 +664,9 @@ Large PDFs (>10 pages) return a lightweight reference when @-mentioned. Always s
 
 ---
 
-Version: 13.2.0 (Usage Data Driven Improvements)
-Last Updated: 2026-02-22
+Version: 14.0.0 (Agency v3.2 + Harness Design Integration)
+Last Updated: 2026-04-03
 Language: English
 Core Rule: MoAI is an orchestrator; direct implementation is prohibited
 
-For detailed patterns on plugins, sandboxing, headless mode, and version management, see Skill("moai-foundation-claude").
+For detailed patterns on plugins, sandboxing, headless mode, and version management, see Skill("moai-foundation-cc").

@@ -74,6 +74,133 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     may: 0, jun: 0, jul: 0, aug: 0,
     sep: 0, oct: 0, nov: 0, dec: 0,
   });
+
+  // Helper functions for localStorage persistence
+  const STORAGE_KEY = 'pdfExportDefaults';
+  const SIGNATURES_STORAGE_KEY = 'excel-processor-signatures';
+
+  const loadSignaturesFromStorage = (): Record<string, string> | null => {
+    try {
+      const stored = localStorage.getItem(SIGNATURES_STORAGE_KEY);
+      if (stored) {
+        const state: SignaturesState = JSON.parse(stored);
+        return state.signatures;
+      }
+    } catch (error) {
+      console.warn('Failed to load signatures from storage:', error);
+    }
+    return null;
+  };
+
+  const saveSignaturesToStorage = (currentSignatures: Record<string, string>) => {
+    const state: SignaturesState = {
+      signatures: currentSignatures,
+      updatedAt: Date.now(),
+      version: '1.0',
+    };
+    localStorage.setItem(SIGNATURES_STORAGE_KEY, JSON.stringify(state));
+  };
+
+  /**
+   * Runtime type validation for localStorage data.
+   * Prevents type coercion and ensures data integrity.
+   */
+  const validateStoredDefaults = (data: unknown): {
+    signatureLocation?: string;
+    taxExemptionOption?: string;
+    taxNumber1?: string;
+    taxDate1?: string;
+    taxNumber2?: string;
+    taxDate2?: string;
+    taxValidFrom?: string;
+  } | null => {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+
+    const obj = data as Record<string, unknown>;
+
+    // Validate that stored values are strings if present
+    const result: Record<string, string> = {};
+
+    // Simple string fields (just type check)
+    const simpleStringFields = [
+      'signatureLocation',
+      'taxNumber1',
+      'taxDate1',
+      'taxNumber2',
+      'taxDate2',
+      'taxValidFrom'
+    ];
+
+    for (const field of simpleStringFields) {
+      if (field in obj && typeof obj[field] === 'string') {
+        result[field] = obj[field] as string;
+      }
+    }
+
+    // Enum field - validate against allowed values
+    if ('taxExemptionOption' in obj && typeof obj.taxExemptionOption === 'string') {
+      const value = obj.taxExemptionOption as string;
+      const validOptions = ['freistellungsbescheid', 'vorlaeufigeBescheinigung'];
+      if (validOptions.includes(value)) {
+        result.taxExemptionOption = value;
+      }
+      // Silently ignore invalid enum values (corrupted/old localStorage data)
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
+  };
+
+  const loadDefaultsFromStorage = () => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return validateStoredDefaults(parsed);
+      }
+    } catch (error) {
+      console.warn('Failed to load PDF export defaults from storage:', error);
+    }
+    return null;
+  };
+
+  const saveDefaultsToStorage = () => {
+    const defaults = {
+      signatureLocation,
+      taxExemptionOption,
+      taxNumber1,
+      taxDate1,
+      taxNumber2,
+      taxDate2,
+      taxValidFrom,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+  };
+
+  const clearDefaultsFromStorage = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    // Reload template defaults after clearing storage
+    if (template.customFieldDefaults) {
+      const defaults = template.customFieldDefaults;
+      const setterMap: Record<string, (value: any) => void> = {
+        signatureLocation: setSignatureLocation,
+        taxExemptionOption: setTaxExemptionOption,
+        taxNumber1: setTaxNumber1,
+        taxDate1: setTaxDate1,
+        taxNumber2: setTaxNumber2,
+        taxDate2: setTaxDate2,
+        taxValidFrom: setTaxValidFrom,
+      };
+
+      Object.entries(defaults).forEach(([key, value]) => {
+        const setter = setterMap[key];
+        if (setter && value !== undefined && value !== null) {
+          setter(value);
+        }
+      });
+    }
+  };
   const [totalAmount, setTotalAmount] = useState(0);
   const [amountInWords, setAmountInWords] = useState('');
   const [donationPeriod, setDonationPeriod] = useState('');
@@ -127,6 +254,8 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
 
   // Auto-match contacts based on donorName
   // NOTE: Cleanup function prevents memory leaks and state updates on unmounted components
+  // @MX:NOTE - isMounted guards provide forward compatibility if async operations (e.g., API calls) are added later.
+  // The effect is currently synchronous, but the guards allow safe evolution without refactoring.
   useEffect(() => {
     let isMounted = true;
 
@@ -176,19 +305,6 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
       isMounted = false;
     };
   }, [donorName, contacts, donorAddress, donorEmail]);
-
-  const loadSignaturesFromStorage = (): Record<string, string> | null => {
-    try {
-      const stored = localStorage.getItem(SIGNATURES_STORAGE_KEY);
-      if (stored) {
-        const state: SignaturesState = JSON.parse(stored);
-        return state.signatures;
-      }
-    } catch (error) {
-      console.warn('Failed to load signatures from storage:', error);
-    }
-    return null;
-  };
 
   // Load signatures from localStorage on mount (once)
   useEffect(() => {
@@ -320,13 +436,13 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
         };
 
         // Load saved values from localStorage (priority over template defaults)
-        const storedDefaults = loadDefaultsFromStorage();
 
         // Apply defaults: localStorage takes priority, then template defaults
         Object.entries(defaults).forEach(([key, value]) => {
           const setter = setterMap[key];
           if (setter) {
             // Use localStorage value if available, otherwise use template default
+            const storedDefaults = loadDefaultsFromStorage();
             // Type assertion: key is validated to be a valid key of storedDefaults
             const finalValue = storedDefaults?.[key as keyof typeof storedDefaults] ?? value;
             if (finalValue !== undefined && finalValue !== null) {
@@ -361,7 +477,7 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
           dateColumn = sourceFileDataHeader.id;
         } else {
           // Validate by sampling rows with a simple date parse regex
-          const dateLike = (val: any) => typeof val === 'string' && /(\d{4}[\/-]\d{1,2}[\/-]\d{1,2})|(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4})|(\d{8})/.test(val);
+          const dateLike = (val: any) => typeof val === 'string' && /(\d{4}[/-]\d{1,2}[/-]\d{1,2})|(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})|(\d{8})/.test(val);
           for (const header of context.visibleHeaders) {
             if (header.id === '_sourceFileName' || header.id === '_sourceSheetName') continue;
             const anyDate = selectedData.some(row => dateLike(row[header.id]));
@@ -435,111 +551,6 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
     // Recalculate total and round to 2 decimal places
     const newTotal = Object.values(newAmounts).reduce((sum, val) => sum + val, 0);
     setTotalAmount(Math.round(newTotal * 100) / 100);
-  };
-
-  // Helper functions for localStorage persistence
-  const STORAGE_KEY = 'pdfExportDefaults';
-  const SIGNATURES_STORAGE_KEY = 'excel-processor-signatures';
-
-  // Signature persistence functions
-  const saveSignaturesToStorage = (currentSignatures: Record<string, string>) => {
-    const state: SignaturesState = {
-      signatures: currentSignatures,
-      updatedAt: Date.now(),
-      version: '1.0',
-    };
-    localStorage.setItem(SIGNATURES_STORAGE_KEY, JSON.stringify(state));
-  };
-
-  const saveDefaultsToStorage = () => {
-    const defaults = {
-      signatureLocation,
-      taxExemptionOption,
-      taxNumber1,
-      taxDate1,
-      taxNumber2,
-      taxDate2,
-      taxValidFrom,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
-  };
-
-  /**
-   * Runtime type validation for localStorage data.
-   * Prevents type coercion and ensures data integrity.
-   */
-  const validateStoredDefaults = (data: unknown): {
-    signatureLocation?: string;
-    taxExemptionOption?: string;
-    taxNumber1?: string;
-    taxDate1?: string;
-    taxNumber2?: string;
-    taxDate2?: string;
-    taxValidFrom?: string;
-  } | null => {
-    if (!data || typeof data !== 'object') {
-      return null;
-    }
-
-    const obj = data as Record<string, unknown>;
-
-    // Validate that stored values are strings if present
-    const result: Record<string, string> = {};
-
-    const stringFields = [
-      'signatureLocation',
-      'taxExemptionOption',
-      'taxNumber1',
-      'taxDate1',
-      'taxNumber2',
-      'taxDate2',
-      'taxValidFrom'
-    ];
-
-    for (const field of stringFields) {
-      if (field in obj && typeof obj[field] === 'string') {
-        result[field] = obj[field] as string;
-      }
-    }
-
-    return Object.keys(result).length > 0 ? result : null;
-  };
-
-  const loadDefaultsFromStorage = () => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return validateStoredDefaults(parsed);
-      }
-    } catch (error) {
-      console.warn('Failed to load PDF export defaults from storage:', error);
-    }
-    return null;
-  };
-
-  const clearDefaultsFromStorage = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    // Reload template defaults after clearing storage
-    if (template.customFieldDefaults) {
-      const defaults = template.customFieldDefaults;
-      const setterMap: Record<string, (value: any) => void> = {
-        signatureLocation: setSignatureLocation,
-        taxExemptionOption: setTaxExemptionOption,
-        taxNumber1: setTaxNumber1,
-        taxDate1: setTaxDate1,
-        taxNumber2: setTaxNumber2,
-        taxDate2: setTaxDate2,
-        taxValidFrom: setTaxValidFrom,
-      };
-
-      Object.entries(defaults).forEach(([key, value]) => {
-        const setter = setterMap[key];
-        if (setter && value !== undefined && value !== null) {
-          setter(value);
-        }
-      });
-    }
   };
 
   // Signature upload handlers

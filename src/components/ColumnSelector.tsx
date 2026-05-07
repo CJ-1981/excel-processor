@@ -23,7 +23,6 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [selectedRowIndex, setSelectedRowIndex] = useState<number>(1);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (data.length > 0) {
       debug('ColumnSelector', 'data[0] sample:', data[0]);
@@ -78,7 +77,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
       });
 
       // Intentional: Synchronize columns state when dependencies change
-      // eslint-disable-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setColumns(allColumns);
       debug('ColumnSelector', 'allColumns built:', allColumns.length, 'options');
 

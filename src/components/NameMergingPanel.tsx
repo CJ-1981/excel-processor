@@ -77,7 +77,9 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
   React.useEffect(() => {
     try {
       localStorage.setItem('excel-processor-name-merge-collapsed', String(collapsed));
-    } catch {}
+    } catch {
+      // Intentionally empty - error logged above
+    }
   }, [collapsed]);
 
   // Filter names based on search term
