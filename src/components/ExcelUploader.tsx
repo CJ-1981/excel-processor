@@ -175,6 +175,8 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
         tabIndex={disabled ? -1 : 0}
         onKeyDown={handleKeyDown}
         sx={{
+          width: '100%',
+          boxSizing: 'border-box',
           p: { xs: 2.5, sm: 3, md: 4 },
           border: '2px dashed',
           borderColor: isDragging ? 'primary.main' : 'divider',
