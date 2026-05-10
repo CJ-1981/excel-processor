@@ -104,7 +104,7 @@ function App() {
    * Parse multiple Excel files using batch processing with progress tracking.
    * Processes files in batches of 3 to prevent memory overload and maintain UI responsiveness.
    */
-  const handleFilesUpload = async (files: FileList) => {
+  const handleFilesUpload = async (files: File[]) => {
     // If no files, reset to ready state and hide SheetSelector
     if (files.length === 0) {
       setParsedFiles([]);
@@ -116,7 +116,7 @@ function App() {
     }
 
     setStatus('parsing');
-    const fileArray = Array.from(files);
+    const fileArray = files;
 
     // Initialize progress state
     setParseProgress({
