@@ -16,7 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import type { ParsedFile, ParseProgress, NameMergeState, ExcelDataArray, ExcelRowData } from './types';
 import * as XLSX from 'xlsx';
-import { processInBatches } from './utils/batchProcessor';
+import { processInBatchesWithErrors } from './utils/batchProcessor';
 import { APP_VERSION } from './version';
 import { loadNameMergeState, applyNameMerging } from './utils/nameMergeUtils';
 import { debug, warn } from './utils/logger';
@@ -128,7 +128,7 @@ function App() {
 
     try {
       // Process files in batches of 3 for optimal performance
-      const results = await processInBatches(
+      const { successful: results, errors } = await processInBatchesWithErrors(
         fileArray,
         async (file): Promise<ParsedFile> => {
           // Read file as ArrayBuffer
@@ -170,6 +170,29 @@ function App() {
           }
         }
       );
+
+      // Update progress with any errors encountered
+      if (errors.length > 0) {
+        const formattedErrors = errors.map(err => ({
+          fileName: (err.item as File).name || 'Unknown file',
+          error: err.error instanceof Error ? err.error.message : String(err.error)
+        }));
+        
+        setParseProgress(prev => ({
+          ...prev,
+          errors: formattedErrors
+        }));
+      }
+
+      // If no files were successfully parsed but we tried to upload some, reset state
+      if (results.length === 0) {
+        if (errors.length > 0) {
+           // We have errors, alert the user and return to ready state
+           alert(`Failed to read files:\n${errors.map(e => (e.item as File).name).join(', ')}\n\nPlease ensure the files are fully downloaded if they are cloud-only (e.g. OneDrive) and try again.`);
+        }
+        setStatus('ready');
+        return;
+      }
 
       // If one file with one sheet is uploaded, auto-merge and skip selection
       if (results.length === 1 && results[0].sheets.length === 1) {
