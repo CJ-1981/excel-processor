@@ -5,16 +5,24 @@ import ExcelUploader from './ExcelUploader';
 // Mock i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, options?: any) => {
       const translations: Record<string, string> = {
         'uploader.title': 'Upload Excel Files',
         'uploader.dropFiles': 'Drop your files here',
         'uploader.dragDrop': 'Drag and drop Excel files here',
         'uploader.orClick': 'or click to browse',
         'uploader.supportedFormats': 'Supported formats: .xlsx, .xls, .csv',
-        'uploader.selectedFiles': 'Selected files: {count}',
+        'uploader.selectedFiles': 'Selected files: {{count}}',
+        'uploader.invalidFile': 'Invalid file type: {{name}}. Only .xlsx, .xls, and .csv files are supported.',
       };
-      return translations[key] || key;
+      let text = translations[key] || key;
+      if (options && options.count !== undefined) {
+        text = text.replace('{{count}}', options.count.toString());
+      }
+      if (options && options.name !== undefined) {
+        text = text.replace('{{name}}', options.name);
+      }
+      return text;
     },
   }),
 }));
@@ -71,7 +79,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [xlsxFile] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].name).toBe('test.xlsx');
     });
@@ -92,7 +100,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [xlsFile] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].name).toBe('test.xls');
     });
@@ -113,7 +121,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [csvFile] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].name).toBe('test.csv');
     });
@@ -196,7 +204,7 @@ describe('ExcelUploader', () => {
 
       // Verify onFilesUpload was called with only valid files
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(2);
 
       // Check that valid files are present
@@ -249,7 +257,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [file1, file2] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(2);
     });
   });
@@ -257,7 +265,7 @@ describe('ExcelUploader', () => {
   describe('Drag and Drop', () => {
     it('should handle successful drag and drop', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
@@ -266,62 +274,66 @@ describe('ExcelUploader', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const paper = container.querySelector('[role="button"]') as HTMLElement;
+      const paper = screen.getByRole('button', { name: /drag and drop/i });
 
       // Simulate drag events
-      const dragEnterEvent = new Event('dragenter', { bubbles: true });
-      Object.defineProperty(dragEnterEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dragEnterEvent, 'stopPropagation', { value: vi.fn() });
-
-      paper.dispatchEvent(dragEnterEvent);
-
-      const dragOverEvent = new Event('dragover', { bubbles: true });
-      Object.defineProperty(dragOverEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dragOverEvent, 'stopPropagation', { value: vi.fn() });
-
-      paper.dispatchEvent(dragOverEvent);
-
-      const dropEvent = new Event('drop', { bubbles: true });
-      Object.defineProperty(dropEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dropEvent, 'stopPropagation', { value: vi.fn() });
-      (dropEvent as any).dataTransfer = { files: [file] };
-
-      paper.dispatchEvent(dropEvent);
+      fireEvent.dragEnter(paper);
+      fireEvent.dragOver(paper);
+      fireEvent.drop(paper, {
+        dataTransfer: {
+          files: [file],
+          items: [
+            {
+              kind: 'file',
+              type: file.type,
+              getAsFile: () => file
+            }
+          ],
+          types: ['Files']
+        }
+      });
 
       // Verify files were uploaded
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].name).toBe('dragged.xlsx');
     });
 
     it('should handle drag and drop with invalid files', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
       const file = new File(['text'], 'invalid.txt', { type: 'text/plain' });
 
-      const paper = container.querySelector('[role="button"]') as HTMLElement;
+      const paper = screen.getByRole('button', { name: /drag and drop/i });
 
       // Simulate drop event with invalid file
-      const dropEvent = new Event('drop', { bubbles: true });
-      Object.defineProperty(dropEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dropEvent, 'stopPropagation', { value: vi.fn() });
-      (dropEvent as any).dataTransfer = { files: [file] };
-
-      paper.dispatchEvent(dropEvent);
+      fireEvent.drop(paper, {
+        dataTransfer: {
+          files: [file],
+          items: [
+            {
+              kind: 'file',
+              type: file.type,
+              getAsFile: () => file
+            }
+          ],
+          types: ['Files']
+        }
+      });
 
       // Verify files were not uploaded
       expect(onFilesUpload).not.toHaveBeenCalled();
-      const alert = container.querySelector('[role="alert"]') as HTMLElement;
+      const alert = screen.getByRole('alert');
       expect(alert).toBeInTheDocument();
     });
 
     it('should not handle drag and drop when disabled', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={true} />
       );
 
@@ -330,21 +342,23 @@ describe('ExcelUploader', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const paper = container.querySelector('[role="button"]') as HTMLElement;
+      const paper = screen.getByRole('button', { name: /drag and drop/i });
 
       // Simulate drag events
-      const dragEnterEvent = new Event('dragenter', { bubbles: true });
-      Object.defineProperty(dragEnterEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dragEnterEvent, 'stopPropagation', { value: vi.fn() });
-
-      paper.dispatchEvent(dragEnterEvent);
-
-      const dropEvent = new Event('drop', { bubbles: true });
-      Object.defineProperty(dropEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dropEvent, 'stopPropagation', { value: vi.fn() });
-      (dropEvent as any).dataTransfer = { files: [file] };
-
-      paper.dispatchEvent(dropEvent);
+      fireEvent.dragEnter(paper);
+      fireEvent.drop(paper, {
+        dataTransfer: {
+          files: [file],
+          items: [
+            {
+              kind: 'file',
+              type: file.type,
+              getAsFile: () => file
+            }
+          ],
+          types: ['Files']
+        }
+      });
 
       // Verify files were not uploaded
       expect(onFilesUpload).not.toHaveBeenCalled();
@@ -352,21 +366,17 @@ describe('ExcelUploader', () => {
 
     it('should show visual feedback during drag', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
-      const paper = container.querySelector('[role="button"]') as HTMLElement;
+      const paper = screen.getByRole('button', { name: /drag and drop/i });
 
       // Simulate drag enter
-      const dragEnterEvent = new Event('dragenter', { bubbles: true });
-      Object.defineProperty(dragEnterEvent, 'preventDefault', { value: vi.fn() });
-      Object.defineProperty(dragEnterEvent, 'stopPropagation', { value: vi.fn() });
+      fireEvent.dragEnter(paper);
 
-      paper.dispatchEvent(dragEnterEvent);
-
-      // Verify visual feedback is applied
-      expect(paper).toHaveStyle('border-color: primary.main');
+      // Verify visual feedback is applied (text changes)
+      expect(screen.getByText('Drop your files here')).toBeInTheDocument();
     });
   });
 
@@ -550,7 +560,7 @@ describe('ExcelUploader', () => {
 
       // Verify both files are uploaded (browsers handle duplicate names)
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(2);
     });
 
@@ -571,7 +581,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [specialFile] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].name).toBe(specialCharFileName);
     });
@@ -594,7 +604,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [longFile] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].name).toBe(longFileName);
     });
@@ -614,7 +624,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [zeroByteFile] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
-      const uploadedFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const uploadedFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(uploadedFiles.length).toBe(1);
       expect(uploadedFiles[0].size).toBe(0);
     });
@@ -641,7 +651,7 @@ describe('ExcelUploader', () => {
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
 
       // Get the FileList from first call
-      const firstCallFiles = onFilesUpload.mock.calls[0][0] as FileList;
+      const firstCallFiles = onFilesUpload.mock.calls[0][0] as File[];
       expect(firstCallFiles.length).toBe(1);
       expect(firstCallFiles[0].name).toBe('test1.xlsx');
       expect(firstCallFiles[0].size).toBe(fileContent.length);
@@ -650,7 +660,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [file1, file2] } });
       expect(onFilesUpload).toHaveBeenCalledTimes(2);
 
-      const secondCallFiles = onFilesUpload.mock.calls[1][0] as FileList;
+      const secondCallFiles = onFilesUpload.mock.calls[1][0] as File[];
       expect(secondCallFiles.length).toBe(2);
 
       // Simulate removing the first file by clicking delete button
@@ -660,7 +670,7 @@ describe('ExcelUploader', () => {
 
         // Verify onFilesUpload was called with remaining file
         expect(onFilesUpload).toHaveBeenCalledTimes(3);
-        const afterRemoveFiles = onFilesUpload.mock.calls[2][0] as FileList;
+        const afterRemoveFiles = onFilesUpload.mock.calls[2][0] as File[];
         expect(afterRemoveFiles.length).toBe(1);
         expect(afterRemoveFiles[0].name).toBe('test2.xlsx');
         expect(afterRemoveFiles[0].size).toBe(fileContent.length);
@@ -688,7 +698,7 @@ describe('ExcelUploader', () => {
       fireEvent.click(deleteButtons[0]!);
 
       // Verify empty FileList was sent (second call)
-      const afterRemoveFiles = onFilesUpload.mock.calls[1][0] as FileList;
+      const afterRemoveFiles = onFilesUpload.mock.calls[1][0] as File[];
       expect(afterRemoveFiles.length).toBe(0);
 
       // Upload new file - this should work correctly now
@@ -696,7 +706,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [file2] } });
 
       expect(onFilesUpload).toHaveBeenCalledTimes(3); // Initial upload, delete (empty), re-upload
-      const newUploadFiles = onFilesUpload.mock.calls[2][0] as FileList;
+      const newUploadFiles = onFilesUpload.mock.calls[2][0] as File[];
       expect(newUploadFiles.length).toBe(1);
       expect(newUploadFiles[0].name).toBe('test2.xlsx');
       expect(newUploadFiles[0].size).toBe(fileContent.length);
@@ -706,18 +716,18 @@ describe('ExcelUploader', () => {
   describe('Component State and UI', () => {
     it('should show appropriate UI when disabled', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={true} />
       );
 
-      const paper = container.querySelector('[role="button"]') as HTMLElement;
+      const paper = screen.getByRole('button', { name: /drag and drop/i });
       expect(paper).toHaveStyle('opacity: 0.6');
       expect(paper).toHaveStyle('cursor: not-allowed');
     });
 
     it('should update selectedFiles state correctly', async () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
@@ -726,33 +736,30 @@ describe('ExcelUploader', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = document.getElementById('excel-file-input') as HTMLInputElement;
 
       // Upload file
       fireEvent.change(input, { target: { files: [file1] } });
 
       // Verify selectedFiles state updated
-      const selectedFilesText = container.querySelector('p') as HTMLElement;
       await waitFor(() => {
-        expect(selectedFilesText).toBeInTheDocument();
-        expect(selectedFilesText.textContent).toContain('1');
+        expect(screen.getByText(/Selected files: 1/i)).toBeInTheDocument();
       });
     });
 
     it('should clear error when valid files are uploaded after error', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
       // First upload invalid file
       const invalidFile = new File(['text'], 'invalid.txt', { type: 'text/plain' });
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = document.getElementById('excel-file-input') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [invalidFile] } });
 
       // Verify error is shown
-      let alert = container.querySelector('[role="alert"]') as HTMLElement;
-      expect(alert).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
 
       // Then upload valid file
       const validFile = new File(['content'], 'valid.xlsx', {
@@ -761,13 +768,12 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [validFile] } });
 
       // Verify error is cleared
-      alert = container.querySelector('[role="alert"]') as HTMLElement;
-      expect(alert).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
     it('should handle file size formatting correctly', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
@@ -777,19 +783,18 @@ describe('ExcelUploader', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = document.getElementById('excel-file-input') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [file] } });
 
       // Verify file size is formatted correctly
-      const chipLabel = container.querySelector('.MuiChip-label') as HTMLElement;
-      expect(chipLabel).toHaveTextContent('1 KB');
+      expect(screen.getByText(/1 KB/i)).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
     it('should have appropriate ARIA labels for delete buttons', async () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
@@ -798,24 +803,23 @@ describe('ExcelUploader', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = document.getElementById('excel-file-input') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [file] } });
 
       // Verify delete button has proper aria-label
-      const deleteButtons = container.querySelectorAll<HTMLElement>('[aria-label="Delete"]');
       await waitFor(() => {
-        expect(deleteButtons.length).toBeGreaterThan(0);
+        expect(screen.getAllByLabelText('Delete').length).toBeGreaterThan(0);
       });
     });
 
     it('should be keyboard accessible', () => {
       const onFilesUpload = vi.fn();
-      const { container } = render(
+      render(
         <ExcelUploader onFilesUpload={onFilesUpload} disabled={false} />
       );
 
       // Test that Enter key triggers file selection
-      const paper = container.querySelector('[role="button"]') as HTMLElement;
+      const paper = screen.getByRole('button', { name: /drag and drop/i });
       paper.focus();
 
       // Paper should be focusable

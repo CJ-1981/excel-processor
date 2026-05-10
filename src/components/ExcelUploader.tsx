@@ -15,7 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 interface ExcelUploaderProps {
-  onFilesUpload: (files: FileList) => void;
+  onFilesUpload: (files: File[]) => void;
   disabled: boolean;
 }
 
@@ -85,10 +85,8 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
       // Store actual File objects to preserve file data
       setSelectedFiles(valid);
 
-      // Create a new FileList-like object for the callback
-      const dataTransfer = new DataTransfer();
-      valid.forEach(file => dataTransfer.items.add(file));
-      onFilesUpload(dataTransfer.files);
+      // Pass the File[] directly
+      onFilesUpload(valid);
     }
   }, [onFilesUpload]);
 
@@ -141,10 +139,16 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
     newFiles.splice(index, 1);
     setSelectedFiles(newFiles);
 
-    // Update the parent component with remaining files (actual File objects)
-    const dataTransfer = new DataTransfer();
-    newFiles.forEach(file => dataTransfer.items.add(file));
-    onFilesUpload(dataTransfer.files);
+    // Update the parent component with remaining files
+    onFilesUpload(newFiles);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleButtonClick();
+    }
   };
 
   return (
@@ -153,8 +157,23 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
         {t('uploader.title')}
       </Typography>
 
+      <input
+        accept=".xlsx, .xls, .csv"
+        style={{ display: 'none' }}
+        id="excel-file-input"
+        multiple
+        type="file"
+        onChange={handleFileInputChange}
+        disabled={disabled}
+        ref={fileInputRef}
+      />
+
       <Paper
         elevation={isDragging ? 8 : 2}
+        role="button"
+        aria-label={t('uploader.dragDrop')}
+        tabIndex={disabled ? -1 : 0}
+        onKeyDown={handleKeyDown}
         sx={{
           p: { xs: 2.5, sm: 3, md: 4 },
           border: '2px dashed',
@@ -171,16 +190,6 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
         onDrop={handleDrop}
         onClick={!disabled ? handleButtonClick : undefined}
       >
-        <input
-          accept=".xlsx, .xls, .csv"
-          style={{ display: 'none' }}
-          id="excel-file-input"
-          multiple
-          type="file"
-          onChange={handleFileInputChange}
-          disabled={disabled}
-          ref={fileInputRef}
-        />
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
           <CloudUploadOutlined
             sx={{
@@ -221,7 +230,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
                 icon={getFileIcon(file.name)}
                 label={`${file.name} (${formatFileSize(file.size)})`}
                 onDelete={(e) => handleRemoveFile(index, e)}
-                deleteIcon={<Delete />}
+                deleteIcon={<Delete aria-label="Delete" />}
                 variant="outlined"
                 size="medium"
                 sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' } }}
