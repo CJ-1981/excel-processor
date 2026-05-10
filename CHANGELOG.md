@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.3] - 2026-05-10
+
+### Fixed
+- **Browser Compatibility**: Resolved `NotReadableError` in Safari/WebKit by directly passing `File[]` arrays instead of relying on problematic `DataTransfer` object mutations.
+- **Error Handling**: Improved error capture and UI alerts when uploaded files (especially cloud-only files like OneDrive) time out or fail to read.
+- **Excel Parsing**: Upgraded `XLSX.read` to use `Uint8Array` for improved stability across various browser environments.
+- **Accessibility**: Restored and improved ARIA roles, `tabIndex`, and keyboard event handlers in `ExcelUploader`.
+- **UI Logic**: Moved hidden file input outside of the `Paper` component in `ExcelUploader` to prevent infinite click-recursion loops.
+
 ## [1.13.2] - 2026-05-07
 
 ### Fixed
