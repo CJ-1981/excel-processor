@@ -46,8 +46,11 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
   // Reset search term when dialog opens
   useEffect(() => {
     if (open) {
-      setSearchTerm(initialSearchTerm);
-      setSelectedIndex(0);
+      // Wrap in setTimeout to avoid synchronous setState
+      setTimeout(() => {
+        setSearchTerm(initialSearchTerm);
+        setSelectedIndex(0);
+      }, 0);
       // Auto-focus search input
       setTimeout(() => {
         searchInputRef.current?.focus();
@@ -163,7 +166,7 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
             {contact.address}
           </Typography>
           {contact.email && (
-            <Typography variant="caption" color="primary" noWrap display="block">
+            <Typography variant="caption" sx={(theme) => ({ color: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50', fontWeight: 600 })} noWrap display="block">
               {contact.email}
             </Typography>
           )}
@@ -177,12 +180,23 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
             />
           )}
           {isBestMatch && (
-            <Chip size="small" label={t('contacts.lookup.bestMatch')} color="primary" />
+            <Chip
+              size="small"
+              label={t('contacts.lookup.bestMatch')}
+              sx={(theme) => ({
+                bgcolor: theme.palette.mode === 'dark' ? '#1b5e20' : '#e8f5e9',
+                color: theme.palette.mode === 'dark' ? '#ffffff' : '#1b5e20',
+                border: theme.palette.mode === 'dark' ? '2px solid #4caf50' : '1px solid #2e7d32',
+                fontWeight: 700,
+                fontSize: '0.813rem',
+                height: 26,
+              })}
+            />
           )}
         </Box>
       </Paper>
     );
-  }, [searchTerm, highlightMatch, handleSelect, t]);
+  }, [searchTerm, searchResults, highlightMatch, handleSelect, t]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { height: 500 } }}>

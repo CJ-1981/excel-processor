@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, Box, Typography, ListSubheader } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import type { SelectChangeEvent } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { debug } from '../utils/logger';
@@ -168,14 +169,25 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
 
   return (
     <Box sx={{ mt: { xs: 2, sm: 2.5, md: 3 }, width: '100%' }}>
-      <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+      <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' }, fontWeight: 600 }}>
         {t('columnSelector.title')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 1, sm: 1.5 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
         {t('columnSelector.subtitle')}
       </Typography>
-      <FormControl fullWidth>
-        <InputLabel id="column-select-label">{t('columnSelector.label')}</InputLabel>
+      <FormControl 
+        fullWidth
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 2,
+            bgcolor: 'surface',
+            '& fieldset': { borderColor: 'hairlineStrong' },
+            '&:hover fieldset': { borderColor: 'primary.main' },
+            '&.Mui-focused fieldset': { borderColor: 'primary.dark', borderWidth: '2px' }
+          }
+        }}
+      >
+        <InputLabel id="column-select-label" sx={{ color: 'steel' }}>{t('columnSelector.label')}</InputLabel>
         <Select
           labelId="column-select-label"
           id="column-select"
@@ -186,18 +198,52 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ data, onColumnSelect })
             PaperProps: {
               sx: {
                 maxHeight: { xs: 400, sm: 500, md: 600 },
+                borderRadius: 2,
+                boxShadow: '0px 12px 24px -4px rgba(0, 30, 43, 0.12)',
+                mt: 1
               }
             }
           }}
         >
           {Object.entries(groupedColumns).flatMap(([rowNum, cols]) => [
-            <ListSubheader key={`header-${rowNum}`} sx={{ bgcolor: 'grey.100', fontWeight: 'bold', fontSize: { xs: '0.85rem', sm: '0.9rem' } }}>
+            <ListSubheader 
+              key={`header-${rowNum}`} 
+              sx={{ 
+                bgcolor: 'surface', 
+                fontWeight: 800, 
+                fontSize: '0.7rem', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'steel',
+                lineHeight: '32px'
+              }}
+            >
               {t('columnSelector.row', { number: rowNum })}
             </ListSubheader>,
             ...cols.map((column) => (
-              <MenuItem key={`${column.rowIndex}-${column.original}`} value={`${column.rowIndex}-${column.original}`}>
+              <MenuItem 
+                key={`${column.rowIndex}-${column.original}`} 
+                value={`${column.rowIndex}-${column.original}`}
+                sx={{
+                  py: 1,
+                  px: 2,
+                  '&.Mui-selected': {
+                    bgcolor: (theme) => alpha(theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50', 0.1),
+                    color: (theme) => theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: (theme) => alpha(theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50', 0.2) }
+                  }
+                }}
+
+              >
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: column.value !== '(empty)' ? 'bold' : 'normal', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: column.original === selectedColumn ? 600 : 400,
+                      fontSize: { xs: '0.8rem', sm: '0.875rem' } 
+                    }}
+                  >
                     {column.display}
                   </Typography>
                 </Box>

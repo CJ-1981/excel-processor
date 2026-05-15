@@ -20,6 +20,7 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
@@ -53,8 +54,11 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
   // Reset selection and focus when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedIds(new Set());
-      setSearchTerm('');
+      // Wrap in setTimeout to avoid synchronous setState
+      setTimeout(() => {
+        setSelectedIds(new Set());
+        setSearchTerm('');
+      }, 0);
 
       // Auto-focus search input with a small delay to ensure dialog is fully rendered
       const timer = setTimeout(() => {
@@ -174,21 +178,43 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { height: 600 } }}>
-        <DialogTitle>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="md" 
+        fullWidth 
+        PaperProps={{ 
+          sx: { 
+            height: 700,
+            borderRadius: 2,
+            bgcolor: 'background.paper'
+          } 
+        }}
+      >
+        <DialogTitle sx={{ p: 3, borderBottom: '1px solid', borderColor: 'hairline' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">{t('contacts.manage.title')}</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>{t('contacts.manage.title')}</Typography>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
               <Chip
                 label={t('contacts.manage.totalCount', { count: contacts.length })}
-                color="primary"
+                sx={(theme) => ({
+                  bgcolor: theme.palette.mode === 'dark' ? '#1976d2' : '#e3f2fd',
+                  color: theme.palette.mode === 'dark' ? '#ffffff' : '#0d47a1',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: theme.palette.mode === 'dark' ? '2px solid #42a5f5' : '1px solid #1976d2',
+                  fontSize: '0.813rem',
+                  height: 26,
+                })}
                 size="small"
               />
               <Button
+                variant="outlined"
                 size="small"
                 startIcon={<DownloadIcon />}
                 onClick={handleExportCSV}
                 disabled={contacts.length === 0}
+                sx={{ borderRadius: 9999, borderColor: 'hairlineStrong', color: 'text.secondary' }}
               >
                 {t('contacts.manage.export')}
               </Button>
@@ -196,8 +222,8 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
-          <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 3, bgcolor: 'background.default' }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
             <TextField
               fullWidth
               autoFocus
@@ -209,23 +235,26 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon color="action" fontSize="small" />
+                    <SearchIcon sx={{ color: 'steel' }} fontSize="small" />
                   </InputAdornment>
                 ),
               }}
               sx={{ 
-                '& .MuiInputBase-input': {
-                  caretColor: 'auto !important',
-                  color: 'inherit',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  bgcolor: 'background.paper',
+                  height: 44,
+                  '& fieldset': { borderColor: 'hairlineStrong' },
                 }
               }}
             />
             {selectedIds.size > 0 && (
               <Button
-                variant="outlined"
+                variant="contained"
                 color="error"
                 startIcon={<DeleteIcon />}
                 onClick={handleDeleteSelected}
+                sx={{ borderRadius: 9999, px: 3, fontWeight: 700, whiteSpace: 'nowrap' }}
               >
                 {t('contacts.manage.deleteSelected', { count: selectedIds.size })}
               </Button>
@@ -235,42 +264,73 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
               color="error"
               onClick={handleDeleteAll}
               disabled={contacts.length === 0}
+              sx={{ borderRadius: 9999, px: 3, fontWeight: 700, whiteSpace: 'nowrap', borderColor: 'error.light' }}
             >
               {t('contacts.manage.deleteAll')}
             </Button>
           </Box>
 
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
             {t('contacts.manage.showingCount', {
               count: filteredContacts.length,
               total: contacts.length,
             })}
           </Typography>
 
-          <TableContainer component={Paper} sx={{ flex: 1, overflow: 'auto' }}>
+          <TableContainer 
+            component={Paper} 
+            elevation={0}
+            sx={{ 
+              flex: 1, 
+              overflow: 'auto',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'hairline',
+              bgcolor: 'background.paper'
+            }}
+          >
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell padding="checkbox" sx={{ width: 50 }}>
+                  <TableCell padding="checkbox" sx={{ width: 50, bgcolor: 'surface', borderBottom: '1px solid', borderColor: 'hairline' }}>
                     <Checkbox
                       indeterminate={someSelected}
                       checked={allSelected}
                       onChange={(e) => handleSelectAll(e.target.checked)}
+                      sx={(theme) => ({
+                        color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                        '&.Mui-checked': {
+                          color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                        },
+                        '&.MuiCheckbox-indeterminate': {
+                          color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                        },
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(76, 175, 80, 0.08)'
+                            : 'rgba(46, 125, 50, 0.08)',
+                        },
+                        '&.Mui-checked:hover': {
+                          backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(76, 175, 80, 0.16)'
+                            : 'rgba(46, 125, 50, 0.16)',
+                        },
+                      })}
                     />
                   </TableCell>
-                  <TableCell sx={{ width: 60 }} />
-                  <TableCell>{t('contacts.manage.koreanName')}</TableCell>
-                  <TableCell>{t('contacts.manage.englishName')}</TableCell>
-                  <TableCell>{t('contacts.manage.address')}</TableCell>
-                  <TableCell>{t('contacts.manage.email')}</TableCell>
-                  <TableCell>{t('contacts.manage.source')}</TableCell>
+                  <TableCell sx={{ width: 60, bgcolor: 'surface', borderBottom: '1px solid', borderColor: 'hairline' }} />
+                  <TableCell sx={{ bgcolor: 'surface', fontWeight: 700, color: 'text.primary', borderBottom: '1px solid', borderColor: 'hairline' }}>{t('contacts.manage.koreanName')}</TableCell>
+                  <TableCell sx={{ bgcolor: 'surface', fontWeight: 700, color: 'text.primary', borderBottom: '1px solid', borderColor: 'hairline' }}>{t('contacts.manage.englishName')}</TableCell>
+                  <TableCell sx={{ bgcolor: 'surface', fontWeight: 700, color: 'text.primary', borderBottom: '1px solid', borderColor: 'hairline' }}>{t('contacts.manage.address')}</TableCell>
+                  <TableCell sx={{ bgcolor: 'surface', fontWeight: 700, color: 'text.primary', borderBottom: '1px solid', borderColor: 'hairline' }}>{t('contacts.manage.email')}</TableCell>
+                  <TableCell sx={{ bgcolor: 'surface', fontWeight: 700, color: 'text.primary', borderBottom: '1px solid', borderColor: 'hairline' }}>{t('contacts.manage.source')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                      <Typography color="text.secondary">
+                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                      <Typography color="text.secondary" variant="body1">
                         {searchTerm ? t('contacts.manage.noSearchResults') : t('contacts.manage.noContacts')}
                       </Typography>
                     </TableCell>
@@ -282,42 +342,74 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
                       hover
                       selected={selectedIds.has(contact.id)}
                       onClick={() => handleToggleSelect(contact.id)}
-                      sx={{ cursor: 'pointer' }}
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&.Mui-selected': {
+                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                          '&:hover': { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12) }
+                        }
+                      }}
                     >
-                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()} sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
                         <Checkbox
                           checked={selectedIds.has(contact.id)}
                           onChange={() => handleToggleSelect(contact.id)}
+                          sx={(theme) => ({
+                            color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                            '&.Mui-checked': {
+                              color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                            },
+                            '&:hover': {
+                              backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(76, 175, 80, 0.08)'
+                                : 'rgba(46, 125, 50, 0.08)',
+                            },
+                            '&.Mui-checked:hover': {
+                              backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(76, 175, 80, 0.16)'
+                                : 'rgba(46, 125, 50, 0.16)',
+                            },
+                          })}
                         />
                       </TableCell>
-                      <TableCell>
-                        <PersonIcon color="action" fontSize="small" />
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
+                        <PersonIcon sx={{ color: 'steel' }} fontSize="small" />
                       </TableCell>
-                      <TableCell>{contact.koreanName || '-'}</TableCell>
-                      <TableCell>{contact.englishName}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft', fontWeight: 600 }}>{contact.koreanName || '-'}</TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft', fontWeight: 600 }}>{contact.englishName}</TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
                         <Typography
                           variant="body2"
                           noWrap
-                          sx={{ maxWidth: 300 }}
+                          sx={{ maxWidth: 250, color: 'text.secondary' }}
                           title={contact.address}
                         >
                           {contact.address}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
                         <Typography
                           variant="body2"
                           noWrap
-                          sx={{ maxWidth: 200 }}
+                          sx={{ maxWidth: 180, color: 'primary.main', fontWeight: 600 }}
                           title={contact.email || ''}
                         >
                           {contact.email || '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
                         {contact.sourceFile && (
-                          <Chip size="small" label={contact.sourceFile} variant="outlined" />
+                          <Chip 
+                            size="small" 
+                            label={contact.sourceFile} 
+                            variant="outlined" 
+                            sx={{ 
+                              fontSize: '0.65rem', 
+                              height: 20, 
+                              borderColor: 'hairlineStrong',
+                              color: 'text.secondary'
+                            }} 
+                          />
                         )}
                       </TableCell>
                     </TableRow>
@@ -328,8 +420,30 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
           </TableContainer>
 
           {contacts.length > 0 && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="caption">
+            <Alert
+              severity="info"
+              sx={(theme) => ({
+                mt: 3,
+                borderRadius: 2,
+                backgroundColor: theme.palette.mode === 'dark' ? '#0d47a1' : '#e3f2fd',
+                border: theme.palette.mode === 'dark' ? '2px solid #42a5f5' : '1px solid #1976d2',
+                color: theme.palette.mode === 'dark' ? '#ffffff' : '#0d47a1',
+                '& .MuiAlert-icon': {
+                  color: theme.palette.mode === 'dark' ? '#42a5f5' : '#1976d2',
+                },
+                '& .MuiAlert-message': {
+                  color: theme.palette.mode === 'dark' ? '#ffffff' : '#0d47a1',
+                  fontWeight: 600,
+                },
+              })}
+            >
+              <Typography
+                variant="body2"
+                sx={(theme) => ({
+                  fontWeight: 600,
+                  color: theme.palette.mode === 'dark' ? '#ffffff' : '#0d47a1',
+                })}
+              >
                 {t('contacts.manage.lastImport', {
                   date: new Date(contacts[0].createdAt).toLocaleDateString(),
                 })}
@@ -338,8 +452,15 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
           )}
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose}>{t('common.close')}</Button>
+        <DialogActions sx={{ p: 2.5, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'hairline' }}>
+          <Button 
+            onClick={onClose} 
+            variant="contained" 
+            color="primary" 
+            sx={{ borderRadius: 9999, px: 4, fontWeight: 700 }}
+          >
+            {t('common.close')}
+          </Button>
         </DialogActions>
       </Dialog>
 

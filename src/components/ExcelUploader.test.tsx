@@ -401,7 +401,7 @@ describe('ExcelUploader', () => {
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
 
       // Verify the rendered file name is escaped, not executed
-      const chipLabel = container.querySelector('span.MuiChip-label') as HTMLElement;
+      const chipLabel = container.querySelector('[data-testid="file-chip"] span.MuiChip-label') as HTMLElement;
       await waitFor(() => {
         expect(chipLabel).toBeInTheDocument();
         expect(chipLabel.innerHTML).toContain('&lt;script&gt;alert("XSS")&lt;/script&gt;');
@@ -429,7 +429,7 @@ describe('ExcelUploader', () => {
       expect(onFilesUpload).toHaveBeenCalledTimes(1);
 
       // Verify the rendered file name is escaped
-      const chipLabel = container.querySelector('span.MuiChip-label') as HTMLElement;
+      const chipLabel = container.querySelector('[data-testid="file-chip"] span.MuiChip-label') as HTMLElement;
       await waitFor(() => {
         expect(chipLabel).toBeInTheDocument();
         expect(chipLabel.innerHTML).toContain('javascript:alert("XSS")-malicious');
@@ -454,7 +454,7 @@ describe('ExcelUploader', () => {
       fireEvent.change(input, { target: { files: [scriptFile] } });
 
       // Verify the file name is rendered as escaped HTML, not executed
-      const chipLabel = container.querySelector('span.MuiChip-label') as HTMLElement;
+      const chipLabel = container.querySelector('[data-testid="file-chip"] span.MuiChip-label') as HTMLElement;
       await waitFor(() => {
         expect(chipLabel).toBeInTheDocument();
 

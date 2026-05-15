@@ -19,6 +19,7 @@ import {
   Button,
   Chip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -62,14 +63,32 @@ function EnhancedTableHead(props: {
 
   return (
     <TableHead>
-      <TableRow>
-        <TableCell padding="checkbox">
+      <TableRow sx={{ bgcolor: 'surface' }}>
+        <TableCell padding="checkbox" sx={{ bgcolor: 'surface', borderBottom: '1px solid', borderColor: 'hairline' }}>
           <Checkbox
-            color="primary"
             indeterminate={numSelected > 0 && numSelected < rowCount}
             checked={rowCount > 0 && numSelected === rowCount}
             onChange={onSelectAllClick}
             inputProps={{ 'aria-label': 'select all names' }}
+            sx={(theme) => ({
+              color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+              '&.Mui-checked': {
+                color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+              },
+              '&.MuiCheckbox-indeterminate': {
+                color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+              },
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'dark'
+                  ? 'rgba(76, 175, 80, 0.08)'
+                  : 'rgba(46, 125, 50, 0.08)',
+              },
+              '&.Mui-checked:hover': {
+                backgroundColor: theme.palette.mode === 'dark'
+                  ? 'rgba(76, 175, 80, 0.16)'
+                  : 'rgba(46, 125, 50, 0.16)',
+              },
+            })}
           />
         </TableCell>
         {defaultHeadCells.map((headCell: HeadCell) => (
@@ -78,11 +97,26 @@ function EnhancedTableHead(props: {
             align={headCell.numeric ? 'right' : 'left'}
             padding="normal"
             sortDirection={orderBy === headCell.id ? order : false}
+            sx={{ 
+              bgcolor: 'surface', 
+              fontWeight: 600, 
+              color: 'text.primary',
+              borderBottom: '1px solid',
+              borderColor: 'hairline'
+            }}
           >
             <TableSortLabel
               active={orderBy === headCell.id}
               direction={orderBy === headCell.id ? order : 'asc'}
               onClick={createSortHandler(headCell.id)}
+              sx={(theme) => ({
+                '&.Mui-active': {
+                  color: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50',
+                },
+                '& .MuiTableSortLabel-icon': {
+                  color: `${theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50'} !important`,
+                },
+              })}
             >
               {headCell.label}
             </TableSortLabel>
@@ -302,7 +336,7 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon />
+              <SearchIcon sx={{ color: 'steel' }} />
             </InputAdornment>
           ),
           endAdornment: searchTerm && (
@@ -313,12 +347,39 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
             </InputAdornment>
           ),
         }}
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: 3,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 2, // rounded.md (8px)
+            height: 44,
+            bgcolor: 'surface',
+            '& fieldset': {
+              borderColor: 'hairlineStrong',
+            },
+            '&:hover fieldset': {
+              borderColor: 'primary.main',
+            },
+            '&.Mui-focused fieldset': {
+              borderWidth: '2px',
+              borderColor: 'primary.dark',
+            },
+          }
+        }}
       />
 
       {/* Selected Names Panel - Collapsible */}
       {selectedNames.length > 0 && (
-        <Paper sx={{ p: 1.5, mb: 2, bgcolor: 'action.hover' }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: 2, 
+            mb: 3, 
+            bgcolor: 'surfaceFeature', 
+            border: '1px solid',
+            borderColor: 'primary.main',
+            borderRadius: 1
+          }}
+        >
           <Box
             sx={{
               display: 'flex',
@@ -328,14 +389,18 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
             }}
             onClick={() => setShowSelectedExpanded(!showSelectedExpanded)}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Chip
                 size="small"
                 label={`${selectedNames.length} ${t('uniqueNames.selected')}`}
-                color="primary"
+                sx={{ 
+                  bgcolor: 'secondary.main', 
+                  color: 'white',
+                  fontWeight: 600
+                }}
               />
               {searchTerm && selectedMatchingSearch > 0 && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                   ({t('uniqueNames.matchSearch', { count: selectedMatchingSearch })})
                 </Typography>
               )}
@@ -343,11 +408,12 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Button
                 size="small"
+                variant="text"
                 onClick={(e) => {
                   e.stopPropagation();
                   onNamesSelect([]);
                 }}
-                color="error"
+                sx={{ color: 'error.main', fontWeight: 600 }}
               >
                 {t('uniqueNames.clearAll')}
               </Button>
@@ -360,30 +426,60 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
           <Collapse in={showSelectedExpanded}>
             <Box
               sx={{
-                mt: 1.5,
+                mt: 2,
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: 0.5,
-                maxHeight: 150,
+                gap: 1,
+                maxHeight: 200,
                 overflowY: 'auto',
+                p: 0.5
               }}
             >
-              {selectedNamesSorted.map((name) => (
-                <Chip
-                  key={name}
-                  label={name}
-                  size="small"
-                  onDelete={() => handleClick({ stopPropagation: () => {} } as any, name)}
-                  sx={{
-                    maxWidth: 200,
-                    '& .MuiChip-label': {
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    },
-                  }}
-                />
-              ))}
+              {selectedNamesSorted.map((name, idx) => {
+                // Cycle through category colors for a colorful look
+                const categoryColors = ['#7E57C2', '#FF7043', '#00684A', '#42A5F5', '#EC407A'];
+                const color = categoryColors[idx % categoryColors.length];
+
+                return (
+                  <Chip
+                    key={name}
+                    label={name}
+                    size="medium"
+                    onDelete={() => handleClick({ stopPropagation: () => {} } as any, name)}
+                    sx={(theme) => ({
+                      maxWidth: 250,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#ffffff',
+                      px: 0.5,
+                      borderRadius: 9999, // Pill shape
+                      border: '1px solid',
+                      borderColor: theme.palette.mode === 'light' ? '#e0e0e0' : '#404040',
+                      boxShadow: theme.palette.mode === 'light' ? '0px 1px 3px rgba(0, 30, 43, 0.08)' : 'none',
+                      '& .MuiChip-label': {
+                        fontWeight: 600,
+                        color: theme.palette.mode === 'dark' ? '#e0e0e0' : '#1f2937',
+                        pl: 2
+                      },
+                      '& .MuiChip-deleteIcon': {
+                        color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6b7280',
+                        '&:hover': { color: theme.palette.mode === 'dark' ? '#ef4444' : '#dc2626' }
+                      },
+                      '&::before': {
+                        content: '""',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        bgcolor: color,
+                        ml: 1.5,
+                        flexShrink: 0
+                      },
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.mode === 'light' ? '#f5f7f7' : alpha('#FFFFFF', 0.05),
+                        borderColor: color
+                      }
+                    })}
+                  />
+                );
+              })}
             </Box>
           </Collapse>
         </Paper>
@@ -399,8 +495,14 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
             <Chip
               size="small"
               label={`${selectedMatchingSearch} ${t('uniqueNames.selected')}`}
-              color="primary"
-              variant="outlined"
+              sx={(theme) => ({
+                bgcolor: theme.palette.mode === 'dark' ? '#1b5e20' : '#e8f5e9',
+                color: theme.palette.mode === 'dark' ? '#ffffff' : '#1b5e20',
+                border: theme.palette.mode === 'dark' ? '2px solid #4caf50' : '1px solid #2e7d32',
+                fontWeight: 700,
+                fontSize: '0.813rem',
+                height: 26,
+              })}
             />
           )}
           <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
@@ -425,8 +527,18 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
         </Box>
       )}
 
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <TableContainer>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          width: '100%', 
+          mb: 2, 
+          borderRadius: 2, 
+          overflow: 'hidden',
+          border: '1px solid',
+          borderColor: 'hairline'
+        }}
+      >
+        <TableContainer sx={{ maxHeight: 600 }}>
           <Table stickyHeader aria-label="unique names table">
             <EnhancedTableHead
               numSelected={selectedNames.length}
@@ -450,17 +562,51 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
                     tabIndex={-1}
                     key={name}
                     selected={isItemSelected}
-                    sx={{ cursor: 'pointer' }}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&.Mui-selected': {
+                        bgcolor: alpha('#00ED64', 0.08),
+                        '&:hover': {
+                          bgcolor: alpha('#00ED64', 0.12),
+                        }
+                      }
+                    }}
                   >
-                    <TableCell padding="checkbox">
+                    <TableCell padding="checkbox" sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
                       <Checkbox
-                        color="primary"
                         checked={isItemSelected}
-                        inputProps={{ 'aria-labelledby': labelId }}
+                        slotProps={{ input: { 'aria-labelledby': labelId } }}
+                        sx={(theme) => ({
+                          color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                          '&.Mui-checked': {
+                            color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                          },
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark'
+                              ? 'rgba(76, 175, 80, 0.08)'
+                              : 'rgba(46, 125, 50, 0.08)',
+                          },
+                          '&.Mui-checked:hover': {
+                            backgroundColor: theme.palette.mode === 'dark'
+                              ? 'rgba(76, 175, 80, 0.16)'
+                              : 'rgba(46, 125, 50, 0.16)',
+                          },
+                        })}
                       />
                     </TableCell>
-                    <TableCell component="th" id={labelId} scope="row" sx={{ minWidth: 150 }}>
-                      <Typography noWrap>{name}</Typography>
+                    <TableCell 
+                      component="th" 
+                      id={labelId} 
+                      scope="row" 
+                      sx={{ 
+                        minWidth: 150,
+                        borderBottom: '1px solid',
+                        borderColor: 'hairlineSoft'
+                      }}
+                    >
+                      <Typography noWrap sx={{ fontWeight: isItemSelected ? 600 : 400 }}>
+                        {name}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 );
@@ -474,13 +620,14 @@ const UniqueNameList: React.FC<UniqueNameListProps> = ({ data, nameColumn, heade
           </Table>
         </TableContainer>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           component="div"
-          count={displayedNames.length} // Use displayedNames.length for count
+          count={displayedNames.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{ borderTop: '1px solid', borderColor: 'hairline' }}
         />
       </Paper>
     </Box>

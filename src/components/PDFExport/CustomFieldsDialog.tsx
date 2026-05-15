@@ -781,7 +781,14 @@ export const CustomFieldsDialog: React.FC<CustomFieldsDialogProps> = ({
               </IconButton>
             )}
             {onContactsManageClick && contacts && contacts.length > 0 && (
-              <Badge badgeContent={contacts.length} color="primary">
+              <Badge
+                badgeContent={contacts.length}
+                sx={(theme) => ({
+                  '& .MuiBadge-badge': {
+                    backgroundColor: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50',
+                  },
+                })}
+              >
                 <IconButton
                   size="small"
                   onClick={onContactsManageClick}

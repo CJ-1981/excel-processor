@@ -14,11 +14,11 @@ import {
   Checkbox,
   ToggleButtonGroup,
   ToggleButton,
-  Chip,
   IconButton,
   Button,
   Switch,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
@@ -1053,22 +1053,37 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   return (
     <Box sx={{ width: '100%', p: 2 }}>
       {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, bgcolor: 'secondary.main', p: 4, borderRadius: 2, color: 'white' }}>
         <Box>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
             {t('dashboard.title')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body1" sx={{ opacity: 0.8 }}>
             {t('dashboard.showingRows', { count: analysis.metadata.filteredRows })}
             {analysis.metadata.dateRange && (
-              <> {t('dashboard.fromTo', { start: formatDateGerman(analysis.metadata.dateRange.start), end: formatDateGerman(analysis.metadata.dateRange.end) })}</>
+              <> • {t('dashboard.fromTo', { start: formatDateGerman(analysis.metadata.dateRange.start), end: formatDateGerman(analysis.metadata.dateRange.end) })}</>
             )}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           {/* Date column selector */}
           {!useFilenameDates && (
-            <FormControl size="small" sx={{ minWidth: 180 }}>
+            <FormControl 
+              size="small" 
+              sx={{ 
+                minWidth: 180,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 9999,
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                  '&:hover fieldset': { borderColor: 'white' },
+                  '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                },
+                '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                '& .MuiSelect-icon': { color: 'white' }
+              }}
+            >
               <InputLabel>{t('dashboard.dateColumn')}</InputLabel>
               <Select
                 value={selectedDateColumn || ''}
@@ -1080,20 +1095,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 </MenuItem>
                 {availableDateColumns.map((col) => (
                   <MenuItem key={col} value={col}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ flex: 1 }}>
-                        {columnMapping[col] || col}
-                      </Typography>
-                      {availableDateColumns.length > 0 && !availableDateColumns.includes(col) && (
-                        <Chip
-                          label={t('dashboard.notDate')}
-                          size="small"
-                          variant="outlined"
-                          color="warning"
-                          sx={{ fontSize: '0.7rem', height: 20, '& .MuiChip-label': { fontSize: '0.65rem' } }}
-                        />
-                      )}
-                    </Box>
+                    {columnMapping[col] || col}
                   </MenuItem>
                 ))}
               </Select>
@@ -1105,19 +1107,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                 checked={anonymizeNames}
                 onChange={(e) => setAnonymizeNames(e.target.checked)}
                 size="small"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: 'primary.main' }
+                }}
               />
             }
-            label={<Typography variant="body2">{t('dashboard.anonymizeNames')}</Typography>}
+            label={<Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>{t('dashboard.anonymizeNames')}</Typography>}
           />
         </Box>
       </Box>
 
-      {/* Column Selectors */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
+      {/* Configuration Panel */}
+      <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 2, border: '1px solid', borderColor: 'hairline' }}>
+        <Typography variant="subtitle1" sx={{ mb: 2.5, fontWeight: 700, color: 'text.primary' }}>
           {t('dashboard.configureCharts')}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
           {hasFilenameDates && (
             <FormControlLabel
               control={
@@ -1130,22 +1136,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                   size="small"
                 />
               }
-              label={t('dashboard.useFilenameDates')}
+              label={<Typography variant="body2" sx={{ fontWeight: 500 }}>{t('dashboard.useFilenameDates')}</Typography>}
             />
           )}
         </Box>
 
-        {/* Selected columns as chips with drag-drop and toggle */}
+        {/* Selected columns as chips */}
         {(selectedValueColumns || []).length > 0 && (
           <Box sx={{
-            mt: 2,
-            p: 1.5,
-            borderRadius: 1,
-            bgcolor: 'action.hover',
-            border: '1px dashed',
-            borderColor: 'divider',
+            p: 2,
+            borderRadius: 2,
+            bgcolor: 'surface',
+            border: '1px solid',
+            borderColor: 'hairlineSoft',
           }}>
-            <Typography variant="caption" sx={{ width: '100%', mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <Typography variant="caption" sx={{ width: '100%', mb: 1.5, display: 'block', color: 'steel', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {t('dashboard.dataSeries')}
             </Typography>
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -1157,7 +1162,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                     sx={{
                       display: 'flex',
                       flexWrap: 'wrap',
-                      gap: 1.5,
+                      gap: 2,
                       alignItems: 'center',
                     }}
                   >
@@ -1173,49 +1178,72 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                               sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 0.5,
-                                opacity: isHidden ? 0.4 : 1,
-                                transition: 'opacity 0.2s',
+                                gap: 1,
+                                opacity: isHidden ? 0.5 : 1,
+                                bgcolor: (theme) => theme.palette.mode === 'light' ? 'background.paper' : alpha('#FFFFFF', 0.1),
+                                px: 2,
+                                py: 0.75,
+                                borderRadius: 9999,
+                                border: '1px solid',
+                                borderColor: isHidden ? 'hairlineStrong' : color,
+                                boxShadow: (theme) => theme.palette.mode === 'light' ? '0px 1px 2px rgba(0, 30, 43, 0.05)' : 'none',
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                  bgcolor: (theme) => theme.palette.mode === 'light' ? '#f5f7f7' : alpha('#FFFFFF', 0.15),
+                                }
                               }}
                             >
                               <Box
                                 {...provided.dragHandleProps}
-                                sx={{ display: 'flex', alignItems: 'center', cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
+                                sx={{ display: 'flex', alignItems: 'center', cursor: 'grab' }}
                               >
-                                <DragHandleIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                                <DragHandleIcon fontSize="small" sx={{ color: 'steel' }} />
                               </Box>
-                              <input
-                                type="color"
-                                value={color}
-                                onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
-                                style={{ width: 20, height: 20, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
-                              />
-                              <Chip
-                                label={columnMapping[col] || col}
-                                onClick={() => handleToggleColumnVisibility(col)}
-                                onDelete={() => handleRemoveColumn(col)}
-                                size="small"
+                              <Box
                                 sx={{
-                                  bgcolor: isHidden ? 'grey.200' : color + '15',
-                                  border: `1px solid ${isHidden ? 'grey.400' : color + '40'}`,
-                                  color: isHidden ? 'text.secondary' : color,
-                                  fontWeight: 500,
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  bgcolor: color,
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  '& input': {
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    opacity: 0,
+                                    cursor: 'pointer'
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="color"
+                                  value={color}
+                                  onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
+                                />
+                              </Box>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  fontWeight: 700, 
+                                  color: isHidden ? 'text.disabled' : 'text.primary',
                                   cursor: 'pointer',
                                   userSelect: 'none',
-                                  '&:hover': {
-                                    bgcolor: isHidden ? 'grey.300' : color + '25',
-                                  },
-                                  '& .MuiChip-deleteIcon': {
-                                    color: isHidden ? 'text.secondary' : color,
-                                    opacity: 0.7,
-                                    '&:hover': {
-                                      color: isHidden ? 'text.primary' : color,
-                                      opacity: 1,
-                                    },
-                                  },
+                                  fontSize: '0.8rem'
                                 }}
-                                deleteIcon={<Close fontSize="small" />}
-                              />
+                                onClick={() => handleToggleColumnVisibility(col)}
+                              >
+                                {columnMapping[col] || col}
+                              </Typography>
+                              <IconButton 
+                                size="small" 
+                                onClick={() => handleRemoveColumn(col)}
+                                sx={{ p: 0.25, ml: 0.5, color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                              >
+                                <Close fontSize="small" />
+                              </IconButton>
                             </Box>
                           )}
                         </Draggable>
@@ -1228,13 +1256,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
             </DragDropContext>
           </Box>
         )}
-
-        {availableNumericColumns.length === 0 && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            {t('dashboard.noNumericColumns')}
-          </Alert>
-        )}
       </Paper>
+
+      {availableNumericColumns.length === 0 && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {t('dashboard.noNumericColumns')}
+        </Alert>
+      )}
 
       <Divider sx={{ my: 3 }} />
 
@@ -1283,7 +1311,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         <Paper key="trend-chart" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TrendingUp color="primary" />
+              <TrendingUp sx={(theme) => ({ color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32' })} />
               <Typography variant="h6">
                 {hasTimeSeriesData ? t('dashboard.trendOverTime') : t('dashboard.trendAnalysis')}
               </Typography>
@@ -1405,7 +1433,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
           <Paper key="top-contributors" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <BarChart color="primary" />
+                <BarChart sx={(theme) => ({ color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32' })} />
                 <Typography variant="h6">{t('dashboard.topContributors')}</Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
@@ -1464,7 +1492,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         {/* Statistics Table */}
         <Paper key="statistics-table" sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, mb: 2 }}>
-            <TableChart color="primary" />
+            <TableChart sx={(theme) => ({ color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32' })} />
             <Typography variant="h6">{t('dashboard.descriptiveStatistics')}</Typography>
             <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
               <IconButton size="small" onClick={() => handleAdjustWidgetHeight('statistics-table', 2)} title={t('dashboard.taller')}>
@@ -1702,7 +1730,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
         {(selectedValueColumns || []).length > 0 && rangeDistributionData.length > 0 && (
           <Paper key="range-distribution" sx={{ p: 0, height: '100%', display: uniqueContributorValue > 1 ? 'flex' : 'none', flexDirection: 'column' }}>
             <Box className="drag-handle" sx={{ cursor: 'move', display: 'flex', alignItems: 'center', gap: 1, p: 2, pb: 1 }}>
-              <PieChartIcon color="primary" />
+              <PieChartIcon sx={(theme) => ({ color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32' })} />
               <Typography variant="h6">{t('dashboard.rangeDistribution')}</Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }} onMouseDown={(e) => e.stopPropagation()}>
