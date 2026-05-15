@@ -41,7 +41,7 @@ export const getTheme = (mode: PaletteMode) => createTheme({
     text: {
       primary: mode === 'light' ? colors.ink : '#FFFFFF',
       secondary: mode === 'light' ? colors.slate : colors.steel,
-      disabled: colors.steel,
+      disabled: mode === 'light' ? '#4A5568' : colors.steel,
     },
     background: {
       default: mode === 'light' ? colors.canvas : colors.surfaceDark,
