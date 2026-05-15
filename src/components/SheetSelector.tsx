@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Checkbox, FormControlLabel, Button, Paper, List, ListItem,
+  Box, Typography, Checkbox, FormControlLabel, Button, Paper, List, ListItemButton,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import type { ParsedFile } from '../types.ts';
@@ -129,16 +129,15 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
                   const sheetIdentifier = `${file.fileName}::${sheet.sheetName}`;
                   const isSheetSelected = selectedSheets.includes(sheetIdentifier);
                   return (
-                    <ListItem
+                    <ListItemButton
                       key={sheetIdentifier}
-                      disablePadding
+                      dense
                       onClick={() => handleToggle(sheetIdentifier)}
                       sx={{
-                        cursor: 'pointer',
                         px: 1,
-                        backgroundColor: isSheetSelected ? alpha('#00ED64', 0.15) : 'transparent',
+                        backgroundColor: isSheetSelected ? alpha('#2e7d32', 0.15) : 'transparent',
                         '&:hover': {
-                          backgroundColor: isSheetSelected ? alpha('#00ED64', 0.2) : 'action.hover',
+                          backgroundColor: isSheetSelected ? alpha('#2e7d32', 0.2) : 'action.hover',
                         },
                         borderBottom: '1px solid',
                         borderColor: 'hairlineSoft'
@@ -155,10 +154,10 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
                           e.stopPropagation();
                           handleToggleSameNamedSheetAcrossFiles(sheet.sheetName);
                         }}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { textDecoration: 'underline', color: 'primary.main' }, 
-                          flexGrow: 1, 
+                        sx={{
+                          cursor: 'pointer',
+                          '&:hover': { textDecoration: 'underline', color: 'primary.main' },
+                          flexGrow: 1,
                           ml: 1,
                           fontWeight: isSheetSelected ? 600 : 400,
                           color: isSheetSelected ? 'primary.main' : 'text.primary'
@@ -166,7 +165,7 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
                       >
                         {sheet.sheetName}
                       </Typography>
-                    </ListItem>
+                    </ListItemButton>
                   );
                 })}
               </List>

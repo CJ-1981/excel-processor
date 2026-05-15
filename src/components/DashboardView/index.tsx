@@ -1224,16 +1224,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                                   onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
                                 />
                               </Box>
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  fontWeight: 700, 
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: 700,
                                   color: isHidden ? 'text.disabled' : 'text.primary',
                                   cursor: 'pointer',
                                   userSelect: 'none',
                                   fontSize: '0.8rem'
                                 }}
                                 onClick={() => handleToggleColumnVisibility(col)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleToggleColumnVisibility(col);
+                                  }
+                                }}
+                                tabIndex={0}
+                                role="button"
+                                aria-pressed={!isHidden}
                               >
                                 {columnMapping[col] || col}
                               </Typography>

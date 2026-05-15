@@ -4,6 +4,8 @@ import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 type Props = {
   children: React.ReactNode;
   title?: string;
+  errorTitle?: string;
+  errorButtonText?: string;
 };
 
 type State = {
@@ -43,19 +45,19 @@ export class ErrorBoundary extends React.Component<Props, State> {
               '& .MuiAlert-message': { width: '100%' }
             }}
           >
-            <AlertTitle sx={{ fontWeight: 700 }}>{this.props.title || 'Something went wrong in this view.'}</AlertTitle>
+            <AlertTitle sx={{ fontWeight: 700 }}>{this.props.title || this.props.errorTitle || 'Something went wrong in this view.'}</AlertTitle>
             <Typography variant="body2" sx={{ mb: 2, display: 'block' }}>
               {String(this.state.error?.message || this.state.error || 'Unknown error')}
             </Typography>
             <Box sx={{ mt: 1 }}>
-              <Button 
-                size="small" 
-                variant="contained" 
+              <Button
+                size="small"
+                variant="contained"
                 color="error"
                 onClick={this.handleReset}
                 sx={{ borderRadius: 9999, fontWeight: 700 }}
               >
-                Try again
+                {this.props.errorButtonText || 'Try again'}
               </Button>
             </Box>
           </Alert>

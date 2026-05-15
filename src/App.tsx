@@ -478,9 +478,10 @@ function App() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <LanguageSwitcher />
               <Tooltip title={mode === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
-                <IconButton 
-                  onClick={toggleColorMode} 
-                  sx={{ 
+                <IconButton
+                  onClick={toggleColorMode}
+                  aria-label={mode === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                  sx={{
                     color: 'white',
                     bgcolor: 'rgba(255, 255, 255, 0.1)',
                     '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }
