@@ -811,7 +811,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       return { bins: [], mean: 0, median: 0, min: 0, max: 0 };
     }
 
-    // Apply zoom filter if set
+    // Calculate overall statistics from unfiltered data
+    const sorted = [...distributionValues].sort((a, b) => a - b);
+    const overallMin = sorted[0];
+    const overallMax = sorted[sorted.length - 1];
+    const sum = sorted.reduce((acc, val) => acc + val, 0);
+    const overallMean = sum / sorted.length;
+    const mid = Math.floor(sorted.length / 2);
+    const overallMedian = sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    // Apply zoom filter for bins only
     let filteredValues = distributionValues;
     if (histogramZoomMin !== null || histogramZoomMax !== null) {
       filteredValues = distributionValues.filter(v => {
@@ -821,7 +832,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
       });
     }
 
-    return calculateHistogram(filteredValues, histogramBins);
+    // Calculate bins from filtered values, but use overall statistics
+    const binsResult = calculateHistogram(filteredValues, histogramBins);
+    return {
+      ...binsResult,
+      mean: overallMean,
+      median: overallMedian,
+      min: overallMin,
+      max: overallMax,
+    };
   }, [distributionValues, histogramBins, histogramZoomMin, histogramZoomMax]);
 
   // Get overall statistics for all donors (aggregated by name)
