@@ -612,27 +612,8 @@ function App() {
               {t('app.title')} - A modern tool for processing and analyzing donor data with a MongoDB-inspired design.
             </Typography>
           </Box>
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              {t('app.resources')}
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7, mb: 1, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}>
-              {t('app.documentation')}
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7, mb: 1, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}>
-              {t('app.support')}
-            </Typography>
-          </Box>
         </Box>
         <Divider sx={{ my: 4, bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-          <Typography variant="caption" sx={{ opacity: 0.5 }}>
-            © {new Date().getFullYear()} Excel Processor. All rights reserved.
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.5 }}>
-            Built with React, MUI, and passion.
-          </Typography>
-        </Box>
       </Container>
     </Box>
   </Box>
