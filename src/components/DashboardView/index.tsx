@@ -684,11 +684,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // This prevents expensive re-analysis when the data reference changes but content is the same
   const dataContentFingerprint = useMemo(() => {
     if (!data || data.length === 0) return 'empty';
-    // Sample: data length + first row structure
+    // Sample: data length + first row structure + last row structure
+    // This detects filtering changes (e.g., unique names selection) by comparing content
     const firstRow = data[0];
+    const lastRow = data[data.length - 1];
     const firstRowKeys = firstRow ? Object.keys(firstRow).sort().join(',') : '';
-    const sampleValues = firstRow ? Object.values(firstRow).slice(0, 3).map(String).join('|') : '';
-    return `${data.length}|${firstRowKeys}|${sampleValues}`;
+    const firstRowValues = firstRow ? Object.values(firstRow).slice(0, 3).map(String).join('|') : '';
+    const lastRowValues = lastRow ? Object.values(lastRow).slice(0, 3).map(String).join('|') : '';
+    return `${data.length}|${firstRowKeys}|${firstRowValues}|${lastRowValues}`;
   }, [data]);
 
   // Analyze data for dashboard - only re-analyze when data content actually changes
