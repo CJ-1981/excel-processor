@@ -1,4 +1,5 @@
 import { Box, LinearProgress, Typography, Paper, Alert } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import ErrorIcon from '@mui/icons-material/Error';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import type { ParseProgress } from '../types';
@@ -38,15 +39,19 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
 
   return (
     <Paper
-      elevation={2}
+      elevation={0}
       sx={{
-        p: 3,
+        p: 4,
         mt: 4,
         width: '100%',
         maxWidth: 600,
         display: 'flex',
         flexDirection: 'column',
-        gap: 2
+        gap: 2.5,
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'hairline',
+        boxShadow: '0px 8px 24px rgba(0, 30, 43, 0.08)'
       }}
     >
       {/* Header with stage and status icon */}
@@ -57,14 +62,25 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
           justifyContent: 'space-between'
         }}
       >
-        <Typography variant="h6" component="div">
+        <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
           {getStageText()}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           {hasErrors ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'error.main' }}>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 0.5, 
+                color: 'error.main',
+                bgcolor: alpha('#d32f2f', 0.1),
+                px: 1,
+                py: 0.25,
+                borderRadius: 9999
+              }}
+            >
               <ErrorIcon fontSize="small" />
-              <Typography variant="body2" color="error">
+              <Typography variant="caption" sx={{ fontWeight: 700 }}>
                 {t('progress.error', { count: errors.length })}
               </Typography>
             </Box>
@@ -80,11 +96,14 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
         variant="determinate"
         value={percentage}
         sx={{
-          height: 10,
-          borderRadius: 5,
-          backgroundColor: 'grey.200',
+          height: 12,
+          borderRadius: 6,
+          backgroundColor: 'surface',
+          border: '1px solid',
+          borderColor: 'hairline',
           '& .MuiLinearProgress-bar': {
-            borderRadius: 5,
+            borderRadius: 6,
+            backgroundColor: (theme) => theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50',
           }
         }}
       />
@@ -97,18 +116,18 @@ export default function FileProgressIndicator({ progress }: FileProgressIndicato
           alignItems: 'center'
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'steel', fontWeight: 500 }}>
           {t('progress.processed', { completed, total, plural: total === 1 ? '' : 's' })}
         </Typography>
-        <Typography variant="body2" color="text.secondary" fontWeight="medium">
+        <Typography variant="h6" sx={(theme) => ({ color: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50', fontWeight: 700 })}>
           {Math.round(percentage)}%
         </Typography>
       </Box>
 
       {/* Error summary (if there are errors) */}
       {hasErrors && (
-        <Alert severity="warning" sx={{ mt: 1 }}>
-          <Typography variant="body2">
+        <Alert severity="warning" sx={{ mt: 1, borderRadius: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
             {t('progress.failed', { count: errors.length })}
           </Typography>
         </Alert>

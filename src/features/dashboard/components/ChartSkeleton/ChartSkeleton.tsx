@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Box, Skeleton, useTheme } from '@mui/material';
+import { Box, Skeleton } from '@mui/material';
 
 export type ChartType = 'trend' | 'pareto' | 'histogram' | 'scatter' | 'heatmap' | 'boxplot';
 
@@ -25,8 +25,6 @@ const ChartSkeleton: React.FC<ChartSkeletonProps> = ({
   className,
   style,
 }) => {
-  const theme = useTheme();
-
   // Shared skeleton styles for DRY principle
   const axisSx = { position: 'absolute' as const, left: 0, top: 0 };
   const xAxisSx = { position: 'absolute' as const, bottom: 0, left: 40 };
@@ -90,9 +88,11 @@ const ChartSkeleton: React.FC<ChartSkeletonProps> = ({
         width: '100%',
         height: `${height}px`,
         position: 'relative',
-        backgroundColor: theme.palette.background.paper,
-        borderRadius: 1,
+        backgroundColor: 'surface',
+        borderRadius: 2, // rounded.lg
         overflow: 'hidden',
+        border: '1px solid',
+        borderColor: 'hairline',
         ...style,
       }}
     >

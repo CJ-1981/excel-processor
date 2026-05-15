@@ -34,25 +34,38 @@ const LanguageSwitcher: React.FC = () => {
         sx={{
           minWidth: 100,
           textTransform: 'none',
-          fontWeight: 500,
+          fontWeight: 600,
+          borderRadius: 9999,
+          borderColor: 'hairlineStrong',
+          color: 'white',
+          bgcolor: 'rgba(255, 255, 255, 0.1)',
+          '&:hover': {
+            bgcolor: 'rgba(255, 255, 255, 0.2)',
+            borderColor: 'white',
+          },
+          px: 1.5,
+          py: 0.5
         }}
       >
         <Typography
           component="span"
           sx={{
-            mr: 0.5,
-            fontFamily: 'monospace',
-            fontWeight: 700,
-            fontSize: '0.75rem',
-            bgcolor: 'action.hover',
-            px: 0.75,
-            py: 0.25,
-            borderRadius: 0.5,
+            mr: 1,
+            fontWeight: 800,
+            fontSize: '0.7rem',
+            bgcolor: 'primary.main',
+            color: 'secondary.main',
+            px: 0.8,
+            py: 0.2,
+            borderRadius: '4px',
+            lineHeight: 1
           }}
         >
           {oppositeLangCode === 'en' ? 'EN' : 'KO'}
         </Typography>
-        {oppositeLangCode === 'en' ? t('language.english') : t('language.korean')}
+        <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+          {oppositeLangCode === 'en' ? t('language.english') : t('language.korean')}
+        </Typography>
       </Button>
     </Box>
   );

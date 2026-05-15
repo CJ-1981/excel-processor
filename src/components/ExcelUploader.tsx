@@ -6,6 +6,7 @@ import {
   Chip,
   Alert
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   CloudUploadOutlined,
   Description,
@@ -169,7 +170,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
       />
 
       <Paper
-        elevation={isDragging ? 8 : 2}
+        elevation={0}
         role="button"
         aria-label={t('uploader.dragDrop')}
         tabIndex={disabled ? -1 : 0}
@@ -177,14 +178,19 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
         sx={{
           width: '100%',
           boxSizing: 'border-box',
-          p: { xs: 2.5, sm: 3, md: 4 },
+          p: { xs: 4, sm: 5, md: 6 },
           border: '2px dashed',
           borderColor: isDragging ? 'primary.main' : 'divider',
-          bgcolor: isDragging ? 'action.hover' : 'background.paper',
+          bgcolor: isDragging ? 'primary.light' : 'surface',
+          borderRadius: 2,
           cursor: disabled ? 'not-allowed' : 'pointer',
-          transition: 'all 0.3s ease',
+          transition: 'all 0.2s ease-in-out',
           textAlign: 'center',
           opacity: disabled ? 0.6 : 1,
+          '&:hover': {
+            borderColor: disabled ? 'divider' : 'primary.main',
+            bgcolor: disabled ? 'surface' : alpha('#00ED64', 0.04),
+          }
         }}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -192,25 +198,46 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
         onDrop={handleDrop}
         onClick={!disabled ? handleButtonClick : undefined}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
-          <CloudUploadOutlined
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5 }}>
+          <Box
             sx={{
-              fontSize: { xs: 48, sm: 56, md: 64 },
-              color: isDragging ? 'primary.main' : 'text.secondary',
-              transition: 'color 0.3s ease'
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              bgcolor: isDragging ? 'primary.main' : 'background.paper',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: (theme) => theme.palette.mode === 'light' ? '0px 4px 12px rgba(0, 30, 43, 0.08)' : 'none',
+              color: isDragging
+                ? '#ff9800'
+                : (theme) => theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50',
+              transition: 'all 0.2s ease'
             }}
-          />
+          >
+            <CloudUploadOutlined sx={{ fontSize: 40 }} />
+          </Box>
           <Box>
-            <Typography variant="h6" color="text.primary" sx={{ fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
+            <Typography variant="h5" color="text.primary" sx={{ fontWeight: 600, mb: 1 }}>
               {isDragging ? t('uploader.dropFiles') : t('uploader.dragDrop')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+            <Typography variant="body1" color="text.secondary">
               {t('uploader.orClick')}
             </Typography>
           </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-            {t('uploader.supportedFormats')}
-          </Typography>
+          <Chip
+            label={t('uploader.supportedFormats')}
+            size="small"
+            sx={(theme) => ({
+              bgcolor: theme.palette.mode === 'dark' ? '#2e7d32' : '#e8f5e9',
+              color: theme.palette.mode === 'dark' ? '#ffffff' : '#1b5e20',
+              fontWeight: 700,
+              borderRadius: '4px',
+              border: theme.palette.mode === 'dark' ? '2px solid #4caf50' : '1px solid #2e7d32',
+              fontSize: '0.813rem',
+              height: 26,
+            })}
+          />
         </Box>
       </Paper>
 
@@ -235,6 +262,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFilesUpload, disabled }
                 deleteIcon={<Delete aria-label="Delete" />}
                 variant="outlined"
                 size="medium"
+                data-testid="file-chip"
                 sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' } }}
               />
             ))}

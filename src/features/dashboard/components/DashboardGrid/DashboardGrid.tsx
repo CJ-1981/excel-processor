@@ -39,7 +39,7 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({
   rowHeight = 50,
   breakpoints = DEFAULT_BREAKPOINTS,
   cols = DEFAULT_COLS,
-  margin = [16, 16],
+  margin = [24, 24],
   compactType = 'vertical',
   preventCollision = false,
   measureBeforeMount = false,
@@ -68,6 +68,7 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
+        padding: '8px'
       }}
     >
       <ResponsiveGridLayout

@@ -4,6 +4,7 @@ import {
   TableSortLabel, TextField, InputAdornment, IconButton, TablePagination, Menu, MenuItem, FormControlLabel, Checkbox, Divider, Switch, FormGroup,
   Dialog, DialogTitle, DialogContent, Popover, List, ListItemButton, ListItemText, ListItemIcon, Chip, Tooltip
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -1006,6 +1007,22 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                                     onChange={() => handleToggleColumnVisibility(header.id)}
                                     size="small"
                                     onClick={(e) => e.stopPropagation()}
+                                    sx={(theme) => ({
+                                      color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                                      '&.Mui-checked': {
+                                        color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                                      },
+                                      '&:hover': {
+                                        backgroundColor: theme.palette.mode === 'dark'
+                                          ? 'rgba(76, 175, 80, 0.08)'
+                                          : 'rgba(46, 125, 50, 0.08)',
+                                      },
+                                      '&.Mui-checked:hover': {
+                                        backgroundColor: theme.palette.mode === 'dark'
+                                          ? 'rgba(76, 175, 80, 0.16)'
+                                          : 'rgba(46, 125, 50, 0.16)',
+                                      },
+                                    })}
                                   />
                                 }
                                 label={
@@ -1053,7 +1070,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </Menu>
         </Box>
       </Box>
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: { xs: 'flex-start', md: 'space-between' }, mb: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: { xs: 'flex-start', md: 'space-between' }, mb: 3 }}>
         <TextField
           variant="outlined"
           size="small"
@@ -1066,7 +1083,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon />
+                <SearchIcon sx={{ color: 'steel' }} />
               </InputAdornment>
             ),
             endAdornment: searchTerm && (
@@ -1077,16 +1094,24 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               </InputAdornment>
             ),
           }}
-          sx={{ width: { xs: '100%', md: '30%' } }}
+          sx={{ 
+            width: { xs: '100%', md: '30%' },
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              height: 44,
+              bgcolor: 'surface',
+              '& fieldset': { borderColor: 'hairlineStrong' },
+            }
+          }}
         />
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
           {(searchTerm || hasAnyColumnFilter) && (
             <>
               <Tooltip title={t('detailedView.selectRowsTooltip')} arrow>
                 <span>
                   <Button
                     variant="outlined"
-                    size="small"
+                    size="medium"
                     onClick={handleSelectAllRows}
                     disabled={filteredAndSortedData.length === 0}
                     sx={{ width: { xs: '100%', md: 'auto' } }}
@@ -1099,10 +1124,18 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 <span>
                   <Button
                     variant="outlined"
-                    size="small"
+                    size="medium"
                     onClick={handleDeselectAllRows}
                     disabled={includedRowIndices.size === 0}
-                    sx={{ width: { xs: '100%', md: 'auto' } }}
+                    sx={{ 
+                      width: { xs: '100%', md: 'auto' },
+                      color: 'error.main',
+                      borderColor: 'error.light',
+                      '&:hover': {
+                        borderColor: 'error.main',
+                        bgcolor: alpha('#d32f2f', 0.04)
+                      }
+                    }}
                   >
                     {t('detailedView.deselectAll')}
                   </Button>
@@ -1110,33 +1143,6 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               </Tooltip>
             </>
           )}
-          <Tooltip title={t('detailedView.exportCsvTooltip')} arrow>
-            <span>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleExportCsv}
-                disabled={includedRowIndices.size === 0}
-                sx={{ width: { xs: '100%', md: 'auto' } }}
-              >
-                {t('detailedView.exportCsv', { count: includedRowIndices.size })}
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title={t('detailedView.pdfTooltip')} arrow>
-            <span>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => setShowPDFDialog(true)}
-                disabled={includedRowIndices.size === 0}
-                startIcon={<PictureAsPdfIcon />}
-                sx={{ width: { xs: '100%', md: 'auto' } }}
-              >
-                {t('detailedView.pdf', { count: includedRowIndices.size })}
-              </Button>
-            </span>
-          </Tooltip>
         </Box>
       </Box>
       {/* Second row: Selection message and toggle switches */}
@@ -1151,6 +1157,21 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                 checked={autoDeselectZeros}
                 onChange={(e) => setAutoDeselectZeros(e.target.checked)}
                 size="small"
+                slotProps={{ input: { 'aria-label': 'auto deselect zeros' } }}
+                sx={(theme) => ({
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                  },
+                  '& .MuiSwitch-track': {
+                    backgroundColor: theme.palette.mode === 'dark' ? '#6b6b6b' : '#bdbdbd',
+                  },
+                  '& .MuiSwitch-switchBase': {
+                    color: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                  },
+                })}
               />
             }
             label={
@@ -1176,6 +1197,21 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   setPage(0); // Reset to first page when toggling
                 }}
                 size="small"
+                slotProps={{ input: { 'aria-label': 'hide deselected rows' } }}
+                sx={(theme) => ({
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                  },
+                  '& .MuiSwitch-track': {
+                    backgroundColor: theme.palette.mode === 'dark' ? '#6b6b6b' : '#bdbdbd',
+                  },
+                  '& .MuiSwitch-switchBase': {
+                    color: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                  },
+                })}
               />
             }
             label={
@@ -1207,11 +1243,28 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </Button>
         </Box>
       )}
-      <TableContainer component={Paper} sx={{ flexGrow: 1, overflow: 'auto' }}>
+      <TableContainer 
+        component={Paper} 
+        elevation={0}
+        sx={{ 
+          flexGrow: 1, 
+          overflow: 'auto',
+          border: '1px solid',
+          borderColor: 'hairline',
+          borderRadius: 2
+        }}
+      >
         <Table stickyHeader aria-label="detailed data table">
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
+              <TableCell 
+                padding="checkbox" 
+                sx={{ 
+                  bgcolor: 'surface',
+                  borderBottom: '1px solid',
+                  borderColor: 'hairline'
+                }}
+              >
                 <Checkbox
                   indeterminate={(() => {
                     const visibleSelectedCount = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
@@ -1229,7 +1282,26 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                       handleSelectAllRows();
                     }
                   }}
-                  inputProps={{ 'aria-label': t('detailedView.selectAllRowsAria') }}
+                  slotProps={{ input: { 'aria-label': t('detailedView.selectAllRowsAria') } }}
+                  sx={(theme) => ({
+                    color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                    '&.Mui-checked': {
+                      color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                    },
+                    '&.MuiCheckbox-indeterminate': {
+                      color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                    },
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark'
+                        ? 'rgba(76, 175, 80, 0.08)'
+                        : 'rgba(46, 125, 50, 0.08)',
+                    },
+                    '&.Mui-checked:hover': {
+                      backgroundColor: theme.palette.mode === 'dark'
+                        ? 'rgba(76, 175, 80, 0.16)'
+                        : 'rgba(46, 125, 50, 0.16)',
+                    },
+                  })}
                 />
               </TableCell>
               {visibleHeaders.map((headCell, index) => (
@@ -1238,13 +1310,25 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                   align={headCell.numeric ? 'right' : 'left'}
                   padding="normal"
                   sortDirection={orderBy === headCell.id ? order : false}
-                  sx={{ borderRight: index < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}
+                  sx={{ 
+                    bgcolor: 'surface',
+                    fontWeight: 600,
+                    color: 'text.primary',
+                    borderBottom: '1px solid',
+                    borderBottomColor: 'hairline',
+                    borderRight: index < visibleHeaders.length - 1 ? '1px solid' : 0,
+                    borderRightColor: 'hairlineSoft'
+                  }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <TableSortLabel
                       active={orderBy === headCell.id}
                       direction={orderBy === headCell.id ? order : 'asc'}
                       onClick={(event) => handleRequestSort(event, headCell.id)}
+                      sx={(theme) => ({
+                        '&.Mui-active': { color: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50' },
+                        '& .MuiTableSortLabel-icon': { color: `${theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50'} !important` }
+                      })}
                     >
                       {headCell.label}
                     </TableSortLabel>
@@ -1255,14 +1339,10 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                         sx={{
                           ml: 0.5,
                           padding: 0.25,
-                          color: hasColumnFilter(headCell.id) ? 'primary.main' : 'action.active',
+                          color: hasColumnFilter(headCell.id) ? 'primary.main' : 'steel',
                         }}
                       >
-                        {hasColumnFilter(headCell.id) ? (
-                          <FilterListIcon fontSize="small" />
-                        ) : (
-                          <FilterListIcon fontSize="small" />
-                        )}
+                        <FilterListIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -1273,12 +1353,38 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           <TableBody>
             {paginatedData.map((row, index) => {
               const isIncluded = includedRowIndices.has(row._stableIndex);
-              return (<TableRow hover key={row._stableIndex} sx={{ opacity: isIncluded ? 1 : 0.5 }}>
-                  <TableCell padding="checkbox">
+              return (<TableRow 
+                  hover 
+                  key={row._stableIndex} 
+                  sx={{
+                    opacity: isIncluded ? 1 : 0.6,
+                    bgcolor: isIncluded ? 'transparent' : alpha('#f9fbfa', 0.5),
+                    '&:hover': {
+                      bgcolor: isIncluded ? alpha('#2e7d32', 0.04) : alpha('#f9fbfa', 0.8)
+                    }
+                  }}
+                >
+                  <TableCell padding="checkbox" sx={{ borderBottom: '1px solid', borderColor: 'hairlineSoft' }}>
                     <Checkbox
                       checked={isIncluded}
                       onChange={() => handleToggleRowInclude(row._stableIndex)}
-                      inputProps={{ 'aria-label': `select row ${index + 1}` }}
+                      slotProps={{ input: { 'aria-label': `select row ${index + 1}` } }}
+                      sx={(theme) => ({
+                        color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                        '&.Mui-checked': {
+                          color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                        },
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(76, 175, 80, 0.08)'
+                            : 'rgba(46, 125, 50, 0.08)',
+                        },
+                        '&.Mui-checked:hover': {
+                          backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(76, 175, 80, 0.16)'
+                            : 'rgba(46, 125, 50, 0.16)',
+                        },
+                      })}
                     />
                   </TableCell>
                   {visibleHeaders.map((headCell, cellIndex) => {
@@ -1289,19 +1395,38 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                       const actualName = columnMapping[headCell.id] || headCell.id;
                       cellValue = getRowValue(row, headCell.id, actualName);
                     }
-                    return (<TableCell key={`${index}-${headCell.id}`} sx={{ borderRight: cellIndex < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+                    return (<TableCell 
+                        key={`${index}-${headCell.id}`} 
+                        sx={{ 
+                          borderRight: cellIndex < visibleHeaders.length - 1 ? '1px solid' : 0, 
+                          borderBottom: '1px solid',
+                          borderColor: 'hairlineSoft',
+                          color: isIncluded ? 'text.primary' : 'text.secondary',
+                          fontWeight: isIncluded && headCell.id === nameColumn ? 600 : 400
+                        }}
+                      >
                         {cellValue !== undefined && cellValue !== null ? String(cellValue) : ''}
                       </TableCell>);
                     })}
                 </TableRow>);
             })}
             {emptyRows > 0 && (<TableRow style={{ height: (33) * emptyRows }}>
-                <TableCell colSpan={visibleHeaders.length + 1} sx={{ borderRight: 0 }} />
+                <TableCell colSpan={visibleHeaders.length + 1} sx={{ borderBottom: 'none' }} />
               </TableRow>)}
-            <TableRow sx={{ '& > td': { fontWeight: 'bold' } }}>
-              <TableCell />
+            <TableRow sx={{ '& > td': { fontWeight: 'bold', bgcolor: 'surface' } }}>
+              <TableCell sx={{ borderBottom: 'none' }} />
               {visibleHeaders.map((headCell, index) => (
-                <TableCell key={`total-${headCell.id}`} align={index === 0 ? 'left' : headCell.numeric ? 'right' : 'left'} sx={{ borderRight: index < visibleHeaders.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+                <TableCell 
+                  key={`total-${headCell.id}`} 
+                  align={index === 0 ? 'left' : headCell.numeric ? 'right' : 'left'} 
+                  sx={(theme) => ({
+                    borderRight: index < visibleHeaders.length - 1 ? '1px solid' : 0,
+                    borderColor: 'hairlineSoft',
+                    borderBottom: 'none',
+                    color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                    fontWeight: 700,
+                  })}
+                >
                   {index === 0 ? t('detailedView.total') : (typeof columnTotals[headCell.id] === 'number' ? (columnTotals[headCell.id] as number).toFixed(2) : columnTotals[headCell.id])}
                 </TableCell>
               ))}
@@ -1309,36 +1434,68 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           </TableBody>
         </Table>
       </TableContainer>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            color="info"
-            onClick={() => {
-              debug('[Dashboard]', 'Open clicked', {
-                includedVisibleRows: filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length,
-                totalVisibleRows: filteredAndSortedData.length,
-                visibleHeaders: visibleHeaders.map(h => h.id),
-              });
-              setShowDashboardDialog(true);
-            }}
-            disabled={(() => {
-              const visibleIncluded = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
-              return visibleIncluded === 0;
-            })()}
-            startIcon={<DashboardIcon />}
-            size="small"
-          >
-            {t('detailedView.dashboard', { count: (() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)() })}
-          </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+          rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: -1 }]}
           component="div"
           count={displayData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{ border: 'none' }}
         />
+      </Box>
+      {/* Export Action Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2, mt: 3, pt: 2, pb: 4, borderTop: '1px solid', borderColor: 'hairline' }}>
+        <Tooltip title={t('detailedView.exportCsvTooltip')} arrow>
+          <Button
+            variant="outlined"
+            onClick={handleExportCsv}
+            disabled={includedRowIndices.size === 0}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              borderColor: 'hairlineStrong',
+              color: 'text.primary'
+            }}
+          >
+            {t('detailedView.exportCsv', { count: includedRowIndices.size })}
+          </Button>
+        </Tooltip>
+        <Tooltip title={t('detailedView.pdfTooltip')} arrow>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => setShowPDFDialog(true)}
+            disabled={includedRowIndices.size === 0}
+            startIcon={<PictureAsPdfIcon />}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              bgcolor: 'secondary.main',
+              '&:hover': { bgcolor: '#00141d' }
+            }}
+          >
+            {t('detailedView.pdf', { count: includedRowIndices.size })}
+          </Button>
+        </Tooltip>
+        <Tooltip title={t('detailedView.dashboard')} arrow>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setShowDashboardDialog(true)}
+            disabled={(() => {
+              const visibleIncluded = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
+              return visibleIncluded === 0;
+            })()}
+            startIcon={<DashboardIcon />}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              fontWeight: 600
+            }}
+          >
+            {t('detailedView.dashboard', { count: (() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)() })}
+          </Button>
+        </Tooltip>
       </Box>
       <PDFExportDialog
         open={showPDFDialog}
@@ -1468,6 +1625,22 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
                           edge="start"
                           checked={isChecked}
                           size="small"
+                          sx={(theme) => ({
+                            color: theme.palette.mode === 'dark' ? '#a5d6a7' : '#8d6e63',
+                            '&.Mui-checked': {
+                              color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                            },
+                            '&:hover': {
+                              backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(76, 175, 80, 0.08)'
+                                : 'rgba(46, 125, 50, 0.08)',
+                            },
+                            '&.Mui-checked:hover': {
+                              backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(76, 175, 80, 0.16)'
+                                : 'rgba(46, 125, 50, 0.16)',
+                            },
+                          })}
                         />
                       </ListItemIcon>
                       <ListItemText

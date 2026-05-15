@@ -12,6 +12,7 @@ import {
   LinearProgress,
   Chip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   CloudUploadOutlined,
   InsertDriveFile,
@@ -263,22 +264,27 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+      <DialogTitle sx={{ fontWeight: 600 }}>
         {showPreview ? t('contacts.upload.previewTitle') : t('contacts.upload.title')}
       </DialogTitle>
 
       <DialogContent>
         {!showPreview ? (
           <Paper
-            variant="outlined"
+            elevation={0}
             sx={{
-              p: 4,
+              p: 6,
               textAlign: 'center',
               border: '2px dashed',
-              borderColor: isDragging ? 'primary.main' : 'divider',
-              bgcolor: isDragging ? 'action.hover' : 'background.paper',
+              borderColor: isDragging ? 'primary.main' : 'hairlineStrong',
+              bgcolor: isDragging ? 'primary.light' : 'surface',
+              borderRadius: 2,
               cursor: 'pointer',
               transition: 'all 0.2s',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: alpha('#00ED64', 0.04)
+              }
             }}
             onClick={handleButtonClick}
             onDragEnter={handleDragEnter}
@@ -294,57 +300,63 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
               style={{ display: 'none' }}
               onChange={handleFileInputChange}
             />
-            <CloudUploadOutlined sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
+            <CloudUploadOutlined sx={(theme) => ({ fontSize: 64, color: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50', mb: 2, opacity: 0.8 })} />
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
               {t('contacts.upload.dragDrop')}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body1" color="text.secondary">
               {t('contacts.upload.orClick')}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+            <Typography variant="caption" color="steel" sx={{ display: 'block', mt: 3, fontWeight: 500 }}>
               {t('contacts.upload.supportedFormats')}
             </Typography>
           </Paper>
         ) : (
           <Box>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              <Typography variant="body2">
+            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {t('contacts.upload.successMessage', { count: parsedContacts.length })}
               </Typography>
             </Alert>
 
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 700 }}>
               {t('contacts.upload.preview')}
             </Typography>
-            <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
+            <Paper elevation={0} sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'hairline', borderRadius: 1 }}>
               {parsedContacts.slice(0, 5).map((contact, index) => (
                 <Box
                   key={contact.id}
                   sx={{
-                    p: 1.5,
-                    borderBottom: index < Math.min(5, parsedContacts.length) - 1 ? 1 : 0,
-                    borderColor: 'divider',
+                    p: 2,
+                    borderBottom: index < Math.min(5, parsedContacts.length) - 1 ? '1px solid' : 0,
+                    borderColor: 'hairlineSoft',
+                    '&:hover': { bgcolor: 'surface' }
                   }}
                 >
-                  <Typography variant="body2" fontWeight="medium">
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                     {contact.englishName}
-                    {contact.koreanName && ` (${contact.koreanName})`}
+                    {contact.koreanName && (
+                      <Typography component="span" variant="body2" sx={{ color: 'steel', ml: 1, fontWeight: 400 }}>
+                        ({contact.koreanName})
+                      </Typography>
+                    )}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="body2" color="slate">
                     {contact.address}
                   </Typography>
                   {contact.email && (
-                    <Typography variant="caption" color="primary.main" display="block">
+                    <Typography variant="caption" sx={(theme) => ({ color: theme.palette.mode === 'light' ? '#2e7d32' : '#4caf50', fontWeight: 700, display: 'block', mt: 0.5 })}>
                       {contact.email}
                     </Typography>
                   )}
                 </Box>
               ))}
               {parsedContacts.length > 5 && (
-                <Box sx={{ p: 1.5, textAlign: 'center' }}>
+                <Box sx={{ p: 2, textAlign: 'center', bgcolor: 'surface' }}>
                   <Chip
                     size="small"
                     label={t('contacts.upload.moreContacts', { count: parsedContacts.length - 5 })}
+                    sx={{ fontWeight: 600, bgcolor: 'secondary.main', color: 'white' }}
                   />
                 </Box>
               )}
@@ -353,14 +365,14 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
         )}
 
         {selectedFiles.length > 0 && !showPreview && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'surface', borderRadius: 2, border: '1px solid', borderColor: 'hairline' }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'steel', fontWeight: 800, textTransform: 'uppercase' }}>
               {t('contacts.upload.selectedFile')}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <InsertDriveFile color="success" fontSize="small" />
-              <Typography variant="body2">{selectedFiles[0].name}</Typography>
-              <Typography variant="caption" color="text.secondary">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <InsertDriveFile color="success" />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedFiles[0].name}</Typography>
+              <Typography variant="caption" color="steel">
                 ({formatFileSize(selectedFiles[0].size)})
               </Typography>
             </Box>
@@ -368,28 +380,28 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
         )}
 
         {isProcessing && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" gutterBottom>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
               {t('contacts.upload.processing')}
             </Typography>
-            <LinearProgress />
+            <LinearProgress sx={{ height: 8, borderRadius: 4 }} />
           </Box>
         )}
 
         {error && (
-          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
+          <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={handleClose} disabled={isProcessing}>
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button onClick={handleClose} disabled={isProcessing} sx={{ borderRadius: 9999 }}>
           {showPreview ? t('common.cancel') : t('common.close')}
         </Button>
         {showPreview && (
           <>
-            <Button onClick={handleCancel} disabled={isProcessing}>
+            <Button onClick={handleCancel} disabled={isProcessing} sx={{ borderRadius: 9999 }}>
               {t('common.back')}
             </Button>
             <Button
@@ -397,6 +409,7 @@ export const ContactsUploader: React.FC<ContactsUploaderProps> = ({
               onClick={handleConfirm}
               disabled={isProcessing}
               startIcon={<CheckCircle />}
+              sx={{ borderRadius: 9999, px: 3, fontWeight: 700 }}
             >
               {t('contacts.upload.confirm')}
             </Button>

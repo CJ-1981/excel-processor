@@ -15,12 +15,11 @@ interface PageContainerProps {
 export default function PageContainer({ children, maxWidth = 'lg', sx }: PageContainerProps) {
   return (
     <Container
-      component="main"
       maxWidth={maxWidth}
       sx={{
-        minHeight: '100vh',
-        py: { xs: 2, sm: 3, md: 4 },
-        px: { xs: 1, sm: 2, md: 3 },
+        minHeight: 'calc(100vh - 400px)', // Adjust for hero band
+        py: { xs: 4, sm: 6, md: 8 }, // Marketing section-style spacing
+        px: { xs: 2, sm: 3, md: 4 },
         display: 'flex',
         flexDirection: 'column',
         ...sx

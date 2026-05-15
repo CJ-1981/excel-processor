@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useColorMode } from './ColorModeContext';
 import ExcelUploader from './components/ExcelUploader';
 import ColumnSelector from './components/ColumnSelector';
 import UniqueNameList from './components/UniqueNameList';
@@ -11,8 +12,10 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import WorkflowStepper from './components/WorkflowStepper';
 import { PageContainer, SectionCard } from './components/layout';
 
-import { CssBaseline, Box, Typography, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
+import { CssBaseline, Box, Typography, CircularProgress, Dialog, IconButton, Container, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 
 import type { ParsedFile, ParseProgress, NameMergeState, ExcelDataArray, ExcelRowData } from './types';
 import * as XLSX from 'xlsx';
@@ -25,6 +28,7 @@ export type AppStatus = 'ready' | 'parsing' | 'files_uploaded' | 'data_merged';
 
 function App() {
   const { t } = useTranslation();
+  const { toggleColorMode, mode } = useColorMode();
 
   // State for the new multi-file workflow
   const [status, setStatus] = useState<AppStatus>('ready');
@@ -425,42 +429,78 @@ function App() {
 
 
   return (
-    <PageContainer maxWidth="lg">
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <CssBaseline />
+      
+      {/* Hero Band */}
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          mb: { xs: 2, sm: 3, md: 4 },
-          px: { xs: 1, sm: 0 }
+          bgcolor: 'secondary.main',
+          color: 'white',
+          pt: { xs: 6, sm: 8, md: 10 },
+          pb: { xs: 4, sm: 6, md: 8 },
+          px: { xs: 2, sm: 3 },
+          textAlign: 'center',
+          mb: { xs: 4, sm: 6 },
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '100%',
+            background: 'radial-gradient(circle at 50% 50%, rgba(0, 163, 92, 0.15) 0%, rgba(0, 30, 43, 0) 70%)',
+            pointerEvents: 'none',
+          }
         }}
       >
-        <Typography
-          component="h1"
-          variant="h3"
-          gutterBottom
-          fontWeight="bold"
-          sx={{
-            fontSize: { xs: '1.75rem', sm: '2.125rem', md: '2.5rem' },
-            textAlign: 'center'
-          }}
-        >
-          {t('app.title')}
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, mb: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-            {t('app.version')} {APP_VERSION} • {t('app.lastUpdated')}: {__BUILD_TIME__}
+        <Container maxWidth="lg">
+          <Typography
+            component="h1"
+            variant="h2"
+            gutterBottom
+            sx={{
+              fontWeight: 500,
+              fontSize: { xs: '2rem', sm: '3rem', md: '3.5rem' },
+              letterSpacing: '-0.02em',
+              color: 'white',
+              mb: 2
+            }}
+          >
+            {t('app.title')}
           </Typography>
-          <LanguageSwitcher />
-        </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Typography variant="subtitle1" sx={{ opacity: 0.8, fontWeight: 400 }}>
+              {t('app.version')} {APP_VERSION} • {t('app.lastUpdated')}: {__BUILD_TIME__}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LanguageSwitcher />
+              <Tooltip title={mode === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
+                <IconButton
+                  onClick={toggleColorMode}
+                  aria-label={mode === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                  sx={{
+                    color: 'white',
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }
+                  }}
+                >
+                  {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
+        </Container>
       </Box>
 
-      <WorkflowStepper currentStep={status} />
+      <PageContainer maxWidth="lg" sx={{ py: 0 }}>
+        <WorkflowStepper currentStep={status} />
 
-      <SectionCard>
-        <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
-      </SectionCard>
+        <SectionCard sx={{ mt: 4 }}>
+          <ExcelUploader onFilesUpload={handleFilesUpload} disabled={status === 'parsing'} />
+        </SectionCard>
 
         {status === 'parsing' && (
           <>
@@ -527,27 +567,29 @@ function App() {
           open={isDetailedViewFullScreen}
           onClose={handleToggleDetailedViewFullScreen}
         >
-          <DialogTitle sx={{ m: 0, p: { xs: 1.5, sm: 2 } }}>
-            {t('detailedView.fullScreen')}
-            <IconButton
-              aria-label={t('detailedView.close')}
-              onClick={handleToggleDetailedViewFullScreen}
-              sx={{
-                position: 'absolute',
-                right: { xs: 4, sm: 8 },
-                top: { xs: 4, sm: 8 },
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            px: 3, 
+            py: 2, 
+            bgcolor: 'secondary.main', 
+            color: 'white',
+            borderBottom: '1px solid',
+            borderColor: 'rgba(255, 255, 255, 0.1)'
+          }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>{t('detailedView.fullScreen')}</Typography>
+            <IconButton edge="end" color="inherit" onClick={handleToggleDetailedViewFullScreen} aria-label="close">
               <CloseIcon />
             </IconButton>
-          </DialogTitle>
-          <Box sx={{ p: { xs: 1, sm: 2 }, flexGrow: 1, overflow: 'auto' }}>
+          </Box>
+          <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, flexGrow: 1, overflow: 'auto', bgcolor: 'background.default' }}>
              {/* Render DetailedDataView inside the dialog */}
             {detailedViewContent}
           </Box>
         </Dialog>
     </PageContainer>
+  </Box>
   );
 }
 

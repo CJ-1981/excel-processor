@@ -5,9 +5,6 @@
 # Updated: 2026-01-10
 # Purpose: Essential patterns for user projects
 # ============================================
-.moai/
-.claude/
-
 
 # ===========================================
 # Go Build Artifacts
@@ -214,6 +211,10 @@ dist-ssr/
 .vercel/
 .netlify/
 .firebase/
+
+# User Custom Patterns (preserved by moai update)
+.moai/
+.claude/
 .claude/settings.json
 .claude/agents/moai/builder-agent.md
 .claude/agents/moai/builder-plugin.md

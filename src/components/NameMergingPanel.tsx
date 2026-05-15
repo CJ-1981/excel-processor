@@ -23,7 +23,9 @@ import {
   Tooltip,
   Switch,
   DialogContentText,
+  useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -56,6 +58,7 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
   onMergeStateChange,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
@@ -230,16 +233,22 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
           <IconButton size="small" onClick={() => setCollapsed(!collapsed)} sx={{ mr: 0.5 }} aria-label={collapsed ? 'Expand' : 'Collapse'}>
             {collapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </IconButton>
-          <MergeTypeIcon color="primary" />
+          <MergeTypeIcon sx={(theme) => ({ color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32' })} />
           <Typography variant="h6">{t('nameMerging.title')}</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>{t('nameMerging.optional')}</Typography>
           {mergeState.mergeGroups.length > 0 && (
             <Chip
               size="small"
               label={t('nameMerging.groups', { count: mergeState.mergeGroups.length })}
-              color="primary"
-              variant="outlined"
-              sx={{ ml: 1 }}
+              sx={(theme) => ({
+                ml: 1,
+                bgcolor: theme.palette.mode === 'dark' ? '#1b5e20' : '#e8f5e9',
+                color: theme.palette.mode === 'dark' ? '#ffffff' : '#1b5e20',
+                border: theme.palette.mode === 'dark' ? '2px solid #4caf50' : '1px solid #2e7d32',
+                fontWeight: 700,
+                fontSize: '0.813rem',
+                height: 26,
+              })}
             />
           )}
         </Box>
@@ -259,19 +268,28 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
 
       <Collapse in={!collapsed} timeout="auto" unmountOnExit>
         {/* Search and Create Button */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5 }}>
           <TextField
             size="small"
             placeholder={t('nameMerging.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                bgcolor: 'surface',
+                height: 44,
+                '& fieldset': { borderColor: 'hairlineStrong' },
+              }
+            }}
           />
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenCreateDialog}
             disabled={selectedNames.length < 2}
+            sx={{ px: 3, fontWeight: 700, whiteSpace: 'nowrap' }}
           >
             {t('nameMerging.merge', { count: selectedNames.length })}
           </Button>
@@ -279,18 +297,22 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
 
         {/* Selection Actions */}
         {filteredNames.length > 0 && (
-          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
             <Button
               size="small"
+              variant="outlined"
               onClick={handleSelectAll}
               disabled={unmergedFilteredNames.length === 0}
+              sx={{ borderColor: 'hairlineStrong', color: 'text.secondary', borderRadius: 9999 }}
             >
               {t('nameMerging.addAllUnmerged')}
             </Button>
             <Button
               size="small"
+              variant="outlined"
               onClick={handleClearSelection}
               disabled={selectedNames.length === 0}
+              sx={{ borderColor: 'hairlineStrong', color: 'text.secondary', borderRadius: 9999 }}
             >
               {t('nameMerging.clearSelection')}
             </Button>
@@ -298,17 +320,18 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
         )}
 
         {/* Available Names List */}
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
           {t('nameMerging.availableNames', { count: filteredNames.length })}
         </Typography>
         <List
           dense
           sx={{
-            maxHeight: 200,
+            maxHeight: 250,
             overflow: 'auto',
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'hairline',
+            borderRadius: 2,
+            bgcolor: 'background.paper'
           }}
         >
           {filteredNames.length === 0 ? (
@@ -329,6 +352,14 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                   selected={isSelected}
                   onClick={() => !mergeInfo && handleToggleName(name)}
                   disabled={!!mergeInfo}
+                  sx={{
+                    borderBottom: '1px solid',
+                    borderColor: 'hairlineSoft',
+                    '&.Mui-selected': {
+                      bgcolor: alpha('#00ED64', 0.1),
+                      '&:hover': { bgcolor: alpha('#00ED64', 0.15) }
+                    }
+                  }}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
                     <Checkbox
@@ -340,10 +371,15 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                   </ListItemIcon>
                   <ListItemText
                     primary={name}
+                    primaryTypographyProps={{
+                      fontWeight: isSelected ? 600 : 400,
+                      color: mergeInfo ? 'text.disabled' : 'text.primary'
+                    }}
                     secondary={mergeInfo ? t('nameMerging.mergedAs', { displayName: mergeInfo.displayName }) : undefined}
                     secondaryTypographyProps={{
-                      color: 'primary',
+                      color: theme.palette.mode === 'light' ? 'primary.dark' : 'primary.main',
                       variant: 'caption',
+                      fontWeight: 600
                     }}
                   />
                 </ListItemButton>
@@ -368,7 +404,21 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                       size="small"
                       checked={allGroupsActive}
                       onChange={handleToggleAllActive}
-                      inputProps={{ 'aria-label': 'toggle all merge groups' }}
+                      slotProps={{ input: { 'aria-label': 'toggle all merge groups' } }}
+                      sx={(theme) => ({
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                        },
+                        '& .MuiSwitch-track': {
+                          backgroundColor: theme.palette.mode === 'dark' ? '#6b6b6b' : '#bdbdbd',
+                        },
+                        '& .MuiSwitch-switchBase': {
+                          color: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                        },
+                      })}
                     />
                   </Tooltip>
                 )}
@@ -396,7 +446,21 @@ const NameMergingPanel: React.FC<NameMergingPanelProps> = ({
                             size="small"
                             checked={group.active}
                             onChange={() => handleToggleActive(group.id)}
-                            inputProps={{ 'aria-label': 'toggle merge group' }}
+                            slotProps={{ input: { 'aria-label': 'toggle merge group' } }}
+                            sx={(theme) => ({
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                              },
+                              '& .MuiSwitch-track': {
+                                backgroundColor: theme.palette.mode === 'dark' ? '#6b6b6b' : '#bdbdbd',
+                              },
+                              '& .MuiSwitch-switchBase': {
+                                color: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                              },
+                            })}
                           />
                         </Tooltip>
                         <Tooltip title={t('nameMerging.edit')}>
