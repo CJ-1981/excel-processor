@@ -54,11 +54,8 @@ export const ContactsManageDialog: React.FC<ContactsManageDialogProps> = ({
   // Reset selection and focus when dialog opens
   useEffect(() => {
     if (open) {
-      // Wrap in setTimeout to avoid synchronous setState
-      setTimeout(() => {
-        setSelectedIds(new Set());
-        setSearchTerm('');
-      }, 0);
+      setSelectedIds(new Set());
+      setSearchTerm('');
 
       // Auto-focus search input with a small delay to ensure dialog is fully rendered
       const timer = setTimeout(() => {

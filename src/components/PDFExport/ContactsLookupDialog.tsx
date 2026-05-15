@@ -46,15 +46,13 @@ export const ContactsLookupDialog: React.FC<ContactsLookupDialogProps> = ({
   // Reset search term when dialog opens
   useEffect(() => {
     if (open) {
-      // Wrap in setTimeout to avoid synchronous setState
-      setTimeout(() => {
-        setSearchTerm(initialSearchTerm);
-        setSelectedIndex(0);
-      }, 0);
+      setSearchTerm(initialSearchTerm);
+      setSelectedIndex(0);
       // Auto-focus search input
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         searchInputRef.current?.focus();
       }, 100);
+      return () => clearTimeout(timer);
     }
   }, [open, initialSearchTerm]);
 

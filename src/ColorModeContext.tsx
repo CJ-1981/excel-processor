@@ -21,7 +21,7 @@ interface ColorModeProviderProps {
 export const ColorModeProvider = ({ children }: ColorModeProviderProps) => {
   const [mode, setMode] = useState<PaletteMode>(() => {
     const savedMode = localStorage.getItem('colorMode');
-    return (savedMode as PaletteMode) || 'light';
+    return (savedMode === 'light' || savedMode === 'dark') ? savedMode : 'light';
   });
 
   const colorMode = useMemo(

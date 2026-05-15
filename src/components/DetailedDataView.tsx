@@ -1410,11 +1410,11 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               return (<TableRow 
                   hover 
                   key={row._stableIndex} 
-                  sx={{ 
+                  sx={{
                     opacity: isIncluded ? 1 : 0.6,
                     bgcolor: isIncluded ? 'transparent' : alpha('#f9fbfa', 0.5),
                     '&:hover': {
-                      bgcolor: isIncluded ? alpha('#00ED64', 0.04) : alpha('#f9fbfa', 0.8)
+                      bgcolor: isIncluded ? alpha('#2e7d32', 0.04) : alpha('#f9fbfa', 0.8)
                     }
                   }}
                 >

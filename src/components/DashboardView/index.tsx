@@ -1180,7 +1180,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                                 alignItems: 'center',
                                 gap: 1,
                                 opacity: isHidden ? 0.5 : 1,
-                                bgcolor: (theme) => theme.palette.mode === 'light' ? 'background.paper' : alpha('#FFFFFF', 0.1),
+                                bgcolor: (theme) => theme.palette.mode === 'light' ? theme.palette.background.paper : alpha('#FFFFFF', 0.1),
                                 px: 2,
                                 py: 0.75,
                                 borderRadius: 9999,

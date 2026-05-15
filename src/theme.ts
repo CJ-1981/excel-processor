@@ -49,15 +49,13 @@ export const getTheme = (mode: PaletteMode) => createTheme({
     },
     divider: mode === 'light' ? colors.hairline : colors.hairlineDark,
     // Custom utility colors
-    ...({
-      surface: mode === 'light' ? colors.surface : colors.surfaceDark,
-      hairline: mode === 'light' ? colors.hairline : colors.hairlineDark,
-      hairlineSoft: mode === 'light' ? alpha(colors.hairline, 0.5) : alpha(colors.hairlineDark, 0.5),
-      hairlineStrong: mode === 'light' ? colors.hairlineStrong : '#3D4D5C',
-      surfaceFeature: mode === 'light' ? colors.surfaceFeature : alpha(colors.brandGreen, 0.05),
-      ink: colors.ink,
-      steel: colors.steel,
-    } as any),
+    surface: mode === 'light' ? colors.surface : colors.surfaceDark,
+    hairline: mode === 'light' ? colors.hairline : colors.hairlineDark,
+    hairlineSoft: mode === 'light' ? alpha(colors.hairline, 0.5) : alpha(colors.hairlineDark, 0.5),
+    hairlineStrong: mode === 'light' ? colors.hairlineStrong : '#3D4D5C',
+    surfaceFeature: mode === 'light' ? colors.surfaceFeature : alpha(colors.brandGreen, 0.05),
+    ink: colors.ink,
+    steel: colors.steel,
     action: {
       hover: alpha(colors.brandGreen, 0.08),
       selected: alpha(colors.brandGreen, 0.16),
