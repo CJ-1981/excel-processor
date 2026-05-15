@@ -1,3 +1,4 @@
+/// <reference path="./theme.d.ts" />
 import { createTheme, alpha } from '@mui/material/styles';
 import type { PaletteMode } from '@mui/material';
 
