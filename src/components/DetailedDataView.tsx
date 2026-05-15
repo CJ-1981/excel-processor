@@ -1143,60 +1143,6 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
               </Tooltip>
             </>
           )}
-          <Tooltip title={t('detailedView.exportCsvTooltip')} arrow>
-            <span>
-              <Button
-                variant="outlined"
-                onClick={handleExportCsv}
-                disabled={includedRowIndices.size === 0}
-                sx={{ 
-                  width: { xs: '100%', md: 'auto' },
-                  borderColor: 'hairlineStrong',
-                  color: 'text.primary'
-                }}
-              >
-                {t('detailedView.exportCsv', { count: includedRowIndices.size })}
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title={t('detailedView.pdfTooltip')} arrow>
-            <span>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => setShowPDFDialog(true)}
-                disabled={includedRowIndices.size === 0}
-                startIcon={<PictureAsPdfIcon />}
-                sx={{ 
-                  width: { xs: '100%', md: 'auto' },
-                  bgcolor: 'secondary.main',
-                  '&:hover': { bgcolor: '#00141d' }
-                }}
-              >
-                {t('detailedView.pdf', { count: includedRowIndices.size })}
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title={t('detailedView.dashboard')} arrow>
-            <span>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => setShowDashboardDialog(true)}
-                disabled={(() => {
-                  const visibleIncluded = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
-                  return visibleIncluded === 0;
-                })()}
-                startIcon={<DashboardIcon />}
-                sx={{ 
-                  width: { xs: '100%', md: 'auto' },
-                  fontWeight: 600
-                }}
-              >
-                {t('detailedView.dashboard', { count: (() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)() })}
-              </Button>
-            </span>
-          </Tooltip>
         </Box>
       </Box>
       {/* Second row: Selection message and toggle switches */}
@@ -1499,6 +1445,57 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
           onRowsPerPageChange={handleChangeRowsPerPage}
           sx={{ border: 'none' }}
         />
+      </Box>
+      {/* Export Action Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2, mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'hairline' }}>
+        <Tooltip title={t('detailedView.exportCsvTooltip')} arrow>
+          <Button
+            variant="outlined"
+            onClick={handleExportCsv}
+            disabled={includedRowIndices.size === 0}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              borderColor: 'hairlineStrong',
+              color: 'text.primary'
+            }}
+          >
+            {t('detailedView.exportCsv', { count: includedRowIndices.size })}
+          </Button>
+        </Tooltip>
+        <Tooltip title={t('detailedView.pdfTooltip')} arrow>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => setShowPDFDialog(true)}
+            disabled={includedRowIndices.size === 0}
+            startIcon={<PictureAsPdfIcon />}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              bgcolor: 'secondary.main',
+              '&:hover': { bgcolor: '#00141d' }
+            }}
+          >
+            {t('detailedView.pdf', { count: includedRowIndices.size })}
+          </Button>
+        </Tooltip>
+        <Tooltip title={t('detailedView.dashboard')} arrow>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setShowDashboardDialog(true)}
+            disabled={(() => {
+              const visibleIncluded = filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length;
+              return visibleIncluded === 0;
+            })()}
+            startIcon={<DashboardIcon />}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              fontWeight: 600
+            }}
+          >
+            {t('detailedView.dashboard', { count: (() => filteredAndSortedData.filter(row => includedRowIndices.has(row._stableIndex)).length)() })}
+          </Button>
+        </Tooltip>
       </Box>
       <PDFExportDialog
         open={showPDFDialog}
