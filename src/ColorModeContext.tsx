@@ -1,4 +1,4 @@
-import { createContext, useState, useMemo, useEffect } from 'react';
+import { createContext, useState, useMemo, useEffect, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import type { PaletteMode } from '@mui/material';
@@ -52,3 +52,5 @@ export const ColorModeProvider = ({ children }: ColorModeProviderProps) => {
     </ColorModeContext.Provider>
   );
 };
+
+export const useColorMode = () => useContext(ColorModeContext);
