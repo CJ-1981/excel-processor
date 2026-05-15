@@ -1447,7 +1447,7 @@ const DetailedDataView: React.FC<DetailedDataViewProps> = ({
         />
       </Box>
       {/* Export Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2, mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'hairline' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2, mt: 3, pt: 2, pb: 4, borderTop: '1px solid', borderColor: 'hairline' }}>
         <Tooltip title={t('detailedView.exportCsvTooltip')} arrow>
           <Button
             variant="outlined"
