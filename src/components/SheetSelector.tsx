@@ -154,6 +154,13 @@ const SheetSelector: React.FC<SheetSelectorProps> = ({ files, onMerge, onCancel 
                           e.stopPropagation();
                           handleToggleSameNamedSheetAcrossFiles(sheet.sheetName);
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleToggleSameNamedSheetAcrossFiles(sheet.sheetName);
+                          }
+                        }}
                         sx={{
                           cursor: 'pointer',
                           '&:hover': { textDecoration: 'underline', color: 'primary.main' },

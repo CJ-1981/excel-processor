@@ -684,14 +684,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
   // This prevents expensive re-analysis when the data reference changes but content is the same
   const dataContentFingerprint = useMemo(() => {
     if (!data || data.length === 0) return 'empty';
-    // Sample: data length + first row structure + last row structure
-    // This detects filtering changes (e.g., unique names selection) by comparing content
-    const firstRow = data[0];
-    const lastRow = data[data.length - 1];
-    const firstRowKeys = firstRow ? Object.keys(firstRow).sort().join(',') : '';
-    const firstRowValues = firstRow ? Object.values(firstRow).slice(0, 3).map(String).join('|') : '';
-    const lastRowValues = lastRow ? Object.values(lastRow).slice(0, 3).map(String).join('|') : '';
-    return `${data.length}|${firstRowKeys}|${firstRowValues}|${lastRowValues}`;
+    // Simple hash of data content for change detection
+    // Sample up to 100 rows evenly distributed across the dataset
+    const step = data.length > 100 ? Math.floor(data.length / 100) : 1;
+    let hash = `${data.length}|`;
+    for (let i = 0; i < data.length; i += step) {
+      const row = data[i];
+      if (row) {
+        const keys = Object.keys(row).sort();
+        hash += keys.map(k => `${k}:${String(row[k])}`).join('|');
+      }
+    }
+    return hash;
   }, [data]);
 
   // Analyze data for dashboard - only re-analyze when data content actually changes
@@ -1244,6 +1248,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ data, columnMapping, name
                                   type="color"
                                   value={color}
                                   onChange={(e) => setColorOverrides(prev => ({ ...prev, [col]: e.target.value }))}
+                                  aria-label={`Change color for ${columnMapping[col] || col}`}
                                 />
                               </Box>
                               <Typography
