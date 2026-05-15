@@ -12,7 +12,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import WorkflowStepper from './components/WorkflowStepper';
 import { PageContainer, SectionCard } from './components/layout';
 
-import { CssBaseline, Box, Typography, CircularProgress, Dialog, IconButton, Container, Divider, Tooltip } from '@mui/material';
+import { CssBaseline, Box, Typography, CircularProgress, Dialog, IconButton, Container, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
@@ -589,34 +589,6 @@ function App() {
           </Box>
         </Dialog>
     </PageContainer>
-
-    {/* Footer */}
-    <Box
-      component="footer"
-      sx={{
-        bgcolor: 'secondary.main',
-        color: 'white',
-        py: 8,
-        px: 3,
-        mt: 8,
-        borderTop: '1px solid',
-        borderColor: 'rgba(255, 255, 255, 0.1)'
-      }}
-    >
-      <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
-          <Box sx={{ maxWidth: 300 }}>
-            <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 800, mb: 2 }}>
-              EXCEL PROCESSOR
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>
-              {t('app.title')} - A modern tool for processing and analyzing donor data with a MongoDB-inspired design.
-            </Typography>
-          </Box>
-        </Box>
-        <Divider sx={{ my: 4, bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
-      </Container>
-    </Box>
   </Box>
   );
 }
